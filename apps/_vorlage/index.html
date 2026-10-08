@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="__TITEL__">
+<meta name="theme-color" content="__FARBE__">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>__TITEL__</title>
+<style>
+  /* Farben an einer Stelle – so kann man sie leicht gemeinsam ändern */
+  :root{--bg:#F4F7FB;--text:#1B2A3A;--muted:#5B6B7C;--accent:__FARBE__}
+  @media (prefers-color-scheme:dark){:root{--bg:#0F1722;--text:#E8EEF5;--muted:#9AAABB}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:18px/1.4 -apple-system,system-ui,sans-serif;
+       padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+       display:flex;flex-direction:column;align-items:center;justify-content:center;
+       -webkit-user-select:none;user-select:none;touch-action:manipulation}
+  h1{margin:0 0 8px}
+  button{font:inherit;padding:14px 28px;border:0;border-radius:14px;background:var(--accent);color:#fff}
+  #version{position:fixed;bottom:calc(8px + env(safe-area-inset-bottom));right:12px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+  <h1>__TITEL__</h1>
+  <p id="text">Hier entsteht etwas Neues.</p>
+  <button id="knopf">Drück mich</button>
+  <div id="version"></div>
+
+<script>
+// Bei jeder Änderung hochzählen (und CACHE in sw.js).
+const APP_VERSION = '0.1';
+document.getElementById('version').textContent = 'v' + APP_VERSION;
+
+// --- Ab hier bauen wir gemeinsam ---
+let zaehler = 0;
+document.getElementById('knopf').onclick = () => {
+  zaehler++;
+  document.getElementById('text').textContent = 'Gedrückt: ' + zaehler + '×';
+};
+
+// Offline-Fähigkeit (funktioniert nur über https oder localhost)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
