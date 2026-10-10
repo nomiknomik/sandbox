@@ -376,7 +376,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 document.getElementById('version').textContent = 'v' + APP_VERSION;
 
 const $ = s => document.querySelector(s);
@@ -1152,9 +1152,28 @@ $('#b-menu').onclick = async () => {
   if (beschaeftigt && !(spiel.modus === 'online' && !Online.tickt)) { Ton.fehler(); return; }   // erst wenn die Kugel gelandet ist
   Ton.klick();
   const w = await dialog('<h2 class="glow">PAUSE</h2><p class="mono" style="color:var(--g-dim)">Das Spiel wird gespeichert. Du kannst es im Menü fortsetzen.</p>',
-    [['WEITER', 'weiter'], ['ZUM MENÜ', 'menue']]);
-  if (w === 'menue') menue();
+    [['WEITER', 'weiter'], ['ZUM MENÜ', 'menue'], [spiel.modus === 'online' ? 'AUFGEBEN' : 'BEENDEN', 'beenden']]);
+  if (w === 'menue') return menue();
+  if (w !== 'beenden') return;
+  const online = spiel.modus === 'online';
+  const ok = await dialog(`<h2 class="glow">${online ? 'WIRKLICH AUFGEBEN?' : 'SPIEL BEENDEN?'}</h2>
+    <p class="mono" style="color:var(--g-dim)">${online ? 'Der Gegner gewinnt dann dieses Spiel.' : 'Der Spielstand wird gelöscht.'}</p>`, [['NEIN'], [online ? 'JA, AUFGEBEN' : 'JA, BEENDEN', true]]);
+  if (!ok) return;
+  if (!online) { speicher.weg('mb-spiel'); return menue(); }
+  aufgeben();
 };
+
+// Online aufgeben: Der Gegner bekommt den Sieg
+async function aufgeben() {
+  const id = spiel.id, idx = spiel.idx;
+  banner('FUNKSPRUCH: WIR GEBEN AUF …', true);
+  try {
+    await Sync.aendern(s => (!s || s.id !== id || s.status === 'ende') ? null
+      : { ...s, status: 'ende', sieger: 1 - idx, aufgegeben: idx });
+    spiel.aufgabe = 'ich';
+    ende(1);
+  } catch (e) { banner('⚠ ' + e.message, true); }
+}
 
 /* ---------- Spielende ---------- */
 async function ende(sieger) {
@@ -1170,10 +1189,12 @@ async function ende(sieger) {
     await warte(2600);
   }
   $('#e-titel').className = verloren ? 'glow' : 'sieg';
-  $('#e-titel').textContent = verloren ? 'NIEDERLAGE' : 'SIEG!';
+  $('#e-titel').textContent = spiel.aufgabe === 'ich' ? 'AUFGEGEBEN' : verloren ? 'NIEDERLAGE' : 'SIEG!';
   $('#e-text').textContent = verloren ? (spiel.modus === 'cpu' ? 'Der Computer hat gewonnen. Revanche?' : 'Deine Flotte ist versenkt. Revanche?')
     : spiel.modus === 'cpu' ? 'Du hast die ganze Computerflotte versenkt!'
     : spiel.modus === 'online' ? 'Du hast die ganze feindliche Flotte versenkt!' : `${name(sieger)} hat die ganze feindliche Flotte versenkt!`;
+  if (spiel.aufgabe === 'ich') $('#e-text').textContent = 'Du hast aufgegeben. Nächstes Mal klappt es!';
+  if (spiel.aufgabe === 'gegner') $('#e-text').textContent = 'Der Gegner hat aufgegeben – die Seeschlacht gehört dir!';
   $('#e-stat').innerHTML = [0, 1].map(i => {
     const s = spiel.statistik[i], q = s.schuss ? Math.round(s.treffer / s.schuss * 100) : 0;
     return `<div><b>${name(i).toUpperCase()}</b>${s.schuss} Schüsse<br>${s.treffer} Treffer<br>${q} % Trefferquote</div>`;
@@ -1428,6 +1449,10 @@ function lobby(text, knoepfe) {
 // Entscheidet anhand des gemeinsamen Stands, was dieses Gerät zeigt
 async function onlineSteuern(st) {
   const idx = st ? st.geraete.indexOf(Sync.geraet) : -1;
+  if (st && st.status === 'ende' && st.sieger === -1 && spiel && spiel.modus === 'online' && spiel.id === st.id && !spiel.fertig) {
+    spiel = null; beschaeftigt = false; speicher.weg('mb-online'); zeige('s-online');
+    return lobby('Das Spiel wurde abgebrochen.', [['⚓ NEUES SPIEL STARTEN', neuesOnlineSpiel]]);
+  }
   const meinSpiel = idx >= 0 && (st.status !== 'ende' || (spiel && spiel.id === st.id && !spiel.fertig));
   if (!meinSpiel) {
     if (spiel && spiel.modus === 'online' && !spiel.fertig && st && st.id === spiel.id) return;
@@ -1476,6 +1501,7 @@ async function zuegeVerarbeiten(st) {
   let letztes = null;
   for (let k = spiel.verarbeitet; k < st.zuege.length; k++) {
     const z = st.zuege[k], meiner = z.s === spiel.idx;
+    if (z.e == null && st.status !== 'laeuft') break;                   // Spiel ist schon vorbei
     if (z.e == null && meiner) { onlineBanner(true); return; }         // mein Schuss ist unterwegs
     let erg;
     if (z.e == null) {
@@ -1486,7 +1512,7 @@ async function zuegeVerarbeiten(st) {
       banner('GEGNER FEUERT AUF ' + koord(z.r, z.c) + ' …', true);
       oFeld.zielen(z.r, z.c); Ton.sonar();
       await Sync.aendern(s => {
-        if (!s || s.id !== st.id || !s.zuege[k] || s.zuege[k].e != null) return null;
+        if (!s || s.id !== st.id || s.status !== 'laeuft' || !s.zuege[k] || s.zuege[k].e != null) return null;
         s.zuege[k].e = erg.art;
         if (erg.art === 'sunk') s.zuege[k].f = erg.felder;
         if (erg.art === 'miss') s.dran = spiel.idx;
@@ -1510,7 +1536,10 @@ async function zuegeVerarbeiten(st) {
     }
   }
   const akt = Sync.stand || st;
-  if (akt.status === 'ende') return ende(akt.sieger === spiel.idx ? 0 : 1);
+  if (akt.status === 'ende') {
+    if (akt.aufgegeben != null) spiel.aufgabe = akt.aufgegeben === spiel.idx ? 'ich' : 'gegner';
+    return ende(akt.sieger === spiel.idx ? 0 : 1);
+  }
   spiel.dran = akt.dran === spiel.idx ? 0 : 1;
   onlineBanner(false, letztes);
 }
