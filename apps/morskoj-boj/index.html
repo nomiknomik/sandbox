@@ -392,7 +392,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -1394,7 +1394,10 @@ const Sync = {
     try {
       const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(roh.iv) }, await this.key(), unb64(roh.d));
       return JSON.parse(new TextDecoder().decode(d));
-    } catch { throw new Error('Schlüssel passt nicht – Einladung neu scannen.'); }
+    } catch {
+      const f = new Error('Der Spielstand auf GitHub hat einen anderen Schlüssel als dieses Gerät.');
+      f.schluessel = true; throw f;
+    }
   },
   // Lesen. Mit ETag fragt GitHub nur „hat sich was geändert?“ – das ist schnell.
   async lesen(frisch = false) {
@@ -1405,8 +1408,9 @@ const Sync = {
     if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
     if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
     const j = await res.json();
-    this.etag = res.headers.get('ETag'); this.sha = j.sha;
+    this.sha = j.sha;
     this.stand = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    this.etag = res.headers.get('ETag');                 // erst merken, wenn Entschlüsseln geklappt hat
     return this.stand;
   },
   async schreiben(stand) {
@@ -1451,11 +1455,18 @@ const Online = {
       const json = JSON.stringify(st);
       if (json !== this.zuletzt) { this.zuletzt = json; await onlineSteuern(st); }
       this.fehler(null);
-    } catch (e) { this.fehler(e.message); }
+    } catch (e) { this.zuletzt = null; this.fehler(e.message, e); }
     finally { this.tickt = false; }
   },
-  fehler(text) {
-    if ($('#s-online').classList.contains('on') && text) { $('#o-status').textContent = '⚠ ' + text; $('#o-status').classList.add('fehler'); }
+  fehler(text, e) {
+    if ($('#s-online').classList.contains('on') && e && e.schluessel) {
+      // Alter Spielstand (z. B. von einer früheren Einrichtung) – kann niemand mehr lesen: ersetzen anbieten
+      if (!this.schluesselHinweis) lobby('⚠ ' + text + '\nWahrscheinlich von einer früheren Einrichtung.\nWichtig: Alle Geräte mit DEMSELBEN QR-Code einrichten.',
+        [['ALTEN SPIELSTAND ERSETZEN', spielstandErsetzen]]);
+      this.schluesselHinweis = true;
+      $('#o-status').classList.add('fehler');
+    } else if ($('#s-online').classList.contains('on') && text) { $('#o-status').textContent = '⚠ ' + text; $('#o-status').classList.add('fehler'); }
+    if (!e || !e.schluessel) this.schluesselHinweis = false;
     if ($('#s-battle').classList.contains('on') && spiel && spiel.modus === 'online') {
       if (text) banner('⚠ KEINE VERBINDUNG …', true); else if (this.warFehler) onlineBanner();
     }
@@ -1624,6 +1635,21 @@ async function neuesOnlineSpiel() {
     Online.tick();
   } catch (e) { lobby('⚠ ' + e.message, [['NOCHMAL', neuesOnlineSpiel]]); }
 }
+// Unlesbaren Spielstand mit einem neuen (wartenden) Spiel überschreiben
+async function spielstandErsetzen() {
+  const ok = await dialog('<h2 class="glow">SPIELSTAND ERSETZEN?</h2><p class="mono" style="color:var(--g-dim)">Der alte Spielstand kann mit keinem Gerät mehr gelesen werden. Er wird durch ein neues Spiel ersetzt.</p>', [['NEIN'], ['ERSETZEN', true]]);
+  if (!ok) return;
+  lobby('Ersetze …', []);
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], zeit: Date.now() };
+  try {
+    for (let i = 0; i < 3; i++) {
+      await Sync.lesen(true).catch(() => {});          // holt die aktuelle Datei-Kennung (sha), auch wenn unlesbar
+      if (await Sync.schreiben(neu)) break;
+    }
+  } catch (e) { return lobby('⚠ ' + e.message, [['NOCHMAL', spielstandErsetzen]]); }
+  Online.schluesselHinweis = false; Online.zuletzt = null; Online.tick();
+}
+
 async function beitreten() {
   lobby('Trete bei …', []);
   try {
