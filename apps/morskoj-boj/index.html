@@ -252,7 +252,7 @@
     <button data-modus="cpu" data-stufe="admiral">GEGEN COMPUTER<small>Stufe: Admiral – richtig schwer</small></button>
     <button data-modus="duo">ZU ZWEIT<small>Ein Gerät, abwechselnd</small></button>
     <button id="b-online">ONLINE · ZWEI GERÄTE<small>iPhone ↔ iPad über GitHub</small></button>
-    <div class="zeile"><button id="b-flotte"></button><button id="b-regeln">REGELN</button></div>
+    <div class="zeile"><button id="b-regeln">REGELN</button></div>
   </div>
 </section>
 
@@ -392,7 +392,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -577,6 +577,11 @@ function schiffSVG(len, senk) {
   let teile = `<path d="M10,50 C10,26 22,18 40,17 L${L - 48},17 C${L - 22},19 ${L - 8},34 ${L - 4},50 C${L - 8},66 ${L - 22},81 ${L - 48},83 L40,83 C22,82 10,74 10,50 Z"/>`;
   if (len === 1) {
     teile += `<circle cx="46" cy="50" r="13"/><line class="lauf" x1="58" y1="50" x2="76" y2="50"/>`;
+  } else if (len === 5) {
+    // Flugzeugträger: Landebahn (gestrichelt), Brücke am Rand, zwei kleine Flugzeuge
+    teile += `<line class="lauf" x1="45" y1="50" x2="430" y2="50" stroke-dasharray="22 16"/>`
+      + `<rect x="300" y="20" width="70" height="18" rx="5"/>`
+      + [120, 210].map(x => `<path d="M${x},50 L${x - 30},36 L${x - 24},50 L${x - 30},64 Z M${x - 18},50 L${x - 40},50"/>`).join('');
   } else {
     // Brücke (Rechteck) und Geschütztürme (Kreis + Rohr) so verteilt, dass sich nichts überlappt
     const mitte = len === 2 ? 82 : L / 2;
@@ -707,10 +712,11 @@ function schiffEl(s, klasse) {
    SPIELREGELN
    ===================================================================== */
 // Zwei Flotten zur Wahl. FLOTTE ist die Flotte des laufenden Spiels.
-const FLOTTEN = { gross: [4, 3, 3, 2, 2, 2, 1, 1, 1, 1], klein: [4, 3, 2, 1] };
-let flottenWahl = speicher.lies('mb-flotte') === 'klein' ? 'klein' : 'gross';
-let FLOTTE = FLOTTEN[flottenWahl];
-const NAME = { 4: 'Schlachtschiff', 3: 'Kreuzer', 2: 'Zerstörer', 1: 'Schnellboot' };
+// Unsere Flotte: je ein Schiff mit 5, 4, 3, 2 und 1 Feld.
+// (FLOTTE kann bei alten, gespeicherten Spielen noch anders aussehen.)
+const STANDARD_FLOTTE = [5, 4, 3, 2, 1];
+let FLOTTE = STANDARD_FLOTTE;
+const NAME = { 5: 'Flugzeugträger', 4: 'Schlachtschiff', 3: 'Kreuzer', 2: 'Zerstörer', 1: 'Schnellboot' };
 const gitter = () => Array.from({ length: 10 }, () => Array(10).fill(0));
 // Schuss-Gitter: 0 = unbekannt, 1 = Wasser, 2 = Treffer, 3 = versenkt
 
@@ -864,32 +870,22 @@ const sichern = () => speicher.schreib('mb-spiel', spiel);
 // ---------- Menü ----------
 $$('[data-modus]').forEach(b => b.onclick = () => {
   Ton.klick();
-  FLOTTE = FLOTTEN[flottenWahl];
+  FLOTTE = STANDARD_FLOTTE;
   spiel = { modus: b.dataset.modus, stufe: b.dataset.stufe || null, spieler: [null, null], dran: 0, phase: 'setzen', flotte: FLOTTE,
     statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
   aufstellen(0);
 });
-// Schalter: große oder kleine Flotte
-function flottenKnopf() {
-  $('#b-flotte').innerHTML = flottenWahl === 'klein' ? 'FLOTTE: KLEIN<small>4 Schiffe</small>' : 'FLOTTE: GROSS<small>10 Schiffe</small>';
-}
-flottenKnopf();
-$('#b-flotte').onclick = () => {
-  flottenWahl = flottenWahl === 'klein' ? 'gross' : 'klein';
-  speicher.schreib('mb-flotte', flottenWahl); flottenKnopf(); Ton.setzen();
-};
 $('#b-regeln').onclick = () => {
   Ton.klick();
   dialog(`<h2 class="glow">REGELN</h2><ul>
-    <li><b>Große Flotte</b> – 10 Schiffe: 1× Schlachtschiff (4), 2× Kreuzer (3), 3× Zerstörer (2), 4× Schnellboot (1).</li>
-    <li><b>Kleine Flotte</b> – 4 Schiffe: je 1× Schlachtschiff (4), Kreuzer (3), Zerstörer (2), Schnellboot (1).</li>
+    <li>Jeder versteckt <b>5 Schiffe</b>: Flugzeugträger (5), Schlachtschiff (4), Kreuzer (3), Zerstörer (2), Schnellboot (1).</li>
     <li>Schiffe dürfen sich <b>nicht berühren</b> – auch nicht über Eck.</li>
     <li>Abwechselnd auf ein Feld zielen und <b>FEUER!</b> drücken.</li>
     <li><b>Treffer?</b> Dann darfst du nochmal schießen!</li>
     <li>Ist ein Schiff <b>versenkt</b>, wird ringsherum automatisch Wasser markiert.</li>
     <li>Wer zuerst die ganze feindliche Flotte versenkt, gewinnt.</li></ul>`, [['VERSTANDEN']]);
 };
-$('#b-weiter').onclick = () => { Ton.klick(); spiel = speicher.lies('mb-spiel'); FLOTTE = spiel.flotte || FLOTTEN.gross; weiterSpielen(); };
+$('#b-weiter').onclick = () => { Ton.klick(); spiel = speicher.lies('mb-spiel'); FLOTTE = spiel.flotte || [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]; weiterSpielen(); };
 function menue() {
   spiel = null; beschaeftigt = false; Online.stop();
   $('#b-weiter').hidden = !(speicher.lies('mb-spiel') || {}).spieler;
@@ -1518,7 +1514,7 @@ async function onlineSteuern(st) {
     if (spiel && spiel.modus === 'online' && !spiel.fertig) { spiel = null; zeige('s-online'); }   // Spiel wurde abgebrochen
     if (!$('#s-online').classList.contains('on')) return;
     if (!st || st.status === 'ende') return lobby('Kein offenes Spiel.', [['⚓ NEUES SPIEL STARTEN', neuesOnlineSpiel]]);
-    if (st.status === 'wartet') return lobby('Das andere Gerät wartet auf dich!\n' + ((st.flotte || []).length === 4 ? 'Kleine Flotte (4 Schiffe)' : 'Große Flotte (10 Schiffe)'), [['⚓ BEITRETEN', beitreten]]);
+    if (st.status === 'wartet') return lobby('Das andere Gerät wartet auf dich!', [['⚓ BEITRETEN', beitreten]]);
     return lobby('Auf anderen Geräten läuft gerade ein Spiel.', [['NEUES SPIEL (ALTES BEENDEN)', neuesOnlineSpiel]]);
   }
   if (!spiel || spiel.modus !== 'online' || spiel.id !== st.id) onlineSpielLaden(st, idx);
@@ -1541,7 +1537,7 @@ async function onlineSteuern(st) {
 function onlineSpielLaden(st, idx) {
   const gesp = speicher.lies('mb-online');
   const schiffe = gesp && gesp.id === st.id ? gesp.schiffe : null;
-  FLOTTE = st.flotte || FLOTTEN.gross;                 // die Flotte bestimmt, wer das Spiel startet
+  FLOTTE = st.flotte || [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];   // Flotte steht im Spielstand (alte Spiele: 10 Schiffe)
   spiel = { modus: 'online', id: st.id, idx, dran: 0, verarbeitet: 0, phase: 'online',
     spieler: [schiffe ? { schiffe, schuesse: gitter() } : null, { schiffe: [], schuesse: gitter() }],
     statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
@@ -1646,7 +1642,7 @@ async function neuesOnlineSpiel() {
   const id = b64(crypto.getRandomValues(new Uint8Array(6)));
   lobby('Starte …', []);
   try {
-    await Sync.aendern(() => ({ id, status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: FLOTTEN[flottenWahl], zeit: Date.now() }));
+    await Sync.aendern(() => ({ id, status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: STANDARD_FLOTTE, zeit: Date.now() }));
     Online.tick();
   } catch (e) { lobby('⚠ ' + e.message, [['NOCHMAL', neuesOnlineSpiel]]); }
 }
@@ -1655,7 +1651,7 @@ async function spielstandErsetzen() {
   const ok = await dialog('<h2 class="glow">SPIELSTAND ERSETZEN?</h2><p class="mono" style="color:var(--g-dim)">Der alte Spielstand kann mit keinem Gerät mehr gelesen werden. Er wird durch ein neues Spiel ersetzt.</p>', [['NEIN'], ['ERSETZEN', true]]);
   if (!ok) return;
   lobby('Ersetze …', []);
-  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: FLOTTEN[flottenWahl], zeit: Date.now() };
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: STANDARD_FLOTTE, zeit: Date.now() };
   try {
     for (let i = 0; i < 3; i++) {
       await Sync.lesen(true).catch(() => {});          // holt die aktuelle Datei-Kennung (sha), auch wenn unlesbar
