@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Würmer">
+<meta name="theme-color" content="#3FA34D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Würmer</title>
+<style>
+  /* Farben an einer Stelle */
+  :root{--rot:#E5484D;--blau:#3B82F6;--panel:rgba(20,32,48,.62);--text:#fff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden;background:#7ec8f2}
+  body{color:var(--text);font:16px/1.3 -apple-system,system-ui,sans-serif;
+       -webkit-user-select:none;user-select:none;touch-action:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  /* Oben: Teams, Zeit, Wind */
+  #oben{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:flex;
+        justify-content:center;gap:10px;pointer-events:none;padding:0 10px}
+  .box{background:var(--panel);border-radius:14px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .team{min-width:130px}
+  .team b{font-size:13px;display:block}
+  .bar{height:10px;border-radius:5px;background:#0004;overflow:hidden;margin-top:3px}
+  .bar i{display:block;height:100%;border-radius:5px;transition:width .4s}
+  #zeit{font-size:26px;font-weight:800;min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+  #zeit.knapp{color:#ffb4b4}
+  #wind{min-width:130px;text-align:center;font-size:12px}
+  #windbar{position:relative;height:10px;border-radius:5px;background:#0004;margin-top:4px}
+  #windbar i{position:absolute;top:0;height:100%;border-radius:5px;background:linear-gradient(90deg,#9be7ff,#fff)}
+  #windbar:after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:#fff8}
+
+  /* Unten: Steuerung und Waffen */
+  #unten{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;
+         justify-content:space-between;align-items:flex-end;padding:0 10px;pointer-events:none;gap:8px}
+  #unten > div{display:flex;gap:8px;pointer-events:auto}
+  .knopf{width:62px;height:62px;border-radius:18px;border:0;background:var(--panel);color:#fff;font-size:28px;
+         backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 3px 0 #0003}
+  .knopf:active{transform:translateY(2px);box-shadow:none}
+  .waffe{position:relative;width:62px;height:62px;border-radius:18px;border:3px solid transparent;background:var(--panel);
+         color:#fff;font-size:30px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .waffe.an{border-color:#ffd84d;background:rgba(60,50,10,.7)}
+  .waffe.leer{opacity:.35}
+  .waffe small{position:absolute;right:4px;bottom:2px;font-size:12px;font-weight:700}
+  #waffen{margin-right:56px}
+
+  /* Mitte: Ansage */
+  #ansage{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;
+          text-align:center;transition:opacity .35s,transform .35s;text-shadow:0 3px 0 #0005}
+  #ansage.zeigen{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #ansage b{display:block;font-size:40px;font-weight:900}
+  #ansage span{font-size:17px}
+
+  /* Menü (Start und Ende) */
+  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0003}
+  #menu .karte{background:rgba(255,255,255,.93);color:#1B2A3A;border-radius:28px;padding:28px 34px;text-align:center;
+               max-width:440px;margin:16px;box-shadow:0 12px 40px #0004}
+  #menu h1{margin:0;font-size:48px;letter-spacing:1px;color:#2f7a2c}
+  #menu p{margin:10px 0 20px;color:#4a5a6a}
+  #menu button{font:inherit;font-size:22px;font-weight:800;padding:14px 34px;border:0;border-radius:18px;
+               background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 4px 0 #1f6427}
+  #menu button:active{transform:translateY(3px);box-shadow:0 1px 0 #1f6427}
+  .versteckt{display:none!important}
+
+  #ton{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:22px}
+  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffc;cursor:pointer;text-shadow:0 1px 2px #0008}
+  @media (max-width:700px){.team{min-width:90px}#wind{min-width:90px}.knopf,.waffe{width:50px;height:50px;font-size:22px}}
+</style>
+</head>
+<body>
+<canvas id="bild"></canvas>
+
+<div id="oben" class="versteckt">
+  <div class="box team"><b style="color:#ffb3b5">Team Rot</b><div class="bar"><i id="hp0" style="background:var(--rot)"></i></div></div>
+  <div class="box" id="zeit">45</div>
+  <div class="box" id="wind">Wind<div id="windbar"><i></i></div></div>
+  <div class="box team"><b style="color:#b3d0ff">Team Blau</b><div class="bar"><i id="hp1" style="background:var(--blau)"></i></div></div>
+</div>
+<button class="knopf versteckt" id="ton">🔊</button>
+
+<div id="unten" class="versteckt">
+  <div>
+    <button class="knopf" id="links">◀</button>
+    <button class="knopf" id="springen">⤴</button>
+    <button class="knopf" id="rechts">▶</button>
+  </div>
+  <div id="waffen">
+    <button class="waffe an" data-w="bazooka">🚀</button>
+    <button class="waffe" data-w="granate">💣</button>
+    <button class="waffe" data-w="banane">🍌<small></small></button>
+    <button class="waffe" data-w="schaf">🐑<small></small></button>
+  </div>
+</div>
+
+<div id="ansage"><b></b><span></span></div>
+
+<div id="menu">
+  <div class="karte">
+    <h1>🪱 Würmer</h1>
+    <p id="menutext">Team Rot gegen Team Blau – je 4 Würmer.<br>
+      <b>Zielen:</b> Vom Wurm wegziehen und loslassen – wie eine Steinschleuder!</p>
+    <button id="los">Los geht's!</button>
+  </div>
+</div>
+<div id="version"></div>
+
+<script>
+// Bei jeder Änderung hochzählen (und CACHE in sw.js).
+const APP_VERSION = '0.1';
+// Version unten rechts antippen = nach Update suchen.
+const versionEl = document.getElementById('version');
+versionEl.textContent = 'v' + APP_VERSION;
+versionEl.onclick = async () => {
+  const zeig = (text, ms) => { versionEl.textContent = text; if (ms) setTimeout(() => versionEl.textContent = 'v' + APP_VERSION, ms); };
+  zeig('suche Update …');
+  try {
+    const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
+    const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
+    if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
+    zeig('lade v' + neu + ' …');
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update().catch(() => {});
+    await new Promise(r => setTimeout(r, 1200));
+    location.replace(location.pathname + '?v=' + encodeURIComponent(neu));
+  } catch { zeig('offline – v' + APP_VERSION, 2500); }
+};
+
+// ================= Spielwelt =================
+const W = 2600, H = 1100;      // so groß ist die Welt
+const WASSER = H - 60;         // hier beginnt das Meer
+const G = 620;                 // Schwerkraft
+const R = 9;                   // Wurm-Radius
+const MAX_V = 900;             // stärkster Schuss
+const WIND_MAX = 160;
+const ZUGZEIT = 45;            // Sekunden pro Zug
+const rnd = (a, b) => a + Math.random() * (b - a);
+const $ = id => document.getElementById(id);
+
+// Die Waffen – hier kann man Werte ändern!
+const WAFFEN = {
+  bazooka: { name: 'Bazooka', radius: 42, schaden: 45 },
+  granate: { name: 'Granate', radius: 46, schaden: 50, zuender: 3 },
+  banane:  { name: 'Banane',  radius: 50, schaden: 45, zuender: 3, start: 1 },
+  schaf:   { name: 'Schaf',   radius: 62, schaden: 60, zuender: 7, start: 2 },
+};
+
+// Teams – Namen der Würmer sind Fantasienamen
+const TEAMS = [
+  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Blitz', 'Krümel', 'Socke', 'Pixel'] },
+  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel'] },
+];
+
+let maske, erde, ectx, wand;          // maske: 1 = Erde, 0 = Luft
+let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [];
+let spiel = null;               // Zustand eines laufenden Spiels
+let zeit = 0, wackeln = 0;
+const kam = { x: W / 2, y: H / 2, frei: false };
+
+// ---------- Landschaft bauen ----------
+function baueLandschaft() {
+  const m = document.createElement('canvas'); m.width = W; m.height = H;
+  const g = m.getContext('2d');
+  const p = [rnd(0, 7), rnd(0, 7), rnd(0, 7), rnd(0, 7)];
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= W; x += 4) {
+    const t = x / W * Math.PI * 2;
+    let h = H * 0.6 + Math.sin(t * 1.3 + p[0]) * 120 + Math.sin(t * 3.1 + p[1]) * 60 + Math.sin(t * 7.7 + p[2]) * 18;
+    const rand = Math.min(x, W - x);                   // an den Seiten ins Meer abfallen
+    if (rand < 240) h += (240 - rand) * 1.8;
+    if (Math.abs(x - W * (0.45 + Math.sin(p[3]) * 0.1)) < 90) h += Math.cos((x - W * (0.45 + Math.sin(p[3]) * 0.1)) / 90 * Math.PI / 2) * 160; // ein Tal
+    g.lineTo(x, h);
+  }
+  g.lineTo(W, H); g.closePath(); g.fill();
+  // schwebende Inseln
+  for (let i = 0; i < 3; i++) {
+    const x = rnd(350, W - 350), y = rnd(220, 380), b = rnd(90, 160);
+    g.beginPath(); g.ellipse(x, y, b, 26, 0, Math.PI, 0); g.ellipse(x, y, b, 55, 0, 0, Math.PI); g.fill();
+  }
+  // Rückwand: dunkle Erde, die man in Löchern und Höhlen sieht
+  wand = document.createElement('canvas'); wand.width = W; wand.height = H;
+  const wc = wand.getContext('2d');
+  wc.fillStyle = '#4a2d18'; wc.fillRect(0, 0, W, H);
+  for (let i = 0; i < 1500; i++) { wc.fillStyle = i % 2 ? '#3a2312' : '#5a3a22'; wc.beginPath(); wc.arc(rnd(0, W), rnd(150, H), rnd(2, 6), 0, 7); wc.fill(); }
+  wc.globalCompositeOperation = 'destination-in'; wc.drawImage(m, 0, 0);
+  // Höhlen
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 5; i++) {
+    g.beginPath(); g.ellipse(rnd(300, W - 300), rnd(H * 0.72, H * 0.86), rnd(40, 90), rnd(25, 45), rnd(-.4, .4), 0, 7); g.fill();
+  }
+
+  // Maske aus der Form lesen
+  const d = g.getImageData(0, 0, W, H).data;
+  maske = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) maske[i] = d[i * 4 + 3] > 128 ? 1 : 0;
+
+  // Erde bemalen
+  erde = document.createElement('canvas'); erde.width = W; erde.height = H;
+  ectx = erde.getContext('2d');
+  const v = ectx.createLinearGradient(0, 250, 0, H);
+  v.addColorStop(0, '#a8713f'); v.addColorStop(.5, '#7b4c2a'); v.addColorStop(1, '#4b2c18');
+  ectx.fillStyle = v; ectx.fillRect(0, 0, W, H);
+  for (let y = 300; y < H; y += 26) {                 // Erdschichten
+    ectx.strokeStyle = 'rgba(0,0,0,.07)'; ectx.lineWidth = 8; ectx.beginPath();
+    for (let x = 0; x <= W; x += 20) ectx.lineTo(x, y + Math.sin(x * .01 + y) * 6);
+    ectx.stroke();
+  }
+  for (let i = 0; i < 3500; i++) {                    // Steinchen
+    const x = rnd(0, W), y = rnd(150, H), r = rnd(1.5, 6);
+    ectx.fillStyle = ['#c9935d', '#5d3a20', '#9c6b43', '#d8b28a', '#6d4a33'][i % 5];
+    ectx.globalAlpha = rnd(.3, .8);
+    ectx.beginPath(); ectx.ellipse(x, y, r, r * rnd(.5, .9), rnd(0, 3), 0, 7); ectx.fill();
+  }
+  ectx.globalAlpha = 1;
+  ectx.globalCompositeOperation = 'destination-in'; ectx.drawImage(m, 0, 0);
+  ectx.globalCompositeOperation = 'source-over';
+  // Gras: überall, wo oben Luft und unten Erde ist
+  for (let x = 0; x < W; x++) {
+    for (let y = 1; y < H; y++) {
+      if (maske[y * W + x] && !maske[(y - 1) * W + x]) {
+        ectx.fillStyle = '#2f7a2c'; ectx.fillRect(x, y, 1, 11);
+        ectx.fillStyle = '#4fae3f'; ectx.fillRect(x, y - 1, 1, 8);
+        ectx.fillStyle = '#86d65a'; ectx.fillRect(x, y - 1, 1, 3);
+        if (Math.random() < .35) {
+          ectx.strokeStyle = Math.random() < .5 ? '#5fbf45' : '#3e9a36'; ectx.lineWidth = 1.3;
+          ectx.beginPath(); ectx.moveTo(x, y + 1); ectx.lineTo(x + rnd(-2.5, 2.5), y - rnd(3, 9)); ectx.stroke();
+        }
+        if (Math.random() < .006) blume(x, y);
+      }
+    }
+  }
+}
+function blume(x, y) {
+  ectx.strokeStyle = '#3e9a36'; ectx.lineWidth = 1.5;
+  ectx.beginPath(); ectx.moveTo(x, y); ectx.lineTo(x, y - 10); ectx.stroke();
+  ectx.fillStyle = ['#ffd84d', '#ff8fb1', '#ffffff', '#b28dff'][Math.random() * 4 | 0];
+  for (let i = 0; i < 5; i++) { ectx.beginPath(); ectx.arc(x + Math.cos(i * 1.26) * 2.6, y - 10 + Math.sin(i * 1.26) * 2.6, 2, 0, 7); ectx.fill(); }
+  ectx.fillStyle = '#e8a321'; ectx.beginPath(); ectx.arc(x, y - 10, 1.5, 0, 7); ectx.fill();
+}
+
+// Loch in die Erde sprengen
+function loch(x, y, r) {
+  ectx.globalCompositeOperation = 'destination-out';
+  ectx.beginPath(); ectx.arc(x, y, r, 0, 7); ectx.fill();
+  ectx.globalCompositeOperation = 'source-atop';      // verbrannter Rand
+  ectx.strokeStyle = 'rgba(45,22,10,.6)'; ectx.lineWidth = 7;
+  ectx.beginPath(); ectx.arc(x, y, r + 2, 0, 7); ectx.stroke();
+  ectx.globalCompositeOperation = 'source-over';
+  for (let yy = Math.max(0, y - r | 0); yy <= Math.min(H - 1, y + r); yy++)
+    for (let xx = Math.max(0, x - r | 0); xx <= Math.min(W - 1, x + r); xx++)
+      if ((xx - x) ** 2 + (yy - y) ** 2 <= r * r) maske[yy * W + xx] = 0;
+}
+
+// ---------- Physik ----------
+function fest(x, y) { x |= 0; y |= 0; if (x < 0 || x >= W || y < 0) return false; if (y >= H) return true; return maske[y * W + x] === 1; }
+const RING = [...Array(16)].map((_, i) => [Math.cos(i * Math.PI / 8), Math.sin(i * Math.PI / 8)]);
+function stoesst(x, y, r) { if (fest(x, y)) return true; for (const [c, s] of RING) if (fest(x + c * r, y + s * r)) return true; return false; }
+function normale(x, y, r) {
+  let nx = 0, ny = 0;
+  for (const [c, s] of RING) if (fest(x + c * (r + 1.5), y + s * (r + 1.5))) { nx -= c; ny -= s; }
+  const l = Math.hypot(nx, ny); return l ? [nx / l, ny / l] : [0, -1];
+}
+// Bewegen in kleinen Schritten; beiAufprall entscheidet, was passiert
+function bewege(o, dt, beiAufprall) {
+  const n = Math.max(1, Math.ceil(Math.hypot(o.vx, o.vy) * dt / 2));
+  for (let i = 0; i < n; i++) {
+    const nx = o.x + o.vx * dt / n, ny = o.y + o.vy * dt / n;
+    if (stoesst(nx, ny, o.r)) { const [ax, ay] = normale(nx, ny, o.r); beiAufprall(o, ax, ay); return true; }
+    o.x = nx; o.y = ny;
+  }
+  return false;
+}
+function abprallen(o, ax, ay, e, reib) {
+  const vn = o.vx * ax + o.vy * ay;
+  if (vn < 0) { o.vx -= (1 + e) * vn * ax; o.vy -= (1 + e) * vn * ay; o.vx *= reib; o.vy *= reib; }
+  else { o.x += ax; o.y += ay; }
+  return -vn;
+}
+// einen Pixel zur Seite laufen (klettert kleine Stufen)
+function schritt(o, d, klettern = 7) {
+  const nx = o.x + d;
+  if (!stoesst(nx, o.y, o.r)) {
+    for (let k = 1; k <= klettern; k++) if (stoesst(nx, o.y + k, o.r)) { o.x = nx; o.y += k - 1; return true; }
+    o.x = nx; o.luft = true; o.vx = d * 40; o.vy = 0; return true;
+  }
+  for (let k = 1; k <= klettern; k++) if (!stoesst(nx, o.y - k, o.r)) { o.x = nx; o.y -= k; return true; }
+  return false;
+}
+function freiMachen(o) { if (stoesst(o.x, o.y, o.r)) for (let k = 1; k < 30; k++) if (!stoesst(o.x, o.y - k, o.r)) { o.y -= k; break; } }
+
+// ---------- Würmer ----------
+function neuerWurm(team, name) {
+  let x, y, ok = false;
+  for (let v = 0; v < 400 && !ok; v++) {
+    x = rnd(120, W - 120);
+    for (y = 0; y < WASSER; y += 2) if (stoesst(x, y, R)) break;
+    y -= 2;
+    ok = y < WASSER - 60 && y > 40 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > 110);
+  }
+  return { team, name, x, y, vx: 0, vy: 0, r: R, hp: 100, luft: true, tot: false, richtung: Math.random() < .5 ? 1 : -1,
+           ziel: -0.6, laufen: 0, schritte: 0, dreh: 0, blinzeln: rnd(1, 4), samen: rnd(0, 9), aua: 0 };
+}
+
+function aktiver() { return spiel && spiel.wurm; }
+
+function schaden(w, n) {
+  if (w.tot || n <= 0) return;
+  w.hp = Math.max(0, w.hp - n); w.aua = 1;
+  texte.push({ x: w.x, y: w.y - 30, t: 0, text: '-' + n, farbe: TEAMS[w.team].farbe });
+  if (w === aktiver() && (spiel.phase === 'zielen' || spiel.phase === 'rueckzug')) spiel.phase = 'warten';
+}
+
+function updateWurm(w, dt) {
+  if (w.tot) return;
+  w.aua = Math.max(0, w.aua - dt * 2);
+  w.blinzeln -= dt; if (w.blinzeln < -0.15) w.blinzeln = rnd(2, 5);
+  if (w.luft) {
+    freiMachen(w);
+    w.vy += G * dt;
+    w.dreh += w.vx * dt * 0.05;
+    bewege(w, dt, (o, ax, ay) => {
+      const wucht = abprallen(o, ax, ay, 0.25, 0.65);
+      if (wucht > 480) schaden(o, Math.round((wucht - 480) / 9));
+      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; }
+    });
+  } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
+  if (w.y > WASSER + 8) ertrinken(w);
+}
+function ertrinken(w) {
+  w.tot = true; w.hp = 0; w.ertrunken = true;
+  platsch(w.x); ton.platsch();
+  texte.push({ x: w.x, y: WASSER - 30, t: 0, text: 'Blubb!', farbe: '#fff' });
+}
+function laufen(w, d, dt) {
+  w.laufen += 55 * dt; w.schritte += dt;
+  while (w.laufen >= 1) { w.laufen -= 1; if (!schritt(w, d)) { w.laufen = 0; break; } if (w.luft) break; }
+}
+function springen(w) {
+  if (w.luft) return;
+  w.vy = -290; w.vx = w.richtung * 120; w.luft = true; w.y -= 2; ton.boing();
+}
+
+// ---------- Explosion ----------
+function explosion(x, y, r, dmg) {
+  loch(x, y, r);
+  ton.bumm(r);
+  wackeln = Math.max(wackeln, r * 0.35);
+  teilchen.push({ art: 'ring', x, y, r: r * 0.4, max: r * 1.5, t: 0 });
+  teilchen.push({ art: 'blitz', x, y, r: r * 1.6, t: 0 });
+  for (let i = 0; i < 22; i++) { const a = rnd(0, 7), s = rnd(40, 260); teilchen.push({ art: 'feuer', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, t: 0, max: rnd(.3, .7), r: rnd(5, 11) }); }
+  for (let i = 0; i < 14; i++) { const a = rnd(0, 7), s = rnd(10, 90); teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0, max: rnd(1, 2), r: rnd(8, 16) }); }
+  for (let i = 0; i < 26; i++) { const a = rnd(Math.PI, Math.PI * 2), s = rnd(150, 450); teilchen.push({ art: 'brocken', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, max: rnd(.8, 1.6), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#4fae3f', '#5d3a20'][i % 4] }); }
+  // Würmer und Dinge wegschleudern
+  for (const o of [...wuermer, ...dinge]) {
+    if (o.tot) continue;
+    const dx = o.x - x, dy = o.y - y - 6, d = Math.hypot(dx, dy);
+    if (d > r + 16) continue;
+    const f = 1 - d / (r + 16), l = d || 1, k = 120 + f * 420;
+    o.vx += dx / l * k; o.vy += dy / l * k - 80 * f; o.luft = true; o.ruhe = false;
+    if (o.hp !== undefined) schaden(o, Math.max(1, Math.round(dmg * f)));
+  }
+}
+
+// ---------- Geschosse ----------
+function feuern(staerke) {
+  const w = aktiver(), art = spiel.waffe, team = spiel.teams[w.team];
+  if (team.munition[art] === 0) return;
+  if (team.munition[art] > 0) team.munition[art]--;
+  const a = w.ziel, v = staerke * MAX_V;
+  const x = w.x + Math.cos(a) * 16, y = w.y - 4 + Math.sin(a) * 16;
+  const o = { art, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 4, t: 0, besitzer: w, dreh: 0 };
+  if (art === 'granate') Object.assign(o, { r: 5, zuender: WAFFEN.granate.zuender });
+  if (art === 'banane') Object.assign(o, { r: 6, zuender: WAFFEN.banane.zuender });
+  if (art === 'schaf') Object.assign(o, { r: 8, x: w.x + w.richtung * 12, y: w.y - 4, vx: w.richtung * 60, vy: -150, luft: true,
+                                          richtung: w.richtung, zuender: WAFFEN.schaf.zuender, laufen: 0, spruenge: 0 });
+  freiMachen(o);
+  dinge.push(o);
+  art === 'schaf' ? ton.maeh() : ton.wusch();
+  spiel.phase = 'flug'; kam.frei = false;
+  zeigeWaffen();
+}
+
+function updateDing(o, dt) {
+  o.t += dt;
+  if (o.zuender !== undefined) { o.zuender -= dt; if (o.zuender <= 0) return platzen(o); }
+  if (o.art === 'bazooka' || o.art === 'baenanchen') {
+    o.vy += G * dt; if (o.art === 'bazooka') o.vx += spiel.wind * dt;
+    o.dreh = Math.atan2(o.vy, o.vx);
+    if (o.art === 'bazooka' && Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
+    if (o.art === 'baenanchen') o.dreh = o.t * 12;
+    if (bewege(o, dt, () => {})) return platzen(o);
+    for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && Math.hypot(w.x - o.x, w.y - o.y) < R + o.r + 2) return platzen(o);
+  } else if (o.art === 'granate' || o.art === 'banane') {
+    if (o.ruhe && !stoesst(o.x, o.y + 1, o.r)) o.ruhe = false;
+    if (!o.ruhe) {
+      o.vy += G * dt; o.dreh += o.vx * dt * .08;
+      bewege(o, dt, (o, ax, ay) => {
+        const wucht = abprallen(o, ax, ay, o.art === 'granate' ? .5 : .45, .8);
+        if (wucht > 60) ton.klack();
+        if (Math.hypot(o.vx, o.vy) < 20 && ay < -.3) { o.vx = o.vy = 0; o.ruhe = true; }
+      });
+    }
+  } else if (o.art === 'schaf') {
+    if (o.luft) {
+      o.vy += G * dt;
+      bewege(o, dt, (o, ax, ay) => { abprallen(o, ax, ay, .3, .7); if (ay < -.5) { o.vx = o.vy = 0; o.luft = false; } });
+    } else if (!stoesst(o.x, o.y + 1, o.r)) o.luft = true;
+    else {
+      o.laufen += 80 * dt;
+      while (o.laufen >= 1) {
+        o.laufen--;
+        if (!schritt(o, o.richtung, 6)) {
+          o.vy = -270; o.vx = o.richtung * 90; o.luft = true; o.y -= 2;
+          if (++o.spruenge > 3) { o.richtung *= -1; o.spruenge = 0; }
+          break;
+        }
+        if (o.luft) break;
+      }
+    }
+  }
+  if (o.y > WASSER + 5) { platsch(o.x); ton.platsch(); return false; }
+  if (o.x < -400 || o.x > W + 400) return false;
+  return true;
+}
+
+function platzen(o) {
+  const w = WAFFEN[o.art] || { radius: 30, schaden: 28 };
+  explosion(o.x, o.y, w.radius, w.schaden);
+  if (o.art === 'banane') {
+    for (let i = 0; i < 5; i++) dinge.push({ art: 'baenanchen', x: o.x, y: o.y - 4, vx: rnd(-240, 240), vy: rnd(-520, -320), r: 4, t: 0, dreh: 0 });
+  }
+  return false;
+}
+
+// ---------- Teilchen ----------
+function platsch(x) {
+  for (let i = 0; i < 24; i++) teilchen.push({ art: 'tropfen', x: x + rnd(-10, 10), y: WASSER, vx: rnd(-120, 120), vy: rnd(-380, -120), t: 0, max: 1.2, r: rnd(2, 4) });
+}
+function updateTeilchen(dt) {
+  for (const p of teilchen) {
+    p.t += dt;
+    if (p.vx !== undefined) { p.x += p.vx * dt; p.y += p.vy * dt; }
+    if (p.art === 'brocken' || p.art === 'tropfen' || p.art === 'konfetti') p.vy += G * dt;
+    if (p.art === 'rauch') { p.vx *= .97; p.vy -= 20 * dt; p.x += (spiel ? spiel.wind : 0) * dt * .15; }
+    if (p.art === 'feuer') { p.vx *= .93; p.vy *= .93; }
+  }
+  teilchen = teilchen.filter(p => p.t < (p.max || .4));
+  if (teilchen.length > 700) teilchen.splice(0, teilchen.length - 700);
+  for (const t of texte) { t.t += dt; t.y -= 30 * dt; }
+  texte = texte.filter(t => t.t < 1.6);
+}
+
+// ================= Spielablauf =================
+function neuesSpiel() {
+  baueLandschaft();
+  wuermer = []; dinge = []; teilchen = []; texte = []; graeber = [];
+  // abwechselnd verteilen, damit es gemischt ist
+  for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+  spiel = {
+    teams: TEAMS.map(() => ({ zeiger: -1, munition: { bazooka: -1, granate: -1, banane: WAFFEN.banane.start, schaf: WAFFEN.schaf.start } })),
+    dran: Math.random() < .5 ? 0 : 1, wurm: null, phase: 'warten', zugzeit: ZUGZEIT, rueckzug: 0, warte: 0,
+    wind: 0, waffe: 'bazooka', erster: true,
+  };
+  spiel.dran = 1 - spiel.dran;
+  ['oben', 'unten', 'ton'].forEach(id => $(id).classList.remove('versteckt'));
+  $('menu').classList.add('versteckt');
+  naechsterZug();
+}
+
+function naechsterZug() {
+  const lebt = t => wuermer.some(w => w.team === t && !w.tot);
+  if (!lebt(0) || !lebt(1)) return ende(lebt(0) ? 0 : lebt(1) ? 1 : -1);
+  spiel.dran = 1 - spiel.dran;
+  const team = spiel.teams[spiel.dran], liste = wuermer.filter(w => w.team === spiel.dran);
+  do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
+  spiel.wurm = liste[team.zeiger];
+  spiel.phase = 'zielen'; spiel.zugzeit = ZUGZEIT; spiel.zugStart = zeit;
+  spiel.wind = Math.round(rnd(-1, 1) * 10) / 10 * WIND_MAX;
+  spiel.waffe = 'bazooka';
+  kam.frei = false;
+  ansage(TEAMS[spiel.dran].name, spiel.wurm.name + ' ist dran!' + (spiel.erster ? '  Zieh vom Wurm weg zum Zielen.' : ''), TEAMS[spiel.dran].hell);
+  spiel.erster = false;
+  zeigeWaffen();
+}
+
+function ende(sieger) {
+  spiel.phase = 'ende';
+  const t = $('menutext');
+  t.innerHTML = sieger < 0 ? 'Unentschieden – alle Würmer sind weg!' : '<b style="color:' + TEAMS[sieger].farbe + ';font-size:28px">🏆 ' + TEAMS[sieger].name + ' gewinnt!</b>';
+  $('los').textContent = 'Nochmal!';
+  setTimeout(() => $('menu').classList.remove('versteckt'), 1200);
+  for (let i = 0; i < 160; i++) teilchen.push({ art: 'konfetti', x: kam.x + rnd(-500, 500), y: kam.y - rnd(300, 600), vx: rnd(-60, 60), vy: rnd(-100, 50), t: 0, max: 4, r: rnd(3, 6), farbe: ['#ffd84d', '#ff6b9a', '#6fe0ff', '#7dff8a', '#fff'][i % 5] });
+}
+
+function ruhig() { return !dinge.length && wuermer.every(w => w.tot || !w.luft); }
+
+function updateSpiel(dt) {
+  const w = aktiver();
+  const darfLaufen = (spiel.phase === 'zielen' || spiel.phase === 'rueckzug') && w && !w.tot;
+  if (darfLaufen && !w.luft) {
+    const d = (tasten.links ? -1 : 0) + (tasten.rechts ? 1 : 0);
+    if (d) {
+      if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; }
+      laufen(w, d, dt); kam.frei = false;
+    }
+    if (tasten.springen) { springen(w); tasten.springen = false; }
+  }
+  if (spiel.phase === 'zielen' && w) {
+    if (tasten.hoch || tasten.runter) { w.ziel += (tasten.hoch ? -1 : 1) * w.richtung * 1.6 * dt; begrenzeZiel(w); }
+    if (tasten.leertaste) spiel.ladung = Math.min(1, (spiel.ladung || 0) + dt / 1.4);
+  }
+  for (const x of wuermer) updateWurm(x, dt);
+  dinge = dinge.filter(o => updateDing(o, dt) !== false);
+  for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(Object.assign(g, { r: 6 })); g.vy = 0; } } }
+  graeber = graeber.filter(g => g.y < WASSER + 10);
+
+  if (spiel.phase === 'zielen') {
+    spiel.zugzeit -= dt;
+    if (spiel.zugzeit <= 0 || w.tot) spiel.phase = 'warten';
+  } else if (spiel.phase === 'flug') {
+    if (!dinge.length) { spiel.phase = 'rueckzug'; spiel.rueckzug = 3; }
+  } else if (spiel.phase === 'rueckzug') {
+    spiel.rueckzug -= dt;
+    if (spiel.rueckzug <= 0 || w.tot) spiel.phase = 'warten';
+  } else if (spiel.phase === 'warten') {
+    if (ruhig()) {
+      spiel.warte += dt;
+      if (spiel.warte > .7) {
+        spiel.warte = 0;
+        const opfer = wuermer.find(x => !x.tot && x.hp <= 0);
+        if (opfer) {                                   // Wurm mit 0 Leben verabschiedet sich
+          opfer.tot = true; graeber.push({ x: opfer.x, y: opfer.y, vy: 0, r: 6, farbe: TEAMS[opfer.team].farbe });
+          explosion(opfer.x, opfer.y, 22, 10);
+        } else naechsterZug();
+      }
+    } else spiel.warte = 0;
+  }
+}
+function begrenzeZiel(w) {
+  let rel = w.richtung === 1 ? w.ziel : Math.PI - w.ziel;
+  rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+  rel = Math.max(-1.55, Math.min(1.55, rel));
+  w.ziel = w.richtung === 1 ? rel : Math.PI - rel;
+}
+
+// ================= Steuerung =================
+const tasten = {};
+const leinwand = $('bild'), ctx = leinwand.getContext('2d');
+let zielt = null, schieben = null;
+
+function wurmAufBild(w) { return { x: (w.x - kam.x) * massstab + bw / 2, y: (w.y - kam.y) * massstab + bh / 2 }; }
+
+leinwand.addEventListener('pointerdown', e => {
+  ton.an();
+  if (!spiel || spiel.phase === 'ende') return;
+  const schaf = dinge.find(o => o.art === 'schaf');
+  if (schaf && spiel.phase === 'flug') { schaf.zuender = 0; return; }   // Schaf zünden
+  const w = aktiver();
+  if (spiel.phase === 'zielen' && w && !w.tot) {
+    const p = wurmAufBild(w);
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 110) { zielt = { id: e.pointerId, staerke: 0 }; return; }
+  }
+  schieben = { id: e.pointerId, x: e.clientX, y: e.clientY };
+});
+addEventListener('pointermove', e => {
+  if (zielt && zielt.id === e.pointerId) {
+    const w = aktiver(), p = wurmAufBild(w);
+    const dx = p.x - e.clientX, dy = p.y - e.clientY;   // Steinschleuder: in Gegenrichtung schießen
+    zielt.staerke = Math.min(1, Math.hypot(dx, dy) / 200);
+    if (Math.abs(dx) > 4) w.richtung = dx > 0 ? 1 : -1;
+    w.ziel = Math.atan2(dy, dx); begrenzeZiel(w);
+  } else if (schieben && schieben.id === e.pointerId) {
+    kam.x -= (e.clientX - schieben.x) / massstab; kam.y -= (e.clientY - schieben.y) / massstab;
+    schieben.x = e.clientX; schieben.y = e.clientY; kam.frei = true;
+  }
+});
+function loslassen(e) {
+  if (zielt && zielt.id === e.pointerId) {
+    if (zielt.staerke > .12 && spiel.phase === 'zielen') feuern(zielt.staerke);
+    zielt = null;
+  }
+  if (schieben && schieben.id === e.pointerId) schieben = null;
+}
+addEventListener('pointerup', loslassen);
+addEventListener('pointercancel', loslassen);
+
+function halten(id, taste) {
+  const el = $(id);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); ton.an(); tasten[taste] = true; });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, () => { if (taste !== 'springen') tasten[taste] = false; });
+}
+halten('links', 'links'); halten('rechts', 'rechts'); halten('springen', 'springen');
+
+document.querySelectorAll('.waffe').forEach(b => b.onclick = () => {
+  if (!spiel || spiel.phase !== 'zielen') return;
+  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) return;
+  spiel.waffe = b.dataset.w; zeigeWaffen();
+});
+function zeigeWaffen() {
+  if (!spiel) return;
+  const m = spiel.teams[spiel.dran].munition;
+  document.querySelectorAll('.waffe').forEach(b => {
+    const n = m[b.dataset.w];
+    b.classList.toggle('an', b.dataset.w === spiel.waffe);
+    b.classList.toggle('leer', n === 0);
+    const s = b.querySelector('small'); if (s) s.textContent = n < 0 ? '' : '×' + n;
+  });
+}
+
+const TASTEN = { ArrowLeft: 'links', ArrowRight: 'rechts', ArrowUp: 'hoch', ArrowDown: 'runter', Enter: 'springen', ' ': 'leertaste' };
+addEventListener('keydown', e => {
+  const t = TASTEN[e.key]; if (!t) { const n = '1234'.indexOf(e.key); if (n >= 0) document.querySelectorAll('.waffe')[n].click(); return; }
+  e.preventDefault(); ton.an();
+  if (t === 'leertaste' && spiel && spiel.phase === 'flug') { const s = dinge.find(o => o.art === 'schaf'); if (s) s.zuender = 0; }
+  if (!e.repeat) tasten[t] = true;
+});
+addEventListener('keyup', e => {
+  const t = TASTEN[e.key]; if (!t) return;
+  tasten[t] = false;
+  if (t === 'leertaste' && spiel && spiel.phase === 'zielen' && spiel.ladung) { feuern(Math.max(.15, spiel.ladung)); }
+  if (t === 'leertaste' && spiel) spiel.ladung = 0;
+});
+
+$('los').onclick = () => { ton.an(); neuesSpiel(); };
+$('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
+
+let ansageZeit;
+function ansage(gross, klein, farbe) {
+  const a = $('ansage');
+  a.querySelector('b').textContent = gross; a.querySelector('b').style.color = farbe || '#fff';
+  a.querySelector('span').textContent = klein;
+  a.classList.add('zeigen'); clearTimeout(ansageZeit);
+  ansageZeit = setTimeout(() => a.classList.remove('zeigen'), 2600);
+}
+
+// ================= Töne (selbst erzeugt, keine Dateien) =================
+const ton = {
+  ac: null, stumm: false,
+  an() { if (!this.ac) try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } if (this.ac && this.ac.state === 'suspended') this.ac.resume(); },
+  rauschen(dauer, f1, f2, laut) {
+    if (!this.ac || this.stumm) return;
+    const ac = this.ac, n = ac.sampleRate * dauer, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const q = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t = ac.currentTime;
+    q.buffer = buf; f.type = 'lowpass'; f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + dauer);
+    g.gain.setValueAtTime(laut, t); g.gain.exponentialRampToValueAtTime(.001, t + dauer);
+    q.connect(f).connect(g).connect(ac.destination); q.start();
+  },
+  piep(f1, f2, dauer, typ, laut) {
+    if (!this.ac || this.stumm) return;
+    const ac = this.ac, o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = typ; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dauer);
+    g.gain.setValueAtTime(laut, t); g.gain.exponentialRampToValueAtTime(.001, t + dauer);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(t + dauer);
+  },
+  bumm(r) { this.rauschen(.5 + r / 80, 1400, 60, .9); this.piep(110, 35, .5, 'sine', .6); },
+  wusch() { this.rauschen(.35, 3000, 400, .25); },
+  boing() { this.piep(250, 620, .18, 'square', .08); },
+  klack() { this.piep(320, 180, .06, 'triangle', .2); },
+  platsch() { this.rauschen(.6, 2500, 200, .4); },
+  maeh() {
+    if (!this.ac || this.stumm) return;
+    const ac = this.ac, o = ac.createOscillator(), l = ac.createOscillator(), lg = ac.createGain(), g = ac.createGain(), t = ac.currentTime;
+    o.type = 'sawtooth'; o.frequency.value = 480; l.frequency.value = 22; lg.gain.value = 40;
+    l.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.15, t + .05); g.gain.exponentialRampToValueAtTime(.001, t + .7);
+    o.connect(g).connect(ac.destination); o.start(); l.start(); o.stop(t + .7); l.stop(t + .7);
+  },
+};
+
+// ================= Zeichnen =================
+let bw = 0, bh = 0, dpr = 1, massstab = 1;
+function groesse() {
+  dpr = Math.min(2, devicePixelRatio || 1);
+  bw = innerWidth; bh = innerHeight;
+  leinwand.width = bw * dpr; leinwand.height = bh * dpr;
+  massstab = Math.min(bh / 760, bw / 1000);
+}
+addEventListener('resize', groesse); groesse();
+
+for (let i = 0; i < 9; i++) wolken.push({ x: rnd(0, W), y: rnd(60, 380), s: rnd(.6, 1.4) });
+
+function kamera(dt) {
+  let ziel = null;
+  if (dinge.length) ziel = dinge[dinge.length - 1];
+  else if (spiel) {
+    const fliegt = wuermer.find(w => !w.tot && w.luft && Math.hypot(w.vx, w.vy) > 60);
+    if (fliegt) ziel = fliegt;
+    else if (!kam.frei && spiel.wurm) ziel = spiel.wurm;
+  }
+  if (ziel) {
+    const k = Math.min(1, dt * 4);
+    kam.x += (ziel.x - kam.x) * k; kam.y += (ziel.y - 80 - kam.y) * k;
+  }
+  const vw = bw / massstab, vh = bh / massstab;
+  kam.x = vw >= W ? W / 2 : Math.max(vw / 2, Math.min(W - vw / 2, kam.x));
+  kam.y = vh >= H ? H - vh / 2 : Math.max(vh / 2 - 300, Math.min(H - vh / 2, kam.y));
+}
+
+function zeichneHimmel() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, 0, bh);
+  g.addColorStop(0, '#5bb6ec'); g.addColorStop(.55, '#a9dcf5'); g.addColorStop(1, '#fdf0d0');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, bw, bh);
+  // Sonne
+  const sx = bw * .8 - (kam.x / W) * 60, sy = bh * .18;
+  const s = ctx.createRadialGradient(sx, sy, 10, sx, sy, 140);
+  s.addColorStop(0, 'rgba(255,250,210,1)'); s.addColorStop(.25, 'rgba(255,240,170,.8)'); s.addColorStop(1, 'rgba(255,240,170,0)');
+  ctx.fillStyle = s; ctx.beginPath(); ctx.arc(sx, sy, 140, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.arc(sx, sy, 34, 0, 7); ctx.fill();
+  // Berge im Hintergrund (bewegen sich langsamer = Tiefe)
+  berge(.25, 640, '#9fcfe0', 140, .0025, 1);
+  wolkenZeichnen();
+  berge(.45, 760, '#86c3a6', 110, .004, 2);
+}
+function berge(p, basis, farbe, hoehe, frq, s) {
+  ctx.fillStyle = farbe; ctx.beginPath(); ctx.moveTo(0, bh);
+  for (let x = 0; x <= bw + 10; x += 10) {
+    const lx = (x - bw / 2) / (massstab * p) + kam.x * 1;
+    const ly = basis - (Math.sin(lx * frq + s) * .6 + Math.sin(lx * frq * 2.3 + s * 3) * .3 + 1) * hoehe;
+    ctx.lineTo(x, (ly - kam.y) * massstab * p + bh / 2 + bh * .12 * (1 - p));
+  }
+  ctx.lineTo(bw, bh); ctx.fill();
+}
+function wolkenZeichnen() {
+  const p = .5;
+  for (const w of wolken) {
+    const x = ((w.x - kam.x) * massstab * p % (W * massstab * p) + W * massstab * p * 1.5) % (W * massstab * p) - W * massstab * p * .25;
+    const y = (w.y - kam.y) * massstab * p + bh / 2;
+    const s = w.s * massstab * 1.2;
+    ctx.fillStyle = 'rgba(255,255,255,.88)';
+    for (const [dx, dy, r] of [[0, 0, 26], [28, -10, 30], [58, 2, 24], [26, 8, 26], [-22, 6, 18]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, 7); ctx.fill(); }
+  }
+}
+
+function welle(y0, farbe, amp, phase, links, rechts, unten) {
+  ctx.fillStyle = farbe; ctx.beginPath(); ctx.moveTo(links, unten);
+  for (let x = links; x <= rechts; x += 12) ctx.lineTo(x, y0 + Math.sin(x * .018 + zeit * 1.6 + phase) * amp + Math.sin(x * .041 - zeit * 2.1 + phase) * amp * .4);
+  ctx.lineTo(rechts, unten); ctx.fill();
+}
+
+function zeichneWurm(w) {
+  const f = w.richtung, wipp = Math.sin(zeit * 3 + w.samen) * 1.2, team = TEAMS[w.team];
+  const lauf = !w.luft && (tasten.links || tasten.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
+  ctx.save(); ctx.translate(w.x, w.y);
+  if (w.luft) ctx.rotate(w.dreh);
+  if (w.aua > 0) ctx.translate(Math.sin(zeit * 60) * w.aua * 2, 0);
+  // Körper als Kurve vom Schwanz zum Kopf
+  const kx = 2 * f, ky = -11 + wipp;
+  const linie = () => { ctx.beginPath(); ctx.moveTo(-10 * f, 7 + lauf * .3); ctx.quadraticCurveTo(-1 * f, 9 - lauf, 2 * f, 1); ctx.quadraticCurveTo(4 * f, -4, kx, ky); };
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#a84a62'; ctx.lineWidth = 13.5; linie(); ctx.stroke();
+  ctx.strokeStyle = '#f7a8b8'; ctx.lineWidth = 10.5; linie(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,225,232,.8)'; ctx.lineWidth = 3; ctx.save(); ctx.translate(f * 1.5, -1); linie(); ctx.stroke(); ctx.restore();
+  // Ringe
+  ctx.strokeStyle = 'rgba(168,74,98,.45)'; ctx.lineWidth = 1.2;
+  for (const [x, y] of [[-6 * f, 7.5], [-2 * f, 6.5]]) { ctx.beginPath(); ctx.moveTo(x - 1, y - 4); ctx.lineTo(x + 1, y + 4); ctx.stroke(); }
+  // Kopf
+  ctx.fillStyle = '#f7a8b8'; ctx.strokeStyle = '#a84a62'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(kx, ky, 8, 0, 7); ctx.fill(); ctx.stroke();
+  // Stirnband in Teamfarbe
+  ctx.save(); ctx.beginPath(); ctx.arc(kx, ky, 8, 0, 7); ctx.clip();
+  ctx.fillStyle = team.farbe; ctx.fillRect(kx - 9, ky - 6.5, 18, 3.4); ctx.restore();
+  const flattern = Math.sin(zeit * 8 + w.samen) * 1.5;
+  ctx.fillStyle = team.farbe; ctx.beginPath();
+  ctx.moveTo(kx - 6.5 * f, ky - 5.5); ctx.lineTo(kx - 13 * f, ky - 8 + flattern); ctx.lineTo(kx - 12 * f, ky - 3 + flattern); ctx.fill();
+  // Augen
+  const zu = w.blinzeln < 0 ? .15 : 1;
+  const bx = Math.cos(w.ziel) * 1.2, by = Math.sin(w.ziel) * 1.2;
+  for (const ax of [kx + .5 * f, kx + 4.8 * f]) {
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a2232'; ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.ellipse(ax, ky - .5, 2.7, 3.4 * zu, 0, 0, 7); ctx.fill(); ctx.stroke();
+    if (zu > .5) { ctx.fillStyle = '#1b1b2b'; ctx.beginPath(); ctx.arc(ax + bx, ky - .3 + by, 1.4, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ax + bx + .5, ky - 1 + by, .5, 0, 7); ctx.fill(); }
+  }
+  // Mund und Bäckchen
+  ctx.strokeStyle = '#7a2a3e'; ctx.lineWidth = 1.1;
+  ctx.beginPath(); w.hp < 30 ? ctx.arc(kx + 3 * f, ky + 5.5, 1.8, Math.PI + .3, -.3) : ctx.arc(kx + 3 * f, ky + 3, 2, .3, Math.PI - .3); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,110,140,.45)'; ctx.beginPath(); ctx.arc(kx + 6.5 * f, ky + 2.5, 1.6, 0, 7); ctx.fill();
+  ctx.restore();
+  // Waffe in der Hand
+  if (spiel && w === aktiver() && spiel.phase === 'zielen' && !w.luft) zeichneWaffe(w);
+}
+
+function zeichneWaffe(w) {
+  ctx.save(); ctx.translate(w.x + w.richtung * 3, w.y - 3); ctx.rotate(w.ziel); if (w.richtung < 0) ctx.scale(1, -1);
+  const a = spiel.waffe;
+  if (a === 'bazooka') {
+    ctx.fillStyle = '#5c6b3a'; ctx.strokeStyle = '#2d3520'; ctx.lineWidth = 1;
+    ctx.fillRect(-6, -3, 24, 6); ctx.strokeRect(-6, -3, 24, 6);
+    ctx.fillStyle = '#3a4426'; ctx.fillRect(16, -4, 4, 8); ctx.fillRect(-7, -4, 3, 8);
+    ctx.fillStyle = '#c9a227'; ctx.fillRect(4, -3, 3, 6);
+  } else if (a === 'granate') bombe(10, 0, 0);
+  else if (a === 'banane') banane(10, 0, 0);
+  else if (a === 'schaf') { ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐑', 10, 0); }
+  ctx.restore();
+}
+function bombe(x, y, d) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(d);
+  ctx.fillStyle = '#3f5f2c'; ctx.strokeStyle = '#1e2e14'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+  ctx.fillStyle = '#888'; ctx.fillRect(-1.5, -8, 3, 3);
+  ctx.strokeStyle = '#bbb'; ctx.beginPath(); ctx.arc(2.5, -8, 2, 0, 7); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(-2, -2, 1.6, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function banane(x, y, d, k = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(d); ctx.scale(k, k);
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#a07a10'; ctx.lineWidth = 6.5;
+  ctx.beginPath(); ctx.arc(0, -5, 8, .35, Math.PI - .35); ctx.stroke();
+  ctx.strokeStyle = '#ffd93b'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(0, -5, 8, .35, Math.PI - .35); ctx.stroke();
+  ctx.strokeStyle = '#fff3a0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, -5, 9, .7, Math.PI - .7); ctx.stroke();
+  ctx.restore();
+}
+function schaf(o) {
+  const hupf = o.luft ? 0 : Math.abs(Math.sin(o.t * 12)) * 2, f = o.richtung;
+  const rot = o.zuender < 2 && Math.sin(o.t * 30) > 0;
+  ctx.save(); ctx.translate(o.x, o.y - hupf - 3); ctx.scale(1.35, 1.35);
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+  for (const [lx, ph] of [[-5, 0], [-2, 2], [3, 1], [6, 3]]) { ctx.beginPath(); ctx.moveTo(lx, 4); ctx.lineTo(lx + Math.sin(o.t * 16 + ph) * 2, 9 + hupf); ctx.stroke(); }
+  ctx.fillStyle = rot ? '#ffd0d0' : '#fff'; ctx.strokeStyle = '#b8b8b8'; ctx.lineWidth = 1;
+  for (const [x, y, r] of [[-5, -1, 5], [0, -3, 5.5], [5, -1, 5], [-2, 2, 5], [3, 2, 5]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle = '#2a2a2a'; ctx.beginPath(); ctx.ellipse(9 * f, -2, 4, 3.3, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7 * f, -5, 2.5, 1.2, -.5 * f, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(10 * f, -3, 1.1, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+function zeichneDing(o) {
+  if (o.art === 'bazooka') {
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
+    ctx.fillStyle = 'rgba(255,170,40,.9)'; ctx.beginPath(); ctx.moveTo(-8, -2.5); ctx.lineTo(-16 - Math.random() * 6, 0); ctx.lineTo(-8, 2.5); ctx.fill();
+    ctx.fillStyle = '#6b7a46'; ctx.fillRect(-8, -3, 12, 6);
+    ctx.fillStyle = '#d33'; ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(10, 0); ctx.lineTo(4, 3); ctx.fill();
+    ctx.fillStyle = '#3a4426'; ctx.beginPath(); ctx.moveTo(-8, -3); ctx.lineTo(-11, -6); ctx.lineTo(-5, -3); ctx.moveTo(-8, 3); ctx.lineTo(-11, 6); ctx.lineTo(-5, 3); ctx.fill();
+    ctx.restore();
+  } else if (o.art === 'granate') bombe(o.x, o.y, o.dreh);
+  else if (o.art === 'banane') banane(o.x, o.y + 4, o.dreh);
+  else if (o.art === 'baenanchen') banane(o.x, o.y + 3, o.dreh, .6);
+  else if (o.art === 'schaf') schaf(o);
+  if (o.zuender !== undefined && o.art !== 'schaf') {
+    ctx.font = 'bold 13px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#000a'; ctx.fillStyle = '#fff';
+    const s = Math.ceil(o.zuender); ctx.strokeText(s, o.x, o.y - 14); ctx.fillText(s, o.x, o.y - 14);
+  }
+}
+
+function zeichneGrab(g) {
+  ctx.save(); ctx.translate(g.x, g.y + 6);
+  ctx.fillStyle = '#9aa3ad'; ctx.strokeStyle = '#5b636c'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-7, -12); ctx.arc(0, -12, 7, Math.PI, 0); ctx.lineTo(7, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = g.farbe; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(0, -6); ctx.moveTo(-3.5, -12.5); ctx.lineTo(3.5, -12.5); ctx.stroke();
+  ctx.restore();
+}
+
+function zeichneTeilchen(p) {
+  const k = p.t / (p.max || .4);
+  if (p.art === 'feuer') { ctx.fillStyle = `rgba(255,${200 - k * 170 | 0},${60 - k * 60 | 0},${1 - k})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 - k * .6), 0, 7); ctx.fill(); }
+  else if (p.art === 'rauch') { ctx.fillStyle = `rgba(90,90,95,${.45 * (1 - k)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + k * 1.5), 0, 7); ctx.fill(); }
+  else if (p.art === 'brocken' || p.art === 'konfetti') { ctx.fillStyle = p.farbe; ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.art === 'konfetti' ? p.r * Math.abs(Math.sin(p.t * 8)) + 1 : p.r); ctx.globalAlpha = 1; }
+  else if (p.art === 'tropfen') { ctx.fillStyle = `rgba(200,235,255,${1 - k})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+  else if (p.art === 'ring') { ctx.strokeStyle = `rgba(255,255,230,${(1 - k) * .8})`; ctx.lineWidth = 5 * (1 - k); ctx.beginPath(); ctx.arc(p.x, p.y, p.r + (p.max - p.r) * k, 0, 7); ctx.stroke(); }
+  else if (p.art === 'blitz') { const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r); g.addColorStop(0, `rgba(255,255,220,${(1 - k * 2.5)})`); g.addColorStop(1, 'rgba(255,200,100,0)'); if (k < .4) { ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); } }
+}
+
+function zeichneZielhilfe(w) {
+  const staerke = zielt ? zielt.staerke : spiel.ladung || 0;
+  const cx = w.x + Math.cos(w.ziel) * 16, cy = w.y - 4 + Math.sin(w.ziel) * 16;
+  // Fadenkreuz
+  const fx = w.x + Math.cos(w.ziel) * 55, fy = w.y - 4 + Math.sin(w.ziel) * 55;
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(fx, fy, 6, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#e33'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(fx, fy, 6, 0, 7); ctx.moveTo(fx - 9, fy); ctx.lineTo(fx + 9, fy); ctx.moveTo(fx, fy - 9); ctx.lineTo(fx, fy + 9); ctx.stroke();
+  if (staerke <= 0) return;
+  // Flugbahn-Vorschau (ohne Wind)
+  if (spiel.waffe !== 'schaf') {
+    let x = cx, y = cy, vx = Math.cos(w.ziel) * staerke * MAX_V, vy = Math.sin(w.ziel) * staerke * MAX_V;
+    for (let i = 0; i < 26; i++) {
+      for (let j = 0; j < 2; j++) { vy += G / 60; x += vx / 60; y += vy / 60; }
+      ctx.fillStyle = `rgba(255,255,255,${.9 - i / 30})`; ctx.beginPath(); ctx.arc(x, y, 3 - i / 13, 0, 7); ctx.fill();
+    }
+  }
+  // Kraft-Balken als bunter Fächer
+  for (let i = 0; i < 12 * staerke; i++) {
+    const d = 18 + i * 4;
+    ctx.fillStyle = `hsl(${60 - i * 5},100%,55%)`;
+    ctx.beginPath(); ctx.arc(w.x + Math.cos(w.ziel) * d, w.y - 4 + Math.sin(w.ziel) * d, 1.5 + i * .35, 0, 7); ctx.fill();
+  }
+}
+
+function namensschild(w) {
+  const t = TEAMS[w.team], y = w.y - 30;
+  ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)';
+  ctx.strokeText(w.name, w.x, y - 12); ctx.fillStyle = t.hell; ctx.fillText(w.name, w.x, y - 12);
+  const txt = String(w.hp), bb = ctx.measureText(txt).width + 10;
+  ctx.fillStyle = t.farbe; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(w.x - bb / 2, y - 8, bb, 14, 5) : ctx.rect(w.x - bb / 2, y - 8, bb, 14); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillText(txt, w.x, y + 3);
+}
+
+function zeichne() {
+  zeichneHimmel();
+  if (!erde) return;
+  const shx = (Math.random() - .5) * wackeln, shy = (Math.random() - .5) * wackeln;
+  ctx.setTransform(dpr * massstab, 0, 0, dpr * massstab, dpr * (bw / 2 - kam.x * massstab + shx), dpr * (bh / 2 - kam.y * massstab + shy));
+  const links = kam.x - bw / 2 / massstab - 20, rechts = kam.x + bw / 2 / massstab + 20, unten = kam.y + bh / 2 / massstab + 20;
+  welle(WASSER - 14, '#3b8fc9', 5, 2, links, rechts, unten);
+  ctx.drawImage(wand, 0, 0);
+  ctx.drawImage(erde, 0, 0);
+  for (const g of graeber) zeichneGrab(g);
+  for (const w of wuermer) if (!w.tot) zeichneWurm(w);
+  for (const o of dinge) zeichneDing(o);
+  for (const p of teilchen) zeichneTeilchen(p);
+  welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
+  welle(WASSER + 10, 'rgba(30,100,175,.85)', 5, 4, links, rechts, unten);
+  // Glitzer auf dem Wasser
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  for (let x = Math.floor(links / 90) * 90; x < rechts; x += 90) { const s = Math.sin(zeit * 2 + x) * .5 + .5; ctx.fillRect(x + (x * 7 % 40), WASSER + 2 + (x * 13 % 20), 10 * s, 1.5); }
+  for (const w of wuermer) if (!w.tot) namensschild(w);
+  const w = aktiver();
+  if (spiel && w && !w.tot && spiel.phase === 'zielen') {
+    zeichneZielhilfe(w);
+    const hy = w.y - 62 + Math.sin(zeit * 6) * 4;              // Pfeil über dem aktiven Wurm
+    ctx.fillStyle = TEAMS[w.team].farbe; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(w.x - 8, hy); ctx.lineTo(w.x + 8, hy); ctx.lineTo(w.x, hy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  for (const t of texte) {
+    ctx.globalAlpha = Math.min(1, 1.6 - t.t);
+    ctx.font = 'bold 18px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#fff';
+    ctx.strokeText(t.text, t.x, t.y); ctx.fillStyle = t.farbe; ctx.fillText(t.text, t.x, t.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+let hudZeit = 0;
+function hud() {
+  if (!spiel) return;
+  for (let t = 0; t < 2; t++) {
+    const sum = wuermer.filter(w => w.team === t && !w.tot).reduce((s, w) => s + w.hp, 0);
+    $('hp' + t).style.width = sum / 4 + '%';
+  }
+  const z = $('zeit'), s = spiel.phase === 'rueckzug' ? Math.ceil(spiel.rueckzug) : Math.max(0, Math.ceil(spiel.zugzeit));
+  z.textContent = s; z.classList.toggle('knapp', spiel.phase === 'zielen' && s <= 10 || spiel.phase === 'rueckzug');
+  const wi = spiel.wind / WIND_MAX, b = $('windbar').firstElementChild;
+  b.style.left = (wi < 0 ? 50 + wi * 50 : 50) + '%'; b.style.width = Math.abs(wi) * 50 + '%';
+}
+
+// ================= Hauptschleife =================
+const SCHRITT = 1 / 60;
+let vorher = performance.now(), rest = 0;
+function schleife(jetzt) {
+  rest += Math.min(.1, (jetzt - vorher) / 1000); vorher = jetzt;
+  while (rest >= SCHRITT) {
+    rest -= SCHRITT; zeit += SCHRITT;
+    for (const w of wolken) w.x += ((spiel ? spiel.wind : 30) * .15 + 6) * SCHRITT;
+    if (spiel && spiel.phase !== 'ende') updateSpiel(SCHRITT);
+    else if (spiel) { for (const w of wuermer) updateWurm(w, SCHRITT); }
+    updateTeilchen(SCHRITT);
+    wackeln *= .9;
+    kamera(SCHRITT);
+  }
+  zeichne();
+  if (jetzt - hudZeit > 100) { hud(); hudZeit = jetzt; }
+  requestAnimationFrame(schleife);
+}
+// Hintergrund-Welt fürs Menü
+baueLandschaft();
+for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+kam.x = W / 2; kam.y = H * .55;
+requestAnimationFrame(schleife);
+// Würmer im Menü fallen auch auf den Boden
+setInterval(() => { if (!spiel) for (const w of wuermer) updateWurm(w, 1 / 30); }, 33);
+
+// Offline-Fähigkeit (funktioniert nur über https oder localhost)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
