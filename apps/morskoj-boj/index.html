@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Морской бой">
+<meta name="theme-color" content="#010a07">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Морской бой</title>
+<style>
+  /* Farben an einer Stelle – so kann man sie leicht gemeinsam ändern */
+  :root{
+    --bg:#010a07; --g:#39ff8a; --g-dim:#1d8a52; --g-dark:#06301e; --panel:rgba(6,40,26,.55);
+    --hit:#ff7a2e; --miss:#7fe3ff; --sunk:#ff3b3b; --gold:#ffd54a; --text:#c9ffe0;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+  body{color:var(--text);font:17px/1.35 -apple-system,system-ui,sans-serif;position:fixed;inset:0;
+       -webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-touch-callout:none}
+  /* Bildschirm-Streifen wie bei einem alten Monitor */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse at 50% 40%,#06301e 0%,#021209 55%,#000 100%)}
+
+  .screen{position:absolute;inset:0;z-index:1;display:none;flex-direction:column;align-items:center;
+    padding:calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 10px)}
+  .screen.on{display:flex;animation:einblenden .35s ease}
+  @keyframes einblenden{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+
+  h1,h2,.mono{font-family:var(--mono);letter-spacing:.06em}
+  .glow{color:var(--g);text-shadow:0 0 6px rgba(57,255,138,.8),0 0 22px rgba(57,255,138,.45)}
+
+  button{font:600 17px/1 var(--mono);letter-spacing:.06em;color:var(--g);cursor:pointer;
+    background:linear-gradient(180deg,rgba(57,255,138,.14),rgba(57,255,138,.04));
+    border:1.5px solid rgba(57,255,138,.7);border-radius:12px;padding:15px 20px;
+    box-shadow:0 0 14px rgba(57,255,138,.22),inset 0 0 12px rgba(57,255,138,.1);text-shadow:0 0 8px rgba(57,255,138,.6);
+    transition:transform .08s,box-shadow .2s,opacity .2s}
+  button:active{transform:scale(.96);box-shadow:0 0 26px rgba(57,255,138,.55),inset 0 0 18px rgba(57,255,138,.3)}
+  button:disabled{opacity:.3;box-shadow:none}
+  button small{display:block;font-weight:400;font-size:12px;opacity:.75;margin-top:6px;letter-spacing:.04em}
+  .rund{width:44px;height:44px;padding:0;border-radius:50%;font-size:20px;display:grid;place-items:center}
+
+  /* ---------- Menü ---------- */
+  #s-menu{justify-content:center;gap:min(3vh,22px)}
+  .radar{position:relative;width:min(62vw,40vh);aspect-ratio:1;border-radius:50%;overflow:hidden;flex:none;
+    border:2px solid rgba(57,255,138,.75);box-shadow:0 0 40px rgba(57,255,138,.35),inset 0 0 50px rgba(0,0,0,.8);
+    background:
+      linear-gradient(rgba(57,255,138,.25),rgba(57,255,138,.25)) 50% 0/1px 100% no-repeat,
+      linear-gradient(rgba(57,255,138,.25),rgba(57,255,138,.25)) 0 50%/100% 1px no-repeat,
+      repeating-radial-gradient(circle,transparent 0 calc(12.5% - 1px),rgba(57,255,138,.28) calc(12.5% - 1px) 12.5%),
+      radial-gradient(circle,#0a4a2c 0%,#031a10 70%,#010805 100%)}
+  .radar .strahl{position:absolute;inset:0;border-radius:50%;animation:drehen 4s linear infinite;
+    background:conic-gradient(from 0deg,transparent 0deg,transparent 290deg,rgba(57,255,138,.08) 300deg,rgba(57,255,138,.55) 359deg,rgba(190,255,215,.9) 360deg)}
+  @keyframes drehen{to{transform:rotate(360deg)}}
+  .radar .blip{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;background:#b8ffd6;
+    box-shadow:0 0 10px 4px rgba(57,255,138,.8);animation:blip 3.6s ease-out forwards}
+  @keyframes blip{0%{opacity:0;transform:scale(.3)}8%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(.7)}}
+  .titel{text-align:center}
+  .titel h1{margin:0;font-size:clamp(34px,8vw,64px)}
+  .titel p{margin:4px 0 0;font:600 clamp(13px,3vw,18px) var(--mono);letter-spacing:.5em;color:var(--g-dim)}
+  .menue{display:grid;gap:12px;width:min(92vw,420px)}
+  .menue .zeile{display:flex;gap:12px;justify-content:center}
+  #s-menu .ecke{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px}
+
+  /* ---------- Spielfeld (Board) ---------- */
+  .board{--cell:30px;display:grid;flex:none;
+    grid-template-columns:calc(var(--cell)*.6) calc(var(--cell)*10);
+    grid-template-rows:calc(var(--cell)*.6) calc(var(--cell)*10)}
+  .board .cols{grid-column:2;display:flex}
+  .board .rows{grid-row:2;display:flex;flex-direction:column}
+  .board .cols span,.board .rows span{flex:1;display:grid;place-items:center;font:600 calc(var(--cell)*.36) var(--mono);color:var(--g-dim)}
+  .field{grid-column:2;grid-row:2;position:relative;width:calc(var(--cell)*10);height:calc(var(--cell)*10);
+    border:1.5px solid rgba(57,255,138,.7);border-radius:6px;box-shadow:0 0 22px rgba(57,255,138,.28);overflow:hidden;background:#010805}
+  .field canvas{position:absolute;inset:0;width:100%;height:100%}
+  .board.eigen .field{border-color:rgba(58,215,255,.7);box-shadow:0 0 22px rgba(58,215,255,.25)}
+  .board.eigen .cols span,.board.eigen .rows span{color:#2a7f99}
+  .board.aktiv .field{box-shadow:0 0 34px rgba(255,90,60,.55);border-color:#ff6a50}
+
+  .ships,.cells{position:absolute;inset:0}
+  .ships{pointer-events:none}
+  .cells{display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);pointer-events:none}
+  .board.zielen .cells{pointer-events:auto}
+  .cell{position:relative}
+  .board.zielen .cell:not([class*=" m-"]):active{background:rgba(57,255,138,.15)}
+
+  /* Markierungen: Wasser, Treffer, versenkt */
+  .cell.m-miss::after{content:"";position:absolute;left:50%;top:50%;width:24%;height:24%;margin:-12%;border-radius:50%;
+    background:var(--miss);box-shadow:0 0 6px 2px rgba(127,227,255,.6)}
+  .cell.m-hit::before,.cell.m-sunk::before{content:"";position:absolute;inset:8%;border-radius:50%;
+    background:radial-gradient(circle,#fff6c0 0%,#ffb238 30%,rgba(255,80,20,.6) 60%,transparent 72%);animation:flackern .5s infinite alternate}
+  .cell.m-hit::after,.cell.m-sunk::after{content:"";position:absolute;inset:18%;
+    background:linear-gradient(45deg,transparent 42%,var(--hit) 42% 58%,transparent 58%),linear-gradient(-45deg,transparent 42%,var(--hit) 42% 58%,transparent 58%);
+    filter:drop-shadow(0 0 3px #ff5a1a)}
+  .cell.m-sunk{background:rgba(255,40,40,.16)}
+  .cell.m-sunk::before{animation-duration:1.4s;opacity:.55}
+  .cell.m-sunk::after{background:linear-gradient(45deg,transparent 42%,var(--sunk) 42% 58%,transparent 58%),linear-gradient(-45deg,transparent 42%,var(--sunk) 42% 58%,transparent 58%)}
+  @keyframes flackern{from{transform:scale(.85);opacity:.75}to{transform:scale(1.08);opacity:1}}
+  .cell.neu::after{animation:plopp .45s cubic-bezier(.3,1.8,.5,1)}
+  @keyframes plopp{from{transform:scale(0)}to{transform:scale(1)}}
+
+  /* Vorschau beim Schiffe-Ziehen */
+  .cell.zone{background:rgba(255,60,60,.09)}
+  .cell.pv-ok{background:rgba(57,255,138,.38);box-shadow:inset 0 0 0 1px var(--g)}
+  .cell.pv-bad{background:rgba(255,60,60,.45);box-shadow:inset 0 0 0 1px var(--sunk)}
+
+  /* Schiffe */
+  .ship{position:absolute;filter:drop-shadow(0 0 4px rgba(57,255,138,.7))}
+  .ship svg{display:block;width:100%;height:100%}
+  .ship path,.ship rect,.ship circle{fill:rgba(57,255,138,.16);stroke:var(--g);stroke-width:5;stroke-linejoin:round}
+  .ship .lauf{stroke-width:7;stroke-linecap:round;fill:none}
+  .board.eigen .ship{filter:drop-shadow(0 0 4px rgba(58,215,255,.7))}
+  .board.eigen .ship :is(path,rect,circle){stroke:#3ad7ff;fill:rgba(58,215,255,.16)}
+  .ship.sunk{filter:drop-shadow(0 0 5px rgba(255,60,40,.9))}
+  .board .ship.sunk :is(path,rect,circle){stroke:var(--sunk);fill:rgba(255,60,40,.22)}
+  .ship.auftauchen{animation:auftauchen .6s ease-out}
+  @keyframes auftauchen{from{opacity:0;transform:scale(1.25)}to{opacity:1;transform:none}}
+  .ship.wackeln{animation:wackeln .35s}
+  @keyframes wackeln{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  /* Fadenkreuz */
+  .xhair{position:absolute;width:calc(var(--cell)*2.2);height:calc(var(--cell)*2.2);margin:calc(var(--cell)*-.6);
+    pointer-events:none;display:none;transition:left .18s ease-out,top .18s ease-out}
+  .xhair.on{display:block}
+  .xhair svg{width:100%;height:100%;overflow:visible;animation:drehen 6s linear infinite}
+  .xhair.lock svg{animation:einrasten .35s ease-in forwards}
+  @keyframes einrasten{from{transform:scale(1.6) rotate(0)}to{transform:scale(.8) rotate(90deg)}}
+
+  .board.wumms{animation:wumms .45s}
+  @keyframes wumms{15%{transform:translate(-7px,4px)}30%{transform:translate(6px,-5px)}45%{transform:translate(-5px,-3px)}60%{transform:translate(4px,5px)}80%{transform:translate(-2px,1px)}}
+
+  /* ---------- Aufstellen ---------- */
+  #s-place{gap:10px}
+  .kopf{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+  .kopf h2{margin:0;font-size:clamp(15px,3.6vw,22px);text-align:center;flex:1}
+  .place-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;width:100%}
+  body.quer .place-wrap{flex-direction:row;gap:28px}
+  .seite{display:flex;flex-direction:column;gap:12px;align-items:center;max-width:420px}
+  #dock{display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:center;align-items:center;min-height:40px;
+    padding:12px;border:1px dashed rgba(57,255,138,.35);border-radius:12px;background:var(--panel);width:100%}
+  #dock .ship{position:relative;touch-action:none}
+  #dock:empty::before{content:"Alle Schiffe sind auf See ✓";font:600 14px var(--mono);color:var(--g)}
+  .knoepfe{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .hinweis{font-size:13px;color:var(--g-dim);text-align:center;font-family:var(--mono);max-width:380px}
+  .board.setzen .ships{pointer-events:auto}
+  .board.setzen .ship{touch-action:none;cursor:grab}
+  .geist{position:fixed;z-index:40;pointer-events:none;opacity:.85;filter:drop-shadow(0 0 10px rgba(57,255,138,1))}
+
+  /* ---------- Schlacht ---------- */
+  #s-battle{gap:6px}
+  #banner{font:700 clamp(14px,3.6vw,21px) var(--mono);letter-spacing:.05em;text-align:center;flex:1;transition:color .3s}
+  #banner.gegner{color:#ff7a5c;text-shadow:0 0 10px rgba(255,90,60,.7)}
+  .bwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:8px;width:100%}
+  body.quer .bwrap{flex-direction:row;justify-content:center;align-items:center;gap:28px}
+  .spalte{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .unten{display:flex;gap:14px;align-items:flex-start;justify-content:center}
+  body.quer .unten{flex-direction:column;align-items:center}
+  .label{font:600 12px var(--mono);letter-spacing:.25em;color:var(--g-dim)}
+  .label.blau{color:#2a7f99}
+  .zielleiste{display:flex;align-items:center;gap:14px}
+  #ziel{font:700 22px var(--mono);min-width:96px;text-align:center;color:var(--g)}
+  #feuer{color:#ffe1d6;border-color:#ff5a3c;font-size:20px;padding:15px 30px;
+    background:linear-gradient(180deg,rgba(255,80,50,.45),rgba(160,20,10,.35));
+    box-shadow:0 0 18px rgba(255,80,50,.5),inset 0 0 14px rgba(255,120,80,.3);text-shadow:0 0 8px rgba(255,120,80,.9)}
+  #feuer:not(:disabled){animation:pulsieren 1s infinite}
+  @keyframes pulsieren{50%{box-shadow:0 0 34px rgba(255,80,50,.9),inset 0 0 18px rgba(255,120,80,.5)}}
+  .flotte{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid rgba(57,255,138,.25);border-radius:10px;background:var(--panel);min-width:150px}
+  .flotte h3{margin:0 0 2px;font:600 11px var(--mono);letter-spacing:.2em;color:var(--g-dim)}
+  .flotte .reihe{display:flex;gap:5px;flex-wrap:wrap}
+  .mini{height:10px;border:1.5px solid var(--g);border-radius:3px 8px 8px 3px;background:rgba(57,255,138,.2);box-shadow:0 0 5px rgba(57,255,138,.5)}
+  .mini.weg{border-color:var(--sunk);background:rgba(255,60,40,.25);box-shadow:none;opacity:.55;position:relative}
+  .mini.weg::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;height:1.5px;background:var(--sunk)}
+  .flotte .zahl{font:600 13px var(--mono);color:var(--text)}
+
+  /* Großer Stempel in der Mitte */
+  #stempel{position:fixed;left:50%;top:42%;z-index:45;pointer-events:none;text-align:center;opacity:0;transform:translate(-50%,-50%)}
+  #stempel b{display:block;font:900 clamp(40px,12vw,96px)/1 var(--mono);letter-spacing:.06em}
+  #stempel span{display:block;font:700 clamp(14px,3.5vw,24px) var(--mono);margin-top:6px}
+  #stempel.zeigen{animation:stempel 1.25s ease-out forwards}
+  #stempel.hit b{color:#ffb238;text-shadow:0 0 12px #ff6a1a,0 0 40px #ff3c00}
+  #stempel.miss b{color:var(--miss);text-shadow:0 0 12px #2ab8ff,0 0 40px #0090ff}
+  #stempel.sunk b{color:#ff4a3a;text-shadow:0 0 14px #ff1a1a,0 0 50px #ff0000}
+  #stempel.sunk span{color:#ffc2b8}
+  @keyframes stempel{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}14%{opacity:1;transform:translate(-50%,-50%) scale(.95)}
+    22%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}
+
+  /* ---------- Übergabe & Ende ---------- */
+  #s-cover,#s-end{justify-content:center;gap:24px;text-align:center}
+  #s-cover h2,#s-end h2{margin:0;font-size:clamp(24px,6vw,44px)}
+  #s-cover p,#s-end p{margin:0;max-width:440px;color:var(--g-dim);font-family:var(--mono);font-size:15px}
+  #s-end h2.sieg{color:var(--gold);text-shadow:0 0 12px #ffae00,0 0 40px #ff8a00;font-size:clamp(52px,15vw,110px)}
+  .statistik{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .statistik div{padding:12px 16px;border:1px solid rgba(57,255,138,.3);border-radius:10px;background:var(--panel);font:14px var(--mono)}
+  .statistik b{display:block;font-size:13px;color:var(--g);margin-bottom:6px;letter-spacing:.1em}
+
+  /* Dialog (Regeln, Abbrechen) */
+  #dialog{position:fixed;inset:0;z-index:48;background:rgba(0,0,0,.72);display:none;place-items:center;padding:20px}
+  #dialog.on{display:grid;animation:einblenden .25s}
+  #dialog .box{max-width:460px;width:100%;padding:22px;border:1.5px solid rgba(57,255,138,.6);border-radius:16px;
+    background:#03140c;box-shadow:0 0 40px rgba(57,255,138,.25)}
+  #dialog h2{margin:0 0 12px;font-size:20px}
+  #dialog ul{margin:0 0 18px;padding-left:20px;font-size:15px}
+  #dialog li{margin:6px 0}
+  #dialog .knoepfe{justify-content:flex-end}
+
+  #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:44}
+  #version{position:fixed;bottom:calc(4px + env(safe-area-inset-bottom));right:10px;font:11px var(--mono);color:var(--g-dim);z-index:2;opacity:.7}
+</style>
+</head>
+<body>
+
+<!-- Startbildschirm -->
+<section id="s-menu" class="screen on">
+  <button class="rund ecke ton" aria-label="Ton an/aus">🔊</button>
+  <div class="radar" id="menuRadar"><div class="strahl"></div></div>
+  <div class="titel">
+    <h1 class="glow">МОРСКОЙ БОЙ</h1>
+    <p>SEESCHLACHT</p>
+  </div>
+  <div class="menue">
+    <button id="b-weiter" hidden>▶ WEITERSPIELEN</button>
+    <button data-modus="cpu" data-stufe="matrose">GEGEN COMPUTER<small>Stufe: Matrose – zum Üben</small></button>
+    <button data-modus="cpu" data-stufe="admiral">GEGEN COMPUTER<small>Stufe: Admiral – richtig schwer</small></button>
+    <button data-modus="duo">ZU ZWEIT<small>Ein Gerät, abwechselnd</small></button>
+    <div class="zeile"><button id="b-regeln">REGELN</button></div>
+  </div>
+</section>
+
+<!-- Schiffe aufstellen -->
+<section id="s-place" class="screen">
+  <div class="kopf">
+    <button class="rund" id="p-zurueck" aria-label="Zurück">✕</button>
+    <h2 class="glow" id="p-titel">FLOTTE AUFSTELLEN</h2>
+    <button class="rund ton" aria-label="Ton an/aus">🔊</button>
+  </div>
+  <div class="place-wrap">
+    <div id="placeBoard"></div>
+    <div class="seite">
+      <div id="dock"></div>
+      <div class="knoepfe">
+        <button id="p-zufall">🎲 ZUFÄLLIG</button>
+        <button id="p-leeren">LEEREN</button>
+      </div>
+      <button id="p-fertig" disabled>FERTIG</button>
+      <div class="hinweis">Ziehen = setzen · Antippen = drehen<br>Schiffe dürfen sich nicht berühren – auch nicht über Eck.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Gerät weitergeben -->
+<section id="s-cover" class="screen">
+  <div class="radar"><div class="strahl"></div></div>
+  <h2 class="glow" id="c-titel"></h2>
+  <p id="c-text"></p>
+  <button id="c-los">BEREIT</button>
+</section>
+
+<!-- Schlacht -->
+<section id="s-battle" class="screen">
+  <div class="kopf">
+    <button class="rund" id="b-menu" aria-label="Menü">☰</button>
+    <div id="banner" class="glow"></div>
+    <button class="rund ton" aria-label="Ton an/aus">🔊</button>
+  </div>
+  <div class="bwrap">
+    <div class="spalte">
+      <div class="label">◉ FEINDGEBIET</div>
+      <div id="targetBoard"></div>
+      <div class="zielleiste">
+        <div id="ziel">– –</div>
+        <button id="feuer" disabled>FEUER!</button>
+      </div>
+    </div>
+    <div class="unten">
+      <div class="spalte">
+        <div class="label blau">◉ DEINE FLOTTE</div>
+        <div id="ownBoard"></div>
+      </div>
+      <div class="flotte" id="flotte"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Spielende -->
+<section id="s-end" class="screen">
+  <h2 id="e-titel"></h2>
+  <p id="e-text"></p>
+  <div class="statistik" id="e-stat"></div>
+  <div class="knoepfe">
+    <button id="e-nochmal">NOCHMAL</button>
+    <button id="e-menu">MENÜ</button>
+  </div>
+</section>
+
+<div id="dialog"><div class="box"></div></div>
+<div id="stempel"><b></b><span></span></div>
+<canvas id="fx"></canvas>
+<div id="version"></div>
+
+<script>
+// Bei jeder Änderung hochzählen (und CACHE in sw.js).
+const APP_VERSION = '1.0';
+document.getElementById('version').textContent = 'v' + APP_VERSION;
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const warte = ms => new Promise(r => setTimeout(r, ms));
+const zufall = n => Math.floor(Math.random() * n);
+const BUCHST = 'ABCDEFGHIJ';
+const koord = (r, c) => BUCHST[c] + (r + 1);           // z. B. "C7"
+
+// localStorage kann in privaten Fenstern fehlen – deshalb vorsichtig
+const speicher = {
+  lies(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  schreib(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  weg(k) { try { localStorage.removeItem(k); } catch {} },
+};
+
+/* =====================================================================
+   TÖNE – alle Geräusche werden live erzeugt (keine Sounddateien nötig)
+   ===================================================================== */
+const Ton = {
+  ctx: null, an: speicher.lies('mb-ton') !== false, rauschen: null,
+  start() {                                   // iPad: Ton erst nach dem ersten Antippen erlaubt
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.haupt = this.ctx.createGain(); this.haupt.gain.value = 0.9; this.haupt.connect(this.ctx.destination);
+      const len = this.ctx.sampleRate * 2, buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.rauschen = buf;
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  ok() { return this.an && this.ctx && this.ctx.state === 'running'; },
+  // Ein Ton: Frequenz (Hz), Dauer (s), Wellenform, Lautstärke, Ziel-Frequenz, Verzögerung
+  ton(f, dauer, typ = 'sine', laut = .2, bis = null, nach = 0) {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime + nach, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = typ; o.frequency.setValueAtTime(f, t);
+    if (bis) o.frequency.exponentialRampToValueAtTime(bis, t + dauer);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(laut, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+    o.connect(g).connect(this.haupt); o.start(t); o.stop(t + dauer + .05);
+  },
+  // Rauschen durch einen Filter: klingt wie Wasser oder Explosion
+  rausch(dauer, filter, f1, f2, laut, nach = 0) {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime + nach, s = this.ctx.createBufferSource(), fi = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.rauschen; fi.type = filter;
+    fi.frequency.setValueAtTime(f1, t); fi.frequency.exponentialRampToValueAtTime(f2, t + dauer);
+    g.gain.setValueAtTime(laut, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+    s.connect(fi).connect(g).connect(this.haupt); s.start(t, Math.random()); s.stop(t + dauer + .05);
+  },
+  ping()     { this.ton(1500, .9, 'sine', .035); this.ton(1500, .7, 'sine', .012, null, .28); },
+  sonar()    { this.ton(520, .22, 'sine', .12, 880); this.ton(880, .3, 'sine', .05, null, .2); },
+  klick()    { this.ton(1800, .05, 'square', .04); },
+  setzen()   { this.ton(300, .12, 'triangle', .2, 160); this.rausch(.15, 'lowpass', 1200, 300, .15); },
+  fehler()   { this.ton(180, .18, 'square', .08, 120); },
+  abschuss() { this.rausch(.35, 'bandpass', 3000, 400, .25); this.ton(900, .3, 'sawtooth', .04, 200); },
+  platsch()  { this.rausch(.55, 'bandpass', 2200, 500, .5); this.rausch(.25, 'highpass', 4000, 6000, .15, .08); this.ton(300, .25, 'sine', .1, 90); },
+  bumm()     { this.rausch(1.1, 'lowpass', 1600, 60, 1.0); this.ton(110, .7, 'sine', .6, 30); this.ton(70, .9, 'triangle', .3, 25, .05); },
+  versenkt() { this.bumm(); this.rausch(1.8, 'lowpass', 800, 40, .8, .25); this.ton(55, 1.6, 'sine', .5, 25, .3); this.rausch(.9, 'lowpass', 1400, 80, .6, .55); },
+  fanfare() {
+    const n = [[523, 0, .18], [659, .18, .18], [784, .36, .18], [1047, .54, .5], [784, .95, .16], [1047, 1.12, .9]];
+    n.forEach(([f, t, d]) => { this.ton(f, d + .1, 'triangle', .22, null, t); this.ton(f * 2, d, 'square', .03, null, t); });
+  },
+  traurig() { [[392, 0], [370, .35], [349, .7], [330, 1.05]].forEach(([f, t]) => this.ton(f, .45, 'triangle', .18, f * .97, t)); },
+  knall()   { this.rausch(.5, 'lowpass', 3000, 200, .35); this.ton(200, .2, 'sine', .1, 60); },
+};
+document.addEventListener('pointerdown', () => Ton.start(), { capture: true });
+
+function tonKnoepfe() { $$('.ton').forEach(b => b.textContent = Ton.an ? '🔊' : '🔇'); }
+$$('.ton').forEach(b => b.onclick = () => { Ton.an = !Ton.an; speicher.schreib('mb-ton', Ton.an); tonKnoepfe(); Ton.klick(); });
+tonKnoepfe();
+
+/* =====================================================================
+   EFFEKTE – Funken, Rauch, Wasser, Feuerwerk (eine Leinwand über allem)
+   ===================================================================== */
+const FX = {
+  cv: $('#fx'), teile: [], dpr: 1,
+  groesse() {
+    this.dpr = Math.min(devicePixelRatio || 1, 2);
+    this.cv.width = innerWidth * this.dpr; this.cv.height = innerHeight * this.dpr;
+    this.ctx = this.cv.getContext('2d'); this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+  },
+  dazu(p) { this.teile.push(Object.assign({ alter: 0, schwer: 0, groesse: 3, art: 'funke' }, p)); },
+  explosion(x, y, z, stark = 1) {
+    this.dazu({ art: 'blitz', x, y, leben: .25, groesse: z * 1.8 * stark });
+    this.dazu({ art: 'ring', x, y, leben: .55, groesse: z * .3, wachs: z * 4 * stark, farbe: '255,170,60' });
+    for (let i = 0; i < 46 * stark; i++) {
+      const w = Math.random() * 6.283, v = (60 + Math.random() * 260) * stark;
+      this.dazu({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v - 40, schwer: 260, leben: .5 + Math.random() * .6,
+        groesse: 1.5 + Math.random() * 2.5, farbe: ['255,240,180', '255,180,60', '255,110,30', '255,70,30'][zufall(4)] });
+    }
+    for (let i = 0; i < 12 * stark; i++) {
+      const w = Math.random() * 6.283, v = 15 + Math.random() * 45;
+      this.dazu({ art: 'rauch', x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v - 25, leben: 1 + Math.random() * .8,
+        groesse: z * (.25 + Math.random() * .3), wachs: z * .9 });
+    }
+  },
+  platsch(x, y, z) {
+    for (let i = 0; i < 3; i++) this.dazu({ art: 'ring', x, y, leben: .7 + i * .2, groesse: z * .15, wachs: z * (1.3 + i * .8), farbe: '127,227,255', nach: i * .12 });
+    for (let i = 0; i < 26; i++) {
+      const w = -Math.PI / 2 + (Math.random() - .5) * 1.6, v = 80 + Math.random() * 200;
+      this.dazu({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, schwer: 520, leben: .5 + Math.random() * .4,
+        groesse: 1.5 + Math.random() * 2, farbe: ['200,245,255', '127,227,255', '80,190,255'][zufall(3)] });
+    }
+  },
+  rakete() {                                    // Feuerwerk für den Sieg
+    const x = innerWidth * (.15 + Math.random() * .7);
+    this.dazu({ art: 'rakete', x, y: innerHeight + 10, vx: (Math.random() - .5) * 60, vy: -(innerHeight * (.9 + Math.random() * .5)),
+      schwer: innerHeight * .6, leben: .9 + Math.random() * .3, groesse: 2.5, farbe: '255,240,200' });
+  },
+  zerplatzen(x, y) {
+    const farben = ['255,213,74', '57,255,138', '127,227,255', '255,90,90', '255,140,255', '255,255,255'];
+    const f = farben[zufall(farben.length)], f2 = farben[zufall(farben.length)];
+    for (let i = 0; i < 70; i++) {
+      const w = Math.random() * 6.283, v = 60 + Math.random() * 230;
+      this.dazu({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, schwer: 120, leben: 1 + Math.random() * .9, groesse: 1.5 + Math.random() * 2, farbe: i % 3 ? f : f2, funkeln: true });
+    }
+    this.dazu({ art: 'blitz', x, y, leben: .2, groesse: 90 });
+    Ton.knall();
+  },
+  schritt(dt) {
+    const c = this.ctx; if (!c) return;
+    c.clearRect(0, 0, innerWidth, innerHeight);
+    if (!this.teile.length) return;
+    c.globalCompositeOperation = 'lighter';
+    this.teile = this.teile.filter(p => {
+      if (p.nach > 0) { p.nach -= dt; return true; }
+      p.alter += dt;
+      if (p.alter >= p.leben) { if (p.art === 'rakete') this.zerplatzen(p.x, p.y); return false; }
+      const k = p.alter / p.leben, a = 1 - k;
+      if (p.vx !== undefined) { p.vy += p.schwer * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; }
+      if (p.art === 'funke' || p.art === 'rakete') {
+        const al = p.funkeln ? a * (.5 + .5 * Math.sin(p.alter * 40)) : a;
+        c.fillStyle = `rgba(${p.farbe},${al})`;
+        c.beginPath(); c.arc(p.x, p.y, p.groesse * (p.art === 'rakete' ? 1 : (.5 + a * .5)), 0, 6.283); c.fill();
+        if (p.art === 'rakete') this.dazu({ x: p.x, y: p.y, vx: (Math.random() - .5) * 20, vy: 20, leben: .4, groesse: 1.5, farbe: '255,200,120' });
+      } else if (p.art === 'ring') {
+        c.strokeStyle = `rgba(${p.farbe},${a * .9})`; c.lineWidth = 2.5 * a + .5;
+        c.beginPath(); c.arc(p.x, p.y, p.groesse + p.wachs * Math.sqrt(k), 0, 6.283); c.stroke();
+      } else if (p.art === 'blitz') {
+        const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.groesse);
+        g.addColorStop(0, `rgba(255,255,230,${a})`); g.addColorStop(.4, `rgba(255,170,60,${a * .6})`); g.addColorStop(1, 'rgba(255,80,0,0)');
+        c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y, p.groesse, 0, 6.283); c.fill();
+      } else if (p.art === 'rauch') {
+        c.globalCompositeOperation = 'source-over';
+        c.fillStyle = `rgba(40,30,25,${a * .35})`;
+        c.beginPath(); c.arc(p.x, p.y, p.groesse + p.wachs * k, 0, 6.283); c.fill();
+        c.globalCompositeOperation = 'lighter';
+      }
+      return true;
+    });
+    c.globalCompositeOperation = 'source-over';
+  },
+};
+
+/* =====================================================================
+   SCHIFFE ZEICHNEN – von oben gesehen, als Radar-Umriss
+   ===================================================================== */
+function schiffSVG(len, senk) {
+  const L = len * 100;
+  let teile = `<path d="M10,50 C10,26 22,18 40,17 L${L - 48},17 C${L - 22},19 ${L - 8},34 ${L - 4},50 C${L - 8},66 ${L - 22},81 ${L - 48},83 L40,83 C22,82 10,74 10,50 Z"/>`;
+  if (len === 1) {
+    teile += `<circle cx="46" cy="50" r="13"/><line class="lauf" x1="58" y1="50" x2="76" y2="50"/>`;
+  } else {
+    // Brücke (Rechteck) und Geschütztürme (Kreis + Rohr) so verteilt, dass sich nichts überlappt
+    const mitte = len === 2 ? 82 : L / 2;
+    teile += `<rect x="${mitte - 24}" y="34" width="48" height="32" rx="6"/>`;
+    const tuerme = { 2: [140], 3: [70, 220], 4: [70, 270, 335] }[len];
+    tuerme.forEach(x => {
+      const vorn = x > mitte;
+      teile += `<circle cx="${x}" cy="50" r="15"/><line class="lauf" x1="${x + (vorn ? 14 : -14)}" y1="50" x2="${x + (vorn ? 36 : -36)}" y2="50"/>`;
+    });
+    if (len === 4) teile += `<circle cx="130" cy="50" r="9"/>`;
+  }
+  const vb = senk ? `0 0 100 ${L}` : `0 0 ${L} 100`;
+  const tr = senk ? ` transform="translate(100,0) rotate(90)"` : '';
+  return `<svg viewBox="${vb}" preserveAspectRatio="none"><g${tr}>${teile}</g></svg>`;
+}
+
+/* =====================================================================
+   SPIELFELD – Radar-Leinwand + 100 Kästchen + Schiffe + Fadenkreuz
+   ===================================================================== */
+class Feld {
+  constructor(host, { farbe = '57,255,138', tempo = 4, eigen = false } = {}) {
+    this.farbe = farbe; this.tempo = tempo; this.marken = [];
+    host.innerHTML = `<div class="board${eigen ? ' eigen' : ''}">
+      <div class="cols">${[...BUCHST].map(b => `<span>${b}</span>`).join('')}</div>
+      <div class="rows">${Array.from({ length: 10 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div>
+      <div class="field"><canvas></canvas><div class="ships"></div><div class="cells"></div>
+        <div class="xhair"><svg viewBox="-50 -50 100 100" fill="none" stroke="#ff5a3c" stroke-width="3">
+          <circle r="34" stroke-dasharray="14 8"/><circle r="18"/><path d="M0,-48V-24M0,48V24M-48,0H-24M48,0H24"/></svg></div></div></div>`;
+    this.el = host.firstElementChild;
+    this.feld = this.el.querySelector('.field');
+    this.cv = this.el.querySelector('canvas');
+    this.schiffe = this.el.querySelector('.ships');
+    this.kreuz = this.el.querySelector('.xhair');
+    const cells = this.el.querySelector('.cells');
+    this.zellen = [];
+    for (let i = 0; i < 100; i++) { const d = document.createElement('div'); d.className = 'cell'; d.dataset.i = i; cells.appendChild(d); this.zellen.push(d); }
+    this.cells = cells;
+    this.groesse(30);
+  }
+  groesse(cell) {
+    if (cell === this.cell) return;
+    this.cell = cell; this.el.style.setProperty('--cell', cell + 'px');
+    const dpr = Math.min(devicePixelRatio || 1, 2), S = Math.round(cell * 10 * dpr);
+    this.cv.width = this.cv.height = S; this.S = S; this.ctx = this.cv.getContext('2d');
+    this.hintergrund(); this.punkte();
+  }
+  // Einmal vorzeichnen: Farbverlauf, Ringe, Gitter
+  hintergrund() {
+    const S = this.S, b = document.createElement('canvas'); b.width = b.height = S;
+    const c = b.getContext('2d'), m = S / 2, f = this.farbe;
+    const g = c.createRadialGradient(m, m, 0, m, m, S * .72);
+    g.addColorStop(0, `rgba(${f},.16)`); g.addColorStop(.6, `rgba(${f},.05)`); g.addColorStop(1, 'rgba(0,0,0,.6)');
+    c.fillStyle = '#010805'; c.fillRect(0, 0, S, S); c.fillStyle = g; c.fillRect(0, 0, S, S);
+    c.strokeStyle = `rgba(${f},.16)`; c.lineWidth = Math.max(1, S / 600);
+    for (let i = 1; i < 10; i++) { const p = Math.round(i * S / 10) + .5; c.beginPath(); c.moveTo(p, 0); c.lineTo(p, S); c.moveTo(0, p); c.lineTo(S, p); c.stroke(); }
+    c.strokeStyle = `rgba(${f},.22)`;
+    for (let r = 1; r <= 4; r++) { c.beginPath(); c.arc(m, m, r * S / 8, 0, 6.283); c.stroke(); }
+    c.strokeStyle = `rgba(${f},.35)`;
+    for (let w = 0; w < 360; w += 5) {
+      const a = w * Math.PI / 180, l = w % 30 ? S * .012 : S * .03;
+      c.beginPath(); c.moveTo(m + Math.cos(a) * (S / 2 - l), m + Math.sin(a) * (S / 2 - l)); c.lineTo(m + Math.cos(a) * S / 2, m + Math.sin(a) * S / 2); c.stroke();
+    }
+    this.bg = b;
+  }
+  // Leuchtpunkte für Treffer/Wasser vorzeichnen
+  punkte() {
+    const r = Math.round(this.S / 10 * .9), mk = rgb => {
+      const b = document.createElement('canvas'); b.width = b.height = r * 2;
+      const c = b.getContext('2d'), g = c.createRadialGradient(r, r, 0, r, r, r);
+      g.addColorStop(0, `rgba(${rgb},.9)`); g.addColorStop(.3, `rgba(${rgb},.35)`); g.addColorStop(1, `rgba(${rgb},0)`);
+      c.fillStyle = g; c.fillRect(0, 0, r * 2, r * 2); return b;
+    };
+    this.blip = { 1: mk('127,227,255'), 2: mk('255,140,40'), 3: mk('255,60,40') };
+  }
+  // Jedes Bild (60× pro Sekunde): Radarstrahl dreht sich, Punkte leuchten auf
+  zeichne(t) {
+    const c = this.ctx, S = this.S, m = S / 2, f = this.farbe;
+    if (!this.bg || !this.el.offsetParent) return false;
+    c.drawImage(this.bg, 0, 0);
+    const w = (t / 1000 / this.tempo * 6.283) % 6.283, R = S * .72, N = 26, schritt = .036;
+    for (let i = 0; i < N; i++) {
+      c.fillStyle = `rgba(${f},${.22 * Math.pow(1 - i / N, 2)})`;
+      c.beginPath(); c.moveTo(m, m); c.arc(m, m, R, w - (i + 1) * schritt, w - i * schritt + .002); c.closePath(); c.fill();
+    }
+    c.strokeStyle = `rgba(${f},.9)`; c.lineWidth = S / 250;
+    c.beginPath(); c.moveTo(m, m); c.lineTo(m + Math.cos(w) * R, m + Math.sin(w) * R); c.stroke();
+    const z = S / 10;
+    for (let i = 0; i < 100; i++) {
+      const v = this.marken[i]; if (!v) continue;
+      const x = (i % 10 + .5) * z, y = ((i / 10 | 0) + .5) * z;
+      let d = w - Math.atan2(y - m, x - m); d = ((d % 6.283) + 6.283) % 6.283;
+      c.globalAlpha = .25 + .75 * Math.exp(-d * 1.4);
+      const b = this.blip[v]; c.drawImage(b, x - b.width / 2, y - b.height / 2);
+    }
+    c.globalAlpha = 1;
+    return w;
+  }
+  zelle(r, c) { return this.zellen[r * 10 + c]; }
+  mitte(r, c) { const b = this.zelle(r, c).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }
+  markiere(r, c, v, neu = false) {
+    this.marken[r * 10 + c] = v;
+    const z = this.zelle(r, c);
+    z.className = 'cell' + (v ? ' ' + ['', 'm-miss', 'm-hit', 'm-sunk'][v] : '') + (neu ? ' neu' : '');
+  }
+  alleMarken(gitter) { for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) this.markiere(r, c, gitter[r][c]); }
+  zeigeSchiffe(liste) {
+    this.schiffe.innerHTML = '';
+    liste.forEach(s => this.schiffe.appendChild(schiffEl(s, s.klasse || '')));
+  }
+  zielen(r, c) {
+    if (r == null) { this.kreuz.classList.remove('on', 'lock'); return; }
+    this.kreuz.style.left = `calc(var(--cell)*${c})`; this.kreuz.style.top = `calc(var(--cell)*${r})`;
+    this.kreuz.classList.remove('lock'); this.kreuz.classList.add('on');
+  }
+  wackeln() { this.el.classList.remove('wumms'); void this.el.offsetWidth; this.el.classList.add('wumms'); }
+}
+
+function schiffEl(s, klasse) {
+  const d = document.createElement('div');
+  d.className = 'ship ' + klasse;
+  d.style.left = `calc(var(--cell)*${s.c})`; d.style.top = `calc(var(--cell)*${s.r})`;
+  d.style.width = `calc(var(--cell)*${s.senk ? 1 : s.len})`; d.style.height = `calc(var(--cell)*${s.senk ? s.len : 1})`;
+  d.innerHTML = schiffSVG(s.len, s.senk);
+  return d;
+}
+
+/* =====================================================================
+   SPIELREGELN
+   ===================================================================== */
+const FLOTTE = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];
+const NAME = { 4: 'Schlachtschiff', 3: 'Kreuzer', 2: 'Zerstörer', 1: 'Schnellboot' };
+const gitter = () => Array.from({ length: 10 }, () => Array(10).fill(0));
+// Schuss-Gitter: 0 = unbekannt, 1 = Wasser, 2 = Treffer, 3 = versenkt
+
+function felderVon(s) { return Array.from({ length: s.len }, (_, k) => [s.r + (s.senk ? k : 0), s.c + (s.senk ? 0 : k)]); }
+
+// Passt ein Schiff hierhin? Nicht über den Rand, und kein anderes Schiff daneben (auch nicht über Eck)
+function passt(schiffe, idx, len, r, c, senk) {
+  for (let k = 0; k < len; k++) {
+    const rr = r + (senk ? k : 0), cc = c + (senk ? 0 : k);
+    if (rr < 0 || cc < 0 || rr > 9 || cc > 9) return false;
+    for (let j = 0; j < schiffe.length; j++) {
+      const o = schiffe[j]; if (j === idx || !o.gesetzt) continue;
+      for (const [r2, c2] of felderVon(o)) if (Math.abs(rr - r2) <= 1 && Math.abs(cc - c2) <= 1) return false;
+    }
+  }
+  return true;
+}
+
+function zufallsFlotte() {
+  while (true) {
+    const schiffe = FLOTTE.map(len => ({ len, r: 0, c: 0, senk: false, gesetzt: false }));
+    let ok = true;
+    for (let i = 0; i < schiffe.length && ok; i++) {
+      const s = schiffe[i]; let versuch = 0;
+      do { s.senk = Math.random() < .5; s.r = zufall(10); s.c = zufall(10); versuch++; }
+      while (!passt(schiffe, i, s.len, s.r, s.c, s.senk) && versuch < 300);
+      if (versuch >= 300) ok = false; else s.gesetzt = true;
+    }
+    if (ok) return schiffe;
+  }
+}
+
+function schiffAuf(spieler, r, c) { return spieler.schiffe.findIndex(s => felderVon(s).some(([a, b]) => a === r && b === c)); }
+const istVersenkt = (spieler, s) => felderVon(s).every(([r, c]) => spieler.schuesse[r][c] === 3);
+const alleVersenkt = spieler => spieler.schiffe.every(s => istVersenkt(spieler, s));
+
+// Ein Schuss auf das Feld (r,c) des Spielers „ziel“
+function schiessen(ziel, r, c) {
+  const g = ziel.schuesse;
+  if (g[r][c]) return null;
+  const i = schiffAuf(ziel, r, c);
+  if (i < 0) { g[r][c] = 1; return { art: 'miss' }; }
+  g[r][c] = 2;
+  const s = ziel.schiffe[i], felder = felderVon(s);
+  if (!felder.every(([a, b]) => g[a][b] === 2)) return { art: 'hit' };
+  felder.forEach(([a, b]) => g[a][b] = 3);
+  const rundum = [];                          // Rund um ein versenktes Schiff ist immer Wasser
+  felder.forEach(([a, b]) => { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    const rr = a + dr, cc = b + dc;
+    if (rr >= 0 && cc >= 0 && rr < 10 && cc < 10 && !g[rr][cc]) { g[rr][cc] = 1; rundum.push([rr, cc]); }
+  } });
+  return { art: 'sunk', schiff: s, felder, rundum };
+}
+
+/* =====================================================================
+   COMPUTER-GEGNER
+   Matrose: schießt meist zufällig, sucht nach einem Treffer manchmal daneben.
+   Admiral: rechnet aus, wo noch Schiffe liegen KÖNNEN, und schießt dorthin,
+            wo die meisten Möglichkeiten sind.
+   ===================================================================== */
+function computerZiel(ziel, stufe) {
+  const g = ziel.schuesse, frei = [], treffer = [];
+  for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) { if (!g[r][c]) frei.push([r, c]); if (g[r][c] === 2) treffer.push([r, c]); }
+  const zufallsFrei = () => frei[zufall(frei.length)];
+  if (stufe === 'matrose') {
+    if (treffer.length && Math.random() < .6) {
+      const n = [];
+      treffer.forEach(([r, c]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const rr = r + a, cc = c + b; if (rr >= 0 && cc >= 0 && rr < 10 && cc < 10 && !g[rr][cc]) n.push([rr, cc]); }));
+      if (n.length) return n[zufall(n.length)];
+    }
+    return zufallsFrei();
+  }
+  if (!treffer.length && Math.random() < .08) return zufallsFrei();
+  const punkte = gitter();
+  ziel.schiffe.filter(s => !istVersenkt(ziel, s)).forEach(({ len }) => {
+    for (const senk of len === 1 ? [false] : [false, true])
+      for (let r = 0; r <= (senk ? 10 - len : 9); r++) for (let c = 0; c <= (senk ? 9 : 10 - len); c++) {
+        let geht = true, h = 0;
+        for (let k = 0; k < len; k++) { const v = g[r + (senk ? k : 0)][c + (senk ? 0 : k)]; if (v === 1 || v === 3) { geht = false; break; } if (v === 2) h++; }
+        if (!geht || (treffer.length && !h)) continue;
+        const gewicht = treffer.length ? h * h * 10 : 1;
+        for (let k = 0; k < len; k++) { const rr = r + (senk ? k : 0), cc = c + (senk ? 0 : k); if (!g[rr][cc]) punkte[rr][cc] += gewicht; }
+      }
+  });
+  let best = -1, wahl = [];
+  frei.forEach(([r, c]) => { const p = punkte[r][c]; if (p > best) { best = p; wahl = [[r, c]]; } else if (p === best) wahl.push([r, c]); });
+  return best > 0 ? wahl[zufall(wahl.length)] : zufallsFrei();
+}
+
+/* =====================================================================
+   BILDSCHIRME & ABLAUF
+   ===================================================================== */
+let spiel = null;     // der ganze Spielstand
+let beschaeftigt = false;
+
+function zeige(id) {
+  $$('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  layout();
+}
+
+const pFeld = new Feld($('#placeBoard'), { eigen: true, farbe: '58,215,255', tempo: 6 });
+const tFeld = new Feld($('#targetBoard'), { tempo: 4 });
+const oFeld = new Feld($('#ownBoard'), { eigen: true, farbe: '58,215,255', tempo: 6 });
+pFeld.el.classList.add('setzen');
+
+// Größen an iPhone / iPad (hoch oder quer) anpassen
+function layout() {
+  const W = innerWidth, H = innerHeight, quer = W > H * 1.15;
+  document.body.classList.toggle('quer', quer);
+  FX.groesse();
+  const f = 10.6;
+  if (quer) pFeld.groesse(Math.floor(Math.min((H - 110) / f, (W - 400) / f)));
+  else pFeld.groesse(Math.floor(Math.min((W - 24) / f, (H - 380) / f)));
+  let gross, klein;
+  if (quer) {
+    gross = Math.min((H - 160) / f, W * .55 / f);
+    klein = Math.min((W - gross * f - 90) / f, (H - 300) / f, gross * .62);
+  } else {
+    klein = Math.min((W - 200) / f, H * .21 / f);
+    gross = Math.min((W - 24) / f, (H - 200 - klein * f) / f);
+  }
+  tFeld.groesse(Math.floor(gross)); oFeld.groesse(Math.floor(klein));
+}
+addEventListener('resize', layout);
+
+function name(i) {
+  if (spiel.modus === 'duo') return 'Kapitän ' + (i + 1);
+  return i === 0 ? 'Kapitän' : 'Computer';
+}
+const sichern = () => speicher.schreib('mb-spiel', spiel);
+
+// ---------- Menü ----------
+$$('[data-modus]').forEach(b => b.onclick = () => {
+  Ton.klick();
+  spiel = { modus: b.dataset.modus, stufe: b.dataset.stufe || null, spieler: [null, null], dran: 0, phase: 'setzen',
+    statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
+  aufstellen(0);
+});
+$('#b-regeln').onclick = () => {
+  Ton.klick();
+  dialog(`<h2 class="glow">REGELN</h2><ul>
+    <li>Jeder versteckt <b>10 Schiffe</b>: 1× Schlachtschiff (4), 2× Kreuzer (3), 3× Zerstörer (2), 4× Schnellboot (1).</li>
+    <li>Schiffe dürfen sich <b>nicht berühren</b> – auch nicht über Eck.</li>
+    <li>Abwechselnd auf ein Feld zielen und <b>FEUER!</b> drücken.</li>
+    <li><b>Treffer?</b> Dann darfst du nochmal schießen!</li>
+    <li>Ist ein Schiff <b>versenkt</b>, wird ringsherum automatisch Wasser markiert.</li>
+    <li>Wer zuerst die ganze feindliche Flotte versenkt, gewinnt.</li></ul>`, [['VERSTANDEN']]);
+};
+$('#b-weiter').onclick = () => { Ton.klick(); spiel = speicher.lies('mb-spiel'); weiterSpielen(); };
+function menue() {
+  spiel = null; beschaeftigt = false;
+  $('#b-weiter').hidden = !(speicher.lies('mb-spiel') || {}).spieler;
+  zeige('s-menu');
+}
+
+// Kleine Lichtpunkte auf dem Menü-Radar
+setInterval(() => {
+  $$('.radar').forEach(rad => {
+    if (!rad.offsetParent || Math.random() < .4) return;
+    const b = document.createElement('div'); b.className = 'blip';
+    const w = Math.random() * 6.283, r = 10 + Math.random() * 36;
+    b.style.left = 50 + Math.cos(w) * r + '%'; b.style.top = 50 + Math.sin(w) * r + '%';
+    rad.appendChild(b); setTimeout(() => b.remove(), 3700);
+  });
+}, 900);
+
+// ---------- Dialog ----------
+function dialog(html, knoepfe) {
+  return new Promise(ok => {
+    const d = $('#dialog'), box = d.firstElementChild;
+    box.innerHTML = html + '<div class="knoepfe"></div>';
+    knoepfe.forEach(([text, wert]) => {
+      const b = document.createElement('button'); b.textContent = text;
+      b.onclick = () => { Ton.klick(); d.classList.remove('on'); ok(wert); };
+      box.lastElementChild.appendChild(b);
+    });
+    d.classList.add('on');
+  });
+}
+
+// ---------- Gerät weitergeben ----------
+function uebergabe(titel, text, knopf, weiter) {
+  $('#c-titel').textContent = titel; $('#c-text').textContent = text; $('#c-los').textContent = knopf;
+  $('#c-los').onclick = () => { Ton.sonar(); weiter(); };
+  zeige('s-cover');
+}
+
+/* ---------- Schiffe aufstellen ---------- */
+let setz = null;     // { wer, schiffe }
+
+function aufstellen(wer) {
+  setz = { wer, schiffe: FLOTTE.map(len => ({ len, r: 0, c: 0, senk: false, gesetzt: false })) };
+  $('#p-titel').textContent = spiel.modus === 'duo' ? `KAPITÄN ${wer + 1}: FLOTTE AUFSTELLEN` : 'FLOTTE AUFSTELLEN';
+  pFeld.alleMarken(gitter());
+  zeige('s-place');
+  zeichneSetzen();
+}
+
+function zeichneSetzen() {
+  pFeld.schiffe.innerHTML = '';
+  const dock = $('#dock'); dock.innerHTML = '';
+  const dz = Math.min(pFeld.cell * .8, 30);
+  setz.schiffe.forEach((s, i) => {
+    let el;
+    if (s.gesetzt) { el = schiffEl(s, ''); pFeld.schiffe.appendChild(el); }
+    else {
+      el = document.createElement('div'); el.className = 'ship';
+      el.style.width = dz * s.len + 'px'; el.style.height = dz + 'px';
+      el.innerHTML = schiffSVG(s.len, false); dock.appendChild(el);
+    }
+    el.dataset.i = i;
+    el.addEventListener('pointerdown', ziehStart);
+  });
+  const rest = setz.schiffe.filter(s => !s.gesetzt).length;
+  $('#p-fertig').disabled = rest > 0;
+  $('#p-fertig').textContent = rest ? `NOCH ${rest} SCHIFF${rest > 1 ? 'E' : ''}` : 'FERTIG – LOS GEHT’S!';
+}
+
+let zieh = null;
+function ziehStart(e) {
+  const el = e.currentTarget, i = +el.dataset.i, s = setz.schiffe[i], b = el.getBoundingClientRect();
+  const senk = s.gesetzt ? s.senk : false, z = s.gesetzt ? pFeld.cell : b.height;
+  const k = Math.max(0, Math.min(s.len - 1, Math.floor((senk ? e.clientY - b.top : e.clientX - b.left) / z)));
+  zieh = { i, k, senk, x0: e.clientX, y0: e.clientY, bewegt: false, finger: e.pointerType !== 'mouse', el, ziel: null };
+  e.preventDefault();
+}
+addEventListener('pointermove', e => {
+  if (!zieh) return;
+  if (!zieh.bewegt) {
+    if (Math.hypot(e.clientX - zieh.x0, e.clientY - zieh.y0) < 7) return;
+    zieh.bewegt = true;
+    const s = setz.schiffe[zieh.i];
+    zieh.geist = document.createElement('div'); zieh.geist.className = 'ship geist';
+    zieh.geist.style.width = pFeld.cell * (zieh.senk ? 1 : s.len) + 'px'; zieh.geist.style.height = pFeld.cell * (zieh.senk ? s.len : 1) + 'px';
+    zieh.geist.innerHTML = schiffSVG(s.len, zieh.senk); document.body.appendChild(zieh.geist);
+    zieh.el.style.opacity = .25;
+    zeigeZone(zieh.i);
+  }
+  const z = pFeld.cell, s = setz.schiffe[zieh.i];
+  const px = e.clientX, py = e.clientY - (zieh.finger ? z * 1.1 : 0);       // Schiff etwas über dem Finger, damit man es sieht
+  zieh.geist.style.left = px - (zieh.senk ? .5 : zieh.k + .5) * z + 'px';
+  zieh.geist.style.top = py - (zieh.senk ? zieh.k + .5 : .5) * z + 'px';
+  const fr = pFeld.feld.getBoundingClientRect();
+  const c0 = Math.floor((px - fr.left) / z), r0 = Math.floor((py - fr.top) / z);
+  pFeld.zellen.forEach(d => d.classList.remove('pv-ok', 'pv-bad'));
+  zieh.ziel = null;
+  if (r0 < 0 || c0 < 0 || r0 > 9 || c0 > 9) return;
+  const r = r0 - (zieh.senk ? zieh.k : 0), c = c0 - (zieh.senk ? 0 : zieh.k);
+  const ok = passt(setz.schiffe, zieh.i, s.len, r, c, zieh.senk);
+  zieh.ziel = { r, c, ok };
+  for (let k = 0; k < s.len; k++) {
+    const rr = r + (zieh.senk ? k : 0), cc = c + (zieh.senk ? 0 : k);
+    if (rr >= 0 && cc >= 0 && rr < 10 && cc < 10) pFeld.zelle(rr, cc).classList.add(ok ? 'pv-ok' : 'pv-bad');
+  }
+});
+function zeigeZone(ohne) {
+  setz.schiffe.forEach((o, j) => {
+    if (j === ohne || !o.gesetzt) return;
+    felderVon(o).forEach(([a, b]) => { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const rr = a + dr, cc = b + dc; if (rr >= 0 && cc >= 0 && rr < 10 && cc < 10) pFeld.zelle(rr, cc).classList.add('zone');
+    } });
+  });
+}
+function ziehEnde(abbruch) {
+  if (!zieh) return;
+  const z = zieh; zieh = null;
+  pFeld.zellen.forEach(d => d.classList.remove('pv-ok', 'pv-bad', 'zone'));
+  if (z.geist) z.geist.remove();
+  const s = setz.schiffe[z.i];
+  if (abbruch) { zeichneSetzen(); return; }
+  if (z.bewegt) {
+    if (z.ziel && z.ziel.ok) { Object.assign(s, { r: z.ziel.r, c: z.ziel.c, senk: z.senk, gesetzt: true }); Ton.setzen(); }
+    else Ton.fehler();
+  } else if (s.gesetzt) {
+    // Antippen = drehen. Passt es nicht, versuchen wir es etwas verschoben.
+    const senk = !s.senk; let ok = false;
+    for (let o = 0; o < s.len && !ok; o++) {
+      const r = s.r - (senk ? o : 0), c = s.c - (senk ? 0 : o);
+      if (passt(setz.schiffe, z.i, s.len, r, c, senk)) { Object.assign(s, { r, c, senk }); ok = true; }
+    }
+    if (ok) Ton.klick(); else { Ton.fehler(); z.el.classList.add('wackeln'); setTimeout(() => z.el.classList.remove('wackeln'), 400); return; }
+  } else {
+    // Antippen im Hafen = irgendwo hinsetzen, wo Platz ist
+    const plaetze = [];
+    for (const senk of [false, true]) for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) if (passt(setz.schiffe, z.i, s.len, r, c, senk)) plaetze.push({ r, c, senk });
+    if (plaetze.length) { Object.assign(s, plaetze[zufall(plaetze.length)], { gesetzt: true }); Ton.setzen(); } else Ton.fehler();
+  }
+  zeichneSetzen();
+}
+addEventListener('pointerup', () => ziehEnde(false));
+addEventListener('pointercancel', () => ziehEnde(true));
+
+$('#p-zufall').onclick = () => { setz.schiffe = zufallsFlotte(); Ton.setzen(); zeichneSetzen(); };
+$('#p-leeren').onclick = () => { setz.schiffe.forEach(s => s.gesetzt = false); Ton.klick(); zeichneSetzen(); };
+$('#p-zurueck').onclick = () => { Ton.klick(); menue(); };
+$('#p-fertig').onclick = () => {
+  Ton.sonar();
+  const wer = setz.wer;
+  spiel.spieler[wer] = { schiffe: setz.schiffe.map(({ len, r, c, senk }) => ({ len, r, c, senk, gesetzt: true })), schuesse: gitter() };
+  if (spiel.modus === 'cpu') {
+    spiel.spieler[1] = { schiffe: zufallsFlotte(), schuesse: gitter() };
+    return schlachtBeginnt();
+  }
+  if (wer === 0) uebergabe('KAPITÄN 2', 'Kapitän 1: Gib das Gerät weiter – und nicht spicken!', 'ICH BIN KAPITÄN 2', () => aufstellen(1));
+  else schlachtBeginnt();
+};
+
+function schlachtBeginnt() {
+  spiel.phase = 'schlacht'; spiel.dran = 0; sichern();
+  weiterSpielen();
+}
+function weiterSpielen() {
+  if (spiel.modus === 'duo') {
+    const d = spiel.dran;
+    uebergabe(`KAPITÄN ${d + 1}`, `Kapitän ${d + 1}, du bist dran! Kapitän ${2 - d}: Gerät weitergeben.`, 'BEREIT ZUM ANGRIFF', () => schlacht());
+  } else schlacht();
+}
+
+/* ---------- Schlacht ---------- */
+let auswahl = null;
+const ich = () => spiel.modus === 'cpu' ? 0 : spiel.dran;      // wessen Felder gerade zu sehen sind
+
+function schlacht() {
+  zeige('s-battle');
+  zeichneSchlacht();
+  if (spiel.modus === 'cpu' && spiel.dran === 1) computerZug();
+  else bereitZumZielen();
+}
+
+function zeichneSchlacht() {
+  const a = spiel.spieler[ich()], g = spiel.spieler[1 - ich()];
+  tFeld.alleMarken(g.schuesse);
+  tFeld.zeigeSchiffe(g.schiffe.filter(s => istVersenkt(g, s)).map(s => ({ ...s, klasse: 'sunk' })));
+  oFeld.alleMarken(a.schuesse);
+  oFeld.zeigeSchiffe(a.schiffe.map(s => ({ ...s, klasse: istVersenkt(a, s) ? 'sunk' : '' })));
+  tFeld.zielen(null); oFeld.zielen(null);
+  zeichneFlotte();
+}
+
+function zeichneFlotte() {
+  const g = spiel.spieler[1 - ich()], a = spiel.spieler[ich()], w = Math.max(9, Math.min(14, oFeld.cell * .55));
+  const zeile = sp => sp.schiffe.slice().sort((x, y) => y.len - x.len)
+    .map(s => `<div class="mini${istVersenkt(sp, s) ? ' weg' : ''}" style="width:${s.len * w}px"></div>`).join('');
+  const uebrig = sp => sp.schiffe.filter(s => !istVersenkt(sp, s)).length;
+  $('#flotte').innerHTML = `<h3>FEINDFLOTTE</h3><div class="reihe">${zeile(g)}</div><div class="zahl">${uebrig(g)} von 10 übrig</div>
+    <h3 style="margin-top:8px">DEINE FLOTTE</h3><div class="reihe">${zeile(a)}</div><div class="zahl">${uebrig(a)} von 10 übrig</div>`;
+}
+
+function banner(text, gegner = false) { const b = $('#banner'); b.textContent = text; b.classList.toggle('gegner', gegner); }
+
+function bereitZumZielen() {
+  beschaeftigt = false; auswahl = null;
+  banner(`${name(spiel.dran).toUpperCase()} – FEUER FREI!`);
+  tFeld.el.classList.add('zielen'); oFeld.el.classList.remove('aktiv');
+  $('#ziel').textContent = '– –'; $('#feuer').disabled = true;
+}
+
+tFeld.cells.addEventListener('click', e => {
+  const z = e.target.closest('.cell'); if (!z || beschaeftigt) return;
+  const i = +z.dataset.i, r = i / 10 | 0, c = i % 10;
+  if (spiel.spieler[1 - ich()].schuesse[r][c]) { Ton.fehler(); return; }
+  if (auswahl && auswahl[0] === r && auswahl[1] === c) return feuer();     // zweimal tippen = Feuer
+  auswahl = [r, c];
+  tFeld.zielen(r, c); Ton.sonar();
+  $('#ziel').textContent = koord(r, c); $('#feuer').disabled = false;
+});
+$('#feuer').onclick = () => feuer();
+
+async function feuer() {
+  if (!auswahl || beschaeftigt) return;
+  beschaeftigt = true; $('#feuer').disabled = true; tFeld.el.classList.remove('zielen');
+  const [r, c] = auswahl, wer = spiel.dran, ziel = spiel.spieler[1 - wer];
+  const erg = schiessen(ziel, r, c);
+  spiel.statistik[wer].schuss++; if (erg.art !== 'miss') spiel.statistik[wer].treffer++;
+  sichern();
+  await schussAnimation(tFeld, r, c, erg, true);
+  zeichneFlotte();
+  if (alleVersenkt(ziel)) return ende(wer);
+  if (erg.art === 'miss') { await warte(900); return zugEnde(); }
+  await warte(350);
+  bereitZumZielen();
+  banner(erg.art === 'sunk' ? 'VERSENKT! NOCHMAL SCHIESSEN!' : 'TREFFER! NOCHMAL SCHIESSEN!');
+}
+
+// Das Spektakel: Fadenkreuz rastet ein, dann Explosion oder Platsch
+async function schussAnimation(feld, r, c, erg, aufGegner) {
+  feld.zielen(r, c); feld.kreuz.classList.add('lock');
+  Ton.abschuss();
+  await warte(380);
+  feld.zielen(null);
+  const [x, y] = feld.mitte(r, c), z = feld.cell;
+  if (erg.art === 'miss') {
+    FX.platsch(x, y, z); Ton.platsch(); feld.markiere(r, c, 1, true);
+    stempel('WASSER', '', 'miss');
+  } else if (erg.art === 'hit') {
+    FX.explosion(x, y, z); Ton.bumm(); feld.markiere(r, c, 2, true); feld.wackeln();
+    stempel('TREFFER!', '', 'hit');
+  } else {
+    Ton.versenkt(); feld.wackeln();
+    stempel('VERSENKT!', NAME[erg.schiff.len], 'sunk');
+    if (aufGegner) { const el = schiffEl(erg.schiff, 'sunk auftauchen'); feld.schiffe.appendChild(el); }
+    else feld.zeigeSchiffe(spiel.spieler[ich()].schiffe.map(s => ({ ...s, klasse: istVersenkt(spiel.spieler[ich()], s) ? 'sunk' : '' })));
+    for (const [a, b] of erg.felder) {
+      const [xx, yy] = feld.mitte(a, b); FX.explosion(xx, yy, z, 1.3); feld.markiere(a, b, 3, true);
+      await warte(130);
+    }
+    for (const [a, b] of erg.rundum) { feld.markiere(a, b, 1, true); await warte(35); }
+  }
+  await warte(500);
+}
+
+function stempel(gross, klein, art) {
+  const s = $('#stempel');
+  s.querySelector('b').textContent = gross; s.querySelector('span').textContent = klein;
+  s.className = art; void s.offsetWidth; s.classList.add('zeigen');
+}
+
+function zugEnde() {
+  spiel.dran = 1 - spiel.dran; sichern();
+  if (spiel.modus === 'cpu') { if (spiel.dran === 1) computerZug(); else bereitZumZielen(); return; }
+  weiterSpielen();
+}
+
+async function computerZug() {
+  beschaeftigt = true; tFeld.el.classList.remove('zielen');
+  $('#feuer').disabled = true; $('#ziel').textContent = '– –';
+  banner('COMPUTER ZIELT …', true); oFeld.el.classList.add('aktiv');
+  while (true) {
+    await warte(900);
+    if (!spiel || !$('#s-battle').classList.contains('on')) return;
+    const ziel = spiel.spieler[0], [r, c] = computerZiel(ziel, spiel.stufe);
+    oFeld.zielen(r, c); Ton.sonar();
+    await warte(650);
+    const erg = schiessen(ziel, r, c);
+    spiel.statistik[1].schuss++; if (erg.art !== 'miss') spiel.statistik[1].treffer++;
+    sichern();
+    await schussAnimation(oFeld, r, c, erg, false);
+    zeichneFlotte();
+    if (alleVersenkt(ziel)) return ende(1);
+    if (erg.art === 'miss') break;
+    banner(erg.art === 'sunk' ? 'COMPUTER VERSENKT EIN SCHIFF!' : 'COMPUTER TRIFFT – NOCHMAL …', true);
+  }
+  await warte(500);
+  zugEnde();
+}
+
+$('#b-menu').onclick = async () => {
+  if (beschaeftigt) { Ton.fehler(); return; }        // erst wenn die Kugel gelandet ist
+  Ton.klick();
+  const w = await dialog('<h2 class="glow">PAUSE</h2><p class="mono" style="color:var(--g-dim)">Das Spiel wird gespeichert. Du kannst es im Menü fortsetzen.</p>',
+    [['WEITER', 'weiter'], ['ZUM MENÜ', 'menue']]);
+  if (w === 'menue') menue();
+};
+
+/* ---------- Spielende ---------- */
+async function ende(sieger) {
+  beschaeftigt = true; speicher.weg('mb-spiel');
+  await warte(900);
+  const verloren = spiel.modus === 'cpu' && sieger === 1;
+  if (verloren) {                         // Zeigen, wo die Computer-Schiffe waren
+    const g = spiel.spieler[1];
+    tFeld.zeigeSchiffe(g.schiffe.map(s => ({ ...s, klasse: istVersenkt(g, s) ? 'sunk' : 'auftauchen' })));
+    banner('DIE FEINDFLOTTE LAG HIER …', true);
+    await warte(2600);
+  }
+  $('#e-titel').className = verloren ? 'glow' : 'sieg';
+  $('#e-titel').textContent = verloren ? 'NIEDERLAGE' : 'SIEG!';
+  $('#e-text').textContent = verloren ? 'Der Computer hat gewonnen. Revanche?'
+    : spiel.modus === 'cpu' ? 'Du hast die ganze Computerflotte versenkt!' : `${name(sieger)} hat die ganze feindliche Flotte versenkt!`;
+  $('#e-stat').innerHTML = [0, 1].map(i => {
+    const s = spiel.statistik[i], q = s.schuss ? Math.round(s.treffer / s.schuss * 100) : 0;
+    return `<div><b>${name(i).toUpperCase()}</b>${s.schuss} Schüsse<br>${s.treffer} Treffer<br>${q} % Trefferquote</div>`;
+  }).join('');
+  zeige('s-end');
+  if (verloren) Ton.traurig();
+  else {
+    Ton.fanfare();
+    for (let i = 0; i < 14; i++) setTimeout(() => $('#s-end').classList.contains('on') && FX.rakete(), 300 + i * 450 + Math.random() * 200);
+  }
+}
+$('#e-nochmal').onclick = () => {
+  Ton.klick();
+  const { modus, stufe } = spiel;
+  spiel = { modus, stufe, spieler: [null, null], dran: 0, phase: 'setzen', statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
+  aufstellen(0);
+};
+$('#e-menu').onclick = () => { Ton.klick(); menue(); };
+
+/* ---------- Haupt-Schleife: zeichnet Radar und Effekte ---------- */
+let letzt = performance.now(), letzterWinkel = 0;
+function schleife(t) {
+  const dt = Math.min(.05, (t - letzt) / 1000); letzt = t;
+  const w = tFeld.zeichne(t);
+  if (w !== false && w < letzterWinkel && $('#s-battle').classList.contains('on')) Ton.ping();   // Ping bei jeder Umdrehung
+  if (w !== false) letzterWinkel = w;
+  oFeld.zeichne(t); pFeld.zeichne(t);
+  FX.schritt(dt);
+  requestAnimationFrame(schleife);
+}
+layout();
+menue();
+requestAnimationFrame(schleife);
+
+// Offline-Fähigkeit (funktioniert nur über https oder localhost)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
