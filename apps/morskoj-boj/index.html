@@ -224,6 +224,14 @@
   .knoepfe.klein button{font-size:12px;padding:10px 12px}
   .fehler{color:#ff8a7a!important}
 
+  #scanner{position:fixed;inset:0;z-index:47;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px}
+  #scanner.on{display:flex}
+  .sucher{position:relative;width:min(88vw,60vh);aspect-ratio:1;border-radius:18px;overflow:hidden;border:2px solid var(--g);box-shadow:0 0 30px rgba(57,255,138,.5)}
+  .sucher video{width:100%;height:100%;object-fit:cover;display:block}
+  .sucher .linie{position:absolute;left:6%;right:6%;height:2px;background:var(--g);box-shadow:0 0 12px 3px rgba(57,255,138,.8);animation:scanlinie 2s ease-in-out infinite alternate}
+  @keyframes scanlinie{from{top:8%}to{top:92%}}
+  #sc-text{text-align:center}
+
   #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:44}
   #version{position:fixed;bottom:calc(4px + env(safe-area-inset-bottom));right:10px;font:11px var(--mono);color:var(--g-dim);z-index:2;opacity:.7}
 </style>
@@ -341,7 +349,8 @@
   </div>
   <div class="formular">
     <h3>A · ICH HABE EINE EINLADUNG</h3>
-    <p>Einladungs-Code vom anderen Gerät hier einfügen:</p>
+    <button id="s-scannen">📷 QR-CODE SCANNEN</button>
+    <p>Oder den Einladungs-Code hier einfügen:</p>
     <textarea id="s-code" placeholder="MB1~…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="knoepfe"><button id="s-einfuegen">📋 EINFÜGEN</button><button id="s-annehmen">ANNEHMEN</button></div>
     <h3>B · ERSTES GERÄT (ELTERN)</h3>
@@ -369,6 +378,13 @@
   </div>
 </section>
 
+<!-- Kamera für den Einladungs-QR (Bilder bleiben im Gerät, nichts wird gespeichert) -->
+<div id="scanner">
+  <div class="sucher"><video playsinline muted></video><div class="linie"></div></div>
+  <p class="klein" id="sc-text">QR-Code der Einladung in den Rahmen halten</p>
+  <button id="sc-stopp">ABBRECHEN</button>
+</div>
+
 <div id="dialog"><div class="box"></div></div>
 <div id="stempel"><b></b><span></span></div>
 <canvas id="fx"></canvas>
@@ -376,7 +392,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 document.getElementById('version').textContent = 'v' + APP_VERSION;
 
 const $ = s => document.querySelector(s);
@@ -1653,6 +1669,51 @@ $('#s-einfuegen').onclick = async () => {
   try { $('#s-code').value = await navigator.clipboard.readText(); } catch { $('#s-code').focus(); }
 };
 $('#s-annehmen').onclick = () => einladungAnnehmen($('#s-code').value);
+
+/* ---------- QR-Code mit der Kamera lesen (jsQR wird erst hier geladen) ---------- */
+const Scanner = {
+  strom: null, an: false,
+  async laden() {
+    if (window.jsQR) return;
+    await new Promise((ok, fehler) => { const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = ok; s.onerror = fehler; document.head.appendChild(s); });
+  },
+  async start() {
+    const video = $('#scanner video');
+    $('#sc-text').textContent = 'QR-Code der Einladung in den Rahmen halten'; $('#sc-text').classList.remove('fehler');
+    $('#scanner').classList.add('on');
+    try {
+      await this.laden();
+      this.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = this.strom; await video.play();
+    } catch (e) {
+      this.stopp();
+      Ton.fehler();
+      return meldung('Kamera nicht verfügbar – in den Einstellungen erlauben oder den Code einfügen.', true);
+    }
+    this.an = true;
+    const cv = document.createElement('canvas'), c = cv.getContext('2d', { willReadFrequently: true });
+    const suchen = () => {
+      if (!this.an) return;
+      if (video.readyState >= 2 && video.videoWidth) {
+        const f = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));   // kleiner rechnen geht schneller
+        cv.width = video.videoWidth * f; cv.height = video.videoHeight * f;
+        c.drawImage(video, 0, 0, cv.width, cv.height);
+        const code = jsQR(c.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: 'dontInvert' });
+        if (code && Sync.lesEinladung(code.data)) { this.stopp(); return einladungAnnehmen(code.data); }
+        if (code) { $('#sc-text').textContent = 'Das ist kein Морской-бой-Einladungscode.'; $('#sc-text').classList.add('fehler'); }
+      }
+      requestAnimationFrame(suchen);
+    };
+    requestAnimationFrame(suchen);
+  },
+  stopp() {
+    this.an = false;
+    if (this.strom) this.strom.getTracks().forEach(t => t.stop());
+    this.strom = null; $('#scanner').classList.remove('on');
+  },
+};
+$('#s-scannen').onclick = () => { Ton.klick(); Scanner.start(); };
+$('#sc-stopp').onclick = () => { Ton.klick(); Scanner.stopp(); };
 
 async function einladungAnnehmen(text) {
   const cfg = Sync.lesEinladung(text);
