@@ -38,3 +38,7 @@ lernt man, wie zwei Geräte miteinander reden.
   gleiche Startzahl + gleiche Eingaben = gleiches Ergebnis. Danach wird der
   Kontroll-Stand übernommen, falls doch etwas abweicht.
   Lernthema: *Zufall mit Startzahl* und *Determinismus*.
+- v0.3: Jedes Team kann Mensch 👤 oder Computer 🤖 sein. Online rechnet das Gerät,
+  das das Spiel erstellt hat („Gastgeber“), die Computer-Züge und schickt sie wie
+  einen normalen Zug. Der Computer probiert „im Kopf“ viele Schüsse mit derselben
+  Physik aus und nimmt einen der besten – je nach Stufe mit zittriger Hand.
