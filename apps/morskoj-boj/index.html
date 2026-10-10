@@ -210,6 +210,20 @@
   #dialog li{margin:6px 0}
   #dialog .knoepfe{justify-content:flex-end}
 
+  /* ---------- Online (zwei Geräte) ---------- */
+  #s-online,#s-einladung,#s-setup{gap:14px}
+  .online-mitte{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;width:100%}
+  #o-status{text-align:center;max-width:420px;font:15px/1.5 var(--mono);margin:0;white-space:pre-line}
+  .formular{width:min(92vw,460px);display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;padding-bottom:20px}
+  .formular h3{margin:10px 0 0;font:600 13px var(--mono);letter-spacing:.15em;color:var(--g)}
+  .formular p,.klein{font:13px/1.5 var(--mono);color:var(--g-dim);margin:0}
+  input,textarea{font:16px var(--mono);color:var(--text);background:rgba(0,0,0,.45);border:1px solid rgba(57,255,138,.5);
+    border-radius:10px;padding:12px;width:100%;-webkit-user-select:text;user-select:text;outline:none}
+  textarea{height:64px;resize:none}
+  #qr{width:min(78vw,44vh);height:auto;image-rendering:pixelated;border-radius:12px;box-shadow:0 0 30px rgba(57,255,138,.45)}
+  .knoepfe.klein button{font-size:12px;padding:10px 12px}
+  .fehler{color:#ff8a7a!important}
+
   #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:44}
   #version{position:fixed;bottom:calc(4px + env(safe-area-inset-bottom));right:10px;font:11px var(--mono);color:var(--g-dim);z-index:2;opacity:.7}
 </style>
@@ -229,6 +243,7 @@
     <button data-modus="cpu" data-stufe="matrose">GEGEN COMPUTER<small>Stufe: Matrose – zum Üben</small></button>
     <button data-modus="cpu" data-stufe="admiral">GEGEN COMPUTER<small>Stufe: Admiral – richtig schwer</small></button>
     <button data-modus="duo">ZU ZWEIT<small>Ein Gerät, abwechselnd</small></button>
+    <button id="b-online">ONLINE · ZWEI GERÄTE<small>iPhone ↔ iPad über GitHub</small></button>
     <div class="zeile"><button id="b-regeln">REGELN</button></div>
   </div>
 </section>
@@ -299,6 +314,61 @@
   </div>
 </section>
 
+<!-- Online: Warteraum -->
+<section id="s-online" class="screen">
+  <div class="kopf">
+    <button class="rund zummenue" aria-label="Zurück">✕</button>
+    <h2 class="glow">ONLINE · ZWEI GERÄTE</h2>
+    <button class="rund ton" aria-label="Ton an/aus">🔊</button>
+  </div>
+  <div class="online-mitte">
+    <div class="radar"><div class="strahl"></div></div>
+    <p id="o-status" class="glow"></p>
+    <div class="menue" id="o-knoepfe"></div>
+  </div>
+  <div class="knoepfe klein">
+    <button id="o-einladung">EINLADUNG ZEIGEN</button>
+    <button id="o-loeschen">EINRICHTUNG LÖSCHEN</button>
+  </div>
+</section>
+
+<!-- Online: einrichten -->
+<section id="s-setup" class="screen">
+  <div class="kopf">
+    <button class="rund zummenue" aria-label="Zurück">✕</button>
+    <h2 class="glow">GERÄT EINRICHTEN</h2>
+    <button class="rund ton" aria-label="Ton an/aus">🔊</button>
+  </div>
+  <div class="formular">
+    <h3>A · ICH HABE EINE EINLADUNG</h3>
+    <p>Einladungs-Code vom anderen Gerät hier einfügen:</p>
+    <textarea id="s-code" placeholder="MB1~…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    <div class="knoepfe"><button id="s-einfuegen">📋 EINFÜGEN</button><button id="s-annehmen">ANNEHMEN</button></div>
+    <h3>B · ERSTES GERÄT (ELTERN)</h3>
+    <p>Privates Repo für die Spielstände und ein Token, der nur dieses Repo lesen und schreiben darf.</p>
+    <input id="s-repo" placeholder="besitzer/repo" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <input id="s-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button id="s-verbinden">VERBINDEN</button>
+    <p id="s-meldung"></p>
+  </div>
+</section>
+
+<!-- Online: Einladung fürs zweite Gerät -->
+<section id="s-einladung" class="screen">
+  <div class="kopf">
+    <button class="rund" id="i-zurueck" aria-label="Zurück">✕</button>
+    <h2 class="glow">EINLADUNG</h2>
+    <button class="rund ton" aria-label="Ton an/aus">🔊</button>
+  </div>
+  <div class="online-mitte">
+    <canvas id="qr"></canvas>
+    <p class="klein" style="text-align:center;max-width:400px">Mit der Kamera des zweiten Geräts scannen.<br>
+      Oder Code kopieren und dort unter „Einladung einfügen“ einsetzen.<br>
+      <b class="fehler">Nur eigenen Geräten zeigen – enthält den Schlüssel!</b></p>
+    <div class="knoepfe"><button id="i-kopieren">📋 CODE KOPIEREN</button><button id="i-fertig">FERTIG</button></div>
+  </div>
+</section>
+
 <div id="dialog"><div class="box"></div></div>
 <div id="stempel"><b></b><span></span></div>
 <canvas id="fx"></canvas>
@@ -306,7 +376,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.1';
 document.getElementById('version').textContent = 'v' + APP_VERSION;
 
 const $ = s => document.querySelector(s);
@@ -650,12 +720,30 @@ function schiessen(ziel, r, c) {
   const s = ziel.schiffe[i], felder = felderVon(s);
   if (!felder.every(([a, b]) => g[a][b] === 2)) return { art: 'hit' };
   felder.forEach(([a, b]) => g[a][b] = 3);
-  const rundum = [];                          // Rund um ein versenktes Schiff ist immer Wasser
+  return { art: 'sunk', schiff: s, felder, rundum: wasserRundum(g, felder) };
+}
+
+// Rund um ein versenktes Schiff ist immer Wasser
+function wasserRundum(g, felder) {
+  const rundum = [];
   felder.forEach(([a, b]) => { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
     const rr = a + dr, cc = b + dc;
     if (rr >= 0 && cc >= 0 && rr < 10 && cc < 10 && !g[rr][cc]) { g[rr][cc] = 1; rundum.push([rr, cc]); }
   } });
-  return { art: 'sunk', schiff: s, felder, rundum };
+  return rundum;
+}
+
+// Online: Wir kennen die feindlichen Schiffe nicht – wir tragen nur die Antwort ein
+function eintragen(sp, z) {
+  const g = sp.schuesse;
+  if (z.e === 'miss') { g[z.r][z.c] = 1; return { art: 'miss' }; }
+  if (z.e === 'hit') { g[z.r][z.c] = 2; return { art: 'hit' }; }
+  const felder = z.f;
+  felder.forEach(([a, b]) => g[a][b] = 3);
+  const senk = felder.length > 1 && felder[0][1] === felder[1][1];
+  const schiff = { len: felder.length, r: Math.min(...felder.map(f => f[0])), c: Math.min(...felder.map(f => f[1])), senk };
+  sp.schiffe.push(schiff);
+  return { art: 'sunk', schiff, felder, rundum: wasserRundum(g, felder) };
 }
 
 /* =====================================================================
@@ -731,6 +819,7 @@ addEventListener('resize', layout);
 
 function name(i) {
   if (spiel.modus === 'duo') return 'Kapitän ' + (i + 1);
+  if (spiel.modus === 'online') return i === 0 ? 'Du' : 'Gegner';
   return i === 0 ? 'Kapitän' : 'Computer';
 }
 const sichern = () => speicher.schreib('mb-spiel', spiel);
@@ -754,7 +843,7 @@ $('#b-regeln').onclick = () => {
 };
 $('#b-weiter').onclick = () => { Ton.klick(); spiel = speicher.lies('mb-spiel'); weiterSpielen(); };
 function menue() {
-  spiel = null; beschaeftigt = false;
+  spiel = null; beschaeftigt = false; Online.stop();
   $('#b-weiter').hidden = !(speicher.lies('mb-spiel') || {}).spieler;
   zeige('s-menu');
 }
@@ -902,7 +991,8 @@ $('#p-zurueck').onclick = () => { Ton.klick(); menue(); };
 $('#p-fertig').onclick = () => {
   Ton.sonar();
   const wer = setz.wer;
-  spiel.spieler[wer] = { schiffe: setz.schiffe.map(({ len, r, c, senk }) => ({ len, r, c, senk, gesetzt: true })), schuesse: gitter() };
+  if (spiel.modus === 'online') return onlineFlotteFertig(setz.schiffe);
+  spiel.spieler[wer] ={ schiffe: setz.schiffe.map(({ len, r, c, senk }) => ({ len, r, c, senk, gesetzt: true })), schuesse: gitter() };
   if (spiel.modus === 'cpu') {
     spiel.spieler[1] = { schiffe: zufallsFlotte(), schuesse: gitter() };
     return schlachtBeginnt();
@@ -924,7 +1014,7 @@ function weiterSpielen() {
 
 /* ---------- Schlacht ---------- */
 let auswahl = null;
-const ich = () => spiel.modus === 'cpu' ? 0 : spiel.dran;      // wessen Felder gerade zu sehen sind
+const ich = () => spiel.modus === 'duo' ? spiel.dran : 0;      // wessen Felder gerade zu sehen sind
 
 function schlacht() {
   zeige('s-battle');
@@ -945,9 +1035,16 @@ function zeichneSchlacht() {
 
 function zeichneFlotte() {
   const g = spiel.spieler[1 - ich()], a = spiel.spieler[ich()], w = Math.max(9, Math.min(14, oFeld.cell * .55));
-  const zeile = sp => sp.schiffe.slice().sort((x, y) => y.len - x.len)
-    .map(s => `<div class="mini${istVersenkt(sp, s) ? ' weg' : ''}" style="width:${s.len * w}px"></div>`).join('');
-  const uebrig = sp => sp.schiffe.filter(s => !istVersenkt(sp, s)).length;
+  // Liste {len, weg}. Online kennen wir vom Gegner nur die versenkten Schiffe.
+  const liste = sp => {
+    if (spiel.modus !== 'online' || sp === a) return sp.schiffe.map(s => ({ len: s.len, weg: istVersenkt(sp, s) }));
+    const rest = FLOTTE.slice();
+    sp.schiffe.forEach(s => rest.splice(rest.indexOf(s.len), 1));
+    return sp.schiffe.map(s => ({ len: s.len, weg: true })).concat(rest.map(len => ({ len, weg: false })));
+  };
+  const zeile = sp => liste(sp).sort((x, y) => y.len - x.len)
+    .map(s => `<div class="mini${s.weg ? ' weg' : ''}" style="width:${s.len * w}px"></div>`).join('');
+  const uebrig = sp => liste(sp).filter(s => !s.weg).length;
   $('#flotte').innerHTML = `<h3>FEINDFLOTTE</h3><div class="reihe">${zeile(g)}</div><div class="zahl">${uebrig(g)} von 10 übrig</div>
     <h3 style="margin-top:8px">DEINE FLOTTE</h3><div class="reihe">${zeile(a)}</div><div class="zahl">${uebrig(a)} von 10 übrig</div>`;
 }
@@ -974,6 +1071,7 @@ $('#feuer').onclick = () => feuer();
 
 async function feuer() {
   if (!auswahl || beschaeftigt) return;
+  if (spiel.modus === 'online') return onlineFeuer();
   beschaeftigt = true; $('#feuer').disabled = true; tFeld.el.classList.remove('zielen');
   const [r, c] = auswahl, wer = spiel.dran, ziel = spiel.spieler[1 - wer];
   const erg = schiessen(ziel, r, c);
@@ -1051,7 +1149,7 @@ async function computerZug() {
 }
 
 $('#b-menu').onclick = async () => {
-  if (beschaeftigt) { Ton.fehler(); return; }        // erst wenn die Kugel gelandet ist
+  if (beschaeftigt && !(spiel.modus === 'online' && !Online.tickt)) { Ton.fehler(); return; }   // erst wenn die Kugel gelandet ist
   Ton.klick();
   const w = await dialog('<h2 class="glow">PAUSE</h2><p class="mono" style="color:var(--g-dim)">Das Spiel wird gespeichert. Du kannst es im Menü fortsetzen.</p>',
     [['WEITER', 'weiter'], ['ZUM MENÜ', 'menue']]);
@@ -1060,10 +1158,12 @@ $('#b-menu').onclick = async () => {
 
 /* ---------- Spielende ---------- */
 async function ende(sieger) {
-  beschaeftigt = true; speicher.weg('mb-spiel');
+  if (spiel.fertig) return;
+  spiel.fertig = true; beschaeftigt = true;
+  if (spiel.modus === 'online') speicher.weg('mb-online'); else speicher.weg('mb-spiel');
   await warte(900);
-  const verloren = spiel.modus === 'cpu' && sieger === 1;
-  if (verloren) {                         // Zeigen, wo die Computer-Schiffe waren
+  const verloren = spiel.modus !== 'duo' && sieger === 1;
+  if (verloren && spiel.modus === 'cpu') {          // Zeigen, wo die Computer-Schiffe waren
     const g = spiel.spieler[1];
     tFeld.zeigeSchiffe(g.schiffe.map(s => ({ ...s, klasse: istVersenkt(g, s) ? 'sunk' : 'auftauchen' })));
     banner('DIE FEINDFLOTTE LAG HIER …', true);
@@ -1071,8 +1171,9 @@ async function ende(sieger) {
   }
   $('#e-titel').className = verloren ? 'glow' : 'sieg';
   $('#e-titel').textContent = verloren ? 'NIEDERLAGE' : 'SIEG!';
-  $('#e-text').textContent = verloren ? 'Der Computer hat gewonnen. Revanche?'
-    : spiel.modus === 'cpu' ? 'Du hast die ganze Computerflotte versenkt!' : `${name(sieger)} hat die ganze feindliche Flotte versenkt!`;
+  $('#e-text').textContent = verloren ? (spiel.modus === 'cpu' ? 'Der Computer hat gewonnen. Revanche?' : 'Deine Flotte ist versenkt. Revanche?')
+    : spiel.modus === 'cpu' ? 'Du hast die ganze Computerflotte versenkt!'
+    : spiel.modus === 'online' ? 'Du hast die ganze feindliche Flotte versenkt!' : `${name(sieger)} hat die ganze feindliche Flotte versenkt!`;
   $('#e-stat').innerHTML = [0, 1].map(i => {
     const s = spiel.statistik[i], q = s.schuss ? Math.round(s.treffer / s.schuss * 100) : 0;
     return `<div><b>${name(i).toUpperCase()}</b>${s.schuss} Schüsse<br>${s.treffer} Treffer<br>${q} % Trefferquote</div>`;
@@ -1086,11 +1187,491 @@ async function ende(sieger) {
 }
 $('#e-nochmal').onclick = () => {
   Ton.klick();
+  if (spiel.modus === 'online') return onlineMenue();
   const { modus, stufe } = spiel;
   spiel = { modus, stufe, spieler: [null, null], dran: 0, phase: 'setzen', statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
   aufstellen(0);
 };
 $('#e-menu').onclick = () => { Ton.klick(); menue(); };
+
+/* =====================================================================
+   QR-CODE – selbst gebaut (nach dem offiziellen Verfahren, Fehlerstufe M)
+   Ein QR-Code ist ein Gitter aus schwarzen/weißen Quadraten. Darin stecken
+   die Buchstaben als Bits plus „Reparatur-Bits“, damit Kratzer nicht stören.
+   ===================================================================== */
+const QR = (() => {
+  const ECC = [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28];
+  const BLOECKE = [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49];
+  const roh = v => { let r = (16 * v + 128) * v + 64; if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; };
+  const datenWorte = v => Math.floor(roh(v) / 8) - ECC[v] * BLOECKE[v];
+  const mal = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z; };
+  const teiler = d => { const r = Array(d).fill(0); r[d - 1] = 1; let w = 1;
+    for (let i = 0; i < d; i++) { for (let j = 0; j < d; j++) { r[j] = mal(r[j], w); if (j + 1 < d) r[j] ^= r[j + 1]; } w = mal(w, 2); } return r; };
+  const rest = (daten, t) => { const r = t.map(() => 0);
+    for (const b of daten) { const f = b ^ r.shift(); r.push(0); t.forEach((k, i) => r[i] ^= mal(k, f)); } return r; };
+  const MASKEN = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, x => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+
+  function erzeuge(text) {
+    const bytes = [...new TextEncoder().encode(text)];
+    let v = 1;
+    while (v <= 40 && 4 + (v < 10 ? 8 : 16) + bytes.length * 8 > datenWorte(v) * 8) v++;
+    if (v > 40) throw new Error('Text zu lang');
+    // 1. Bits sammeln: Modus „Bytes“, Länge, Daten, Füllbytes
+    const bits = [], put = (w, n) => { for (let i = n - 1; i >= 0; i--) bits.push((w >>> i) & 1); };
+    const kap = datenWorte(v) * 8;
+    put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+    put(0, Math.min(4, kap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+    for (let p = 0xEC; bits.length < kap; p ^= 0xEC ^ 0x11) put(p, 8);
+    const daten = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = b << 1 | bits[i + j]; daten.push(b); }
+    // 2. Reparatur-Bits (Reed-Solomon) pro Block, dann verzahnen
+    const nb = BLOECKE[v], el = ECC[v], rw = Math.floor(roh(v) / 8), kurz = nb - rw % nb, kl = Math.floor(rw / nb), t = teiler(el), bl = [];
+    for (let i = 0, k = 0; i < nb; i++) { const d = daten.slice(k, k + kl - el + (i < kurz ? 0 : 1)); k += d.length; const e = rest(d, t); if (i < kurz) d.push(0); bl.push(d.concat(e)); }
+    const worte = []; for (let i = 0; i < bl[0].length; i++) bl.forEach((b, j) => { if (i !== kl - el || j >= kurz) worte.push(b[i]); });
+    // 3. Gitter: feste Muster (Ecken, Taktlinien, Ausrichtung)
+    const n = v * 4 + 17, m = [...Array(n)].map(() => Array(n).fill(false)), fest = [...Array(n)].map(() => Array(n).fill(false));
+    const setze = (x, y, d) => { m[y][x] = d; fest[y][x] = true; };
+    for (let i = 0; i < n; i++) { setze(6, i, i % 2 === 0); setze(i, 6, i % 2 === 0); }
+    const ecke = (x, y) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const d = Math.max(Math.abs(dx), Math.abs(dy)), xx = x + dx, yy = y + dy;
+      if (xx >= 0 && xx < n && yy >= 0 && yy < n) setze(xx, yy, d !== 2 && d !== 4); } };
+    ecke(3, 3); ecke(n - 4, 3); ecke(3, n - 4);
+    if (v > 1) {
+      const na = Math.floor(v / 7) + 2, schritt = v === 32 ? 26 : Math.ceil((v * 4 + 4) / (na * 2 - 2)) * 2, pos = [6];
+      for (let p = n - 7; pos.length < na; p -= schritt) pos.splice(1, 0, p);
+      for (let i = 0; i < na; i++) for (let j = 0; j < na; j++) {
+        if ((i === 0 && j === 0) || (i === 0 && j === na - 1) || (i === na - 1 && j === 0)) continue;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setze(pos[i] + dx, pos[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }
+    }
+    const format = mk => {
+      const d = mk; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);   // Stufe M = 00
+      const b = (d << 10 | r) ^ 0x5412, bit = i => ((b >>> i) & 1) === 1;
+      for (let i = 0; i <= 5; i++) setze(8, i, bit(i));
+      setze(8, 7, bit(6)); setze(8, 8, bit(7)); setze(7, 8, bit(8));
+      for (let i = 9; i < 15; i++) setze(14 - i, 8, bit(i));
+      for (let i = 0; i < 8; i++) setze(n - 1 - i, 8, bit(i));
+      for (let i = 8; i < 15; i++) setze(8, n - 15 + i, bit(i));
+      setze(8, n - 8, true);
+    };
+    format(0);
+    if (v >= 7) {
+      let r = v; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const b = v << 12 | r;
+      for (let i = 0; i < 18; i++) { const bit = ((b >>> i) & 1) === 1, a = n - 11 + i % 3, c = Math.floor(i / 3); setze(a, c, bit); setze(c, a, bit); }
+    }
+    // 4. Daten im Zickzack von unten rechts einfüllen
+    let i = 0;
+    for (let rechts = n - 1; rechts >= 1; rechts -= 2) {
+      if (rechts === 6) rechts = 5;
+      for (let s = 0; s < n; s++) for (let j = 0; j < 2; j++) {
+        const x = rechts - j, hoch = ((rechts + 1) & 2) === 0, y = hoch ? n - 1 - s : s;
+        if (!fest[y][x] && i < worte.length * 8) { m[y][x] = ((worte[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; }
+      }
+    }
+    // 5. Muster-Maske wählen, die am „ruhigsten“ aussieht
+    const maske = k => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!fest[y][x] && MASKEN[k](x, y)) m[y][x] = !m[y][x]; };
+    const strafe = () => {
+      let p = 0, dunkel = 0;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        if (m[y][x]) dunkel++;
+        if (x < n - 1 && y < n - 1 && m[y][x] === m[y][x + 1] && m[y][x] === m[y + 1][x] && m[y][x] === m[y + 1][x + 1]) p += 3;
+      }
+      for (let a = 0; a < n; a++) { let lx = 1, ly = 1;
+        for (let b = 1; b < n; b++) {
+          if (m[a][b] === m[a][b - 1]) { lx++; p += lx === 5 ? 3 : lx > 5 ? 1 : 0; } else lx = 1;
+          if (m[b][a] === m[b - 1][a]) { ly++; p += ly === 5 ? 3 : ly > 5 ? 1 : 0; } else ly = 1;
+        } }
+      return p + Math.floor(Math.abs(dunkel * 20 - n * n * 10) / (n * n)) * 10;
+    };
+    let beste = 0, bp = Infinity;
+    for (let k = 0; k < 8; k++) { maske(k); format(k); const p = strafe(); if (p < bp) { bp = p; beste = k; } maske(k); }
+    maske(beste); format(beste);
+    return m;
+  }
+  function malen(cv, text) {
+    const m = erzeuge(text), n = m.length, px = 8, s = (n + 8) * px;
+    cv.width = cv.height = s;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, s, s); c.fillStyle = '#000';
+    m.forEach((zeile, y) => zeile.forEach((d, x) => d && c.fillRect((x + 4) * px, (y + 4) * px, px, px)));
+  }
+  return { erzeuge, malen };
+})();
+
+/* =====================================================================
+   SYNC ÜBER GITHUB
+   Beide Geräte lesen/schreiben EINE verschlüsselte Datei im privaten Repo.
+   Der Schlüssel (AES-GCM) und der Token liegen nur auf den Geräten.
+   ===================================================================== */
+const b64 = u8 => { let s = ''; u8.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); };
+
+const Sync = {
+  cfg: speicher.lies('mb-sync'),                 // { o: Besitzer, r: Repo, t: Token, k: Schlüssel }
+  geraet: speicher.lies('mb-geraet') || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('mb-geraet', id); return id; })(),
+  pfad: 'morskoj-boj/aktuell.json',
+  etag: null, sha: null, stand: null, schluessel: null,
+
+  einladung() { const c = this.cfg; return ['MB1', c.o, c.r, c.t, c.k].join('~'); },
+  einladungsLink() { return location.origin + location.pathname + '#einladung=' + this.einladung(); },
+  lesEinladung(text) {
+    text = decodeURIComponent((text || '').trim()).replace(/^.*einladung=/, '').replace(/\s/g, '');
+    const t = text.split('~');
+    if (t.length !== 5 || t[0] !== 'MB1' || unb64(t[4]).length !== 32) return null;
+    return { o: t[1], r: t[2], t: t[3], k: t[4] };
+  },
+  speichern(cfg) { this.cfg = cfg; this.schluessel = null; this.etag = this.sha = this.stand = null; speicher.schreib('mb-sync', cfg); },
+
+  url() { return `https://api.github.com/repos/${this.cfg.o}/${this.cfg.r}/contents/${this.pfad}`; },
+  kopf() { return { Authorization: 'Bearer ' + this.cfg.t, Accept: 'application/vnd.github+json' }; },
+  async key() {
+    if (!this.schluessel) this.schluessel = await crypto.subtle.importKey('raw', unb64(this.cfg.k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    return this.schluessel;
+  },
+  async verschluesseln(obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const d = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.key(), new TextEncoder().encode(JSON.stringify(obj)));
+    return { v: 1, iv: b64(iv), d: b64(new Uint8Array(d)) };
+  },
+  async entschluesseln(roh) {
+    try {
+      const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(roh.iv) }, await this.key(), unb64(roh.d));
+      return JSON.parse(new TextDecoder().decode(d));
+    } catch { throw new Error('Schlüssel passt nicht – Einladung neu scannen.'); }
+  },
+  // Lesen. Mit ETag fragt GitHub nur „hat sich was geändert?“ – das ist schnell.
+  async lesen(frisch = false) {
+    const h = this.kopf(); if (!frisch && this.etag) h['If-None-Match'] = this.etag;
+    const res = await fetch(this.url(), { headers: h, cache: 'no-store' });
+    if (res.status === 304) return this.stand;
+    if (res.status === 404) { this.sha = this.etag = this.stand = null; return null; }
+    if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json();
+    this.etag = res.headers.get('ETag'); this.sha = j.sha;
+    this.stand = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    return this.stand;
+  },
+  async schreiben(stand) {
+    const body = { message: 'Морской бой: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
+    if (this.sha) body.sha = this.sha;
+    const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.status === 409 || res.status === 422) return false;          // jemand war schneller
+    if (res.status === 403 || res.status === 404) throw new Error('Token darf nicht schreiben (Contents: Read and write?).');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null;
+    return true;
+  },
+  // Ändern = neu lesen, Funktion anwenden, zurückschreiben. Bei Gleichzeitigkeit: nochmal.
+  async aendern(fn) {
+    for (let i = 0; i < 6; i++) {
+      const alt = await this.lesen(true);
+      const neu = fn(alt ? JSON.parse(JSON.stringify(alt)) : null);
+      if (!neu) return alt;
+      if (await this.schreiben(neu)) return neu;
+      await warte(300 + Math.random() * 700);
+    }
+    throw new Error('Das andere Gerät schreibt gerade – bitte nochmal.');
+  },
+};
+
+/* =====================================================================
+   ONLINE-SPIEL
+   Gemeinsamer Stand: { id, status, geraete:[A,B], bereit:[..], dran, zuege:[{s,r,c,e,f}] }
+   status: wartet → aufstellen → laeuft → ende
+   Ein Zug: Schütze trägt {s,r,c} ein. Das beschossene Gerät prüft bei sich
+   und schreibt die Antwort e = miss/hit/sunk (bei sunk auch die Felder f).
+   ===================================================================== */
+const Online = {
+  timer: null, tickt: false, zuletzt: null,
+  start() { this.stop(); this.zuletzt = null; this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  async tick() {
+    if (this.tickt || document.hidden || !this.timer) return;
+    this.tickt = true;
+    try {
+      const st = await Sync.lesen();
+      const json = JSON.stringify(st);
+      if (json !== this.zuletzt) { this.zuletzt = json; await onlineSteuern(st); }
+      this.fehler(null);
+    } catch (e) { this.fehler(e.message); }
+    finally { this.tickt = false; }
+  },
+  fehler(text) {
+    if ($('#s-online').classList.contains('on') && text) { $('#o-status').textContent = '⚠ ' + text; $('#o-status').classList.add('fehler'); }
+    if ($('#s-battle').classList.contains('on') && spiel && spiel.modus === 'online') {
+      if (text) banner('⚠ KEINE VERBINDUNG …', true); else if (this.warFehler) onlineBanner();
+    }
+    this.warFehler = !!text;
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Online.timer) Online.tick(); });
+
+function onlineMenue() {
+  spiel = null; beschaeftigt = false;
+  if (!Sync.cfg) return setupZeigen();
+  zeige('s-online');
+  lobby('Verbinde mit GitHub …', []);
+  Online.start();
+}
+$('#b-online').onclick = () => { Ton.klick(); onlineMenue(); };
+$$('.zummenue').forEach(b => b.onclick = () => { Ton.klick(); menue(); });
+
+function lobby(text, knoepfe) {
+  const s = $('#o-status'); s.textContent = text; s.classList.remove('fehler');
+  const box = $('#o-knoepfe'); box.innerHTML = '';
+  knoepfe.forEach(([t, fn]) => { const b = document.createElement('button'); b.innerHTML = t; b.onclick = () => { Ton.klick(); fn(); }; box.appendChild(b); });
+}
+
+// Entscheidet anhand des gemeinsamen Stands, was dieses Gerät zeigt
+async function onlineSteuern(st) {
+  const idx = st ? st.geraete.indexOf(Sync.geraet) : -1;
+  const meinSpiel = idx >= 0 && (st.status !== 'ende' || (spiel && spiel.id === st.id && !spiel.fertig));
+  if (!meinSpiel) {
+    if (spiel && spiel.modus === 'online' && !spiel.fertig && st && st.id === spiel.id) return;
+    if (spiel && spiel.modus === 'online' && !spiel.fertig) { spiel = null; zeige('s-online'); }   // Spiel wurde abgebrochen
+    if (!$('#s-online').classList.contains('on')) return;
+    if (!st || st.status === 'ende') return lobby('Kein offenes Spiel.', [['⚓ NEUES SPIEL STARTEN', neuesOnlineSpiel]]);
+    if (st.status === 'wartet') return lobby('Das andere Gerät wartet auf dich!', [['⚓ BEITRETEN', beitreten]]);
+    return lobby('Auf anderen Geräten läuft gerade ein Spiel.', [['NEUES SPIEL (ALTES BEENDEN)', neuesOnlineSpiel]]);
+  }
+  if (!spiel || spiel.modus !== 'online' || spiel.id !== st.id) onlineSpielLaden(st, idx);
+  if (st.status === 'wartet') {
+    if (!$('#s-online').classList.contains('on')) zeige('s-online');
+    return lobby('Warte auf das zweite Gerät …\nDort: Морской бой → Online → Beitreten', [['ABBRECHEN', abbrechen]]);
+  }
+  if (!spiel.spieler[0]) {                                     // eigene Flotte fehlt noch
+    if (!$('#s-place').classList.contains('on')) aufstellen(0);
+    return;
+  }
+  if (st.status === 'aufstellen') {
+    if (!$('#s-online').classList.contains('on')) zeige('s-online');
+    return lobby('Deine Flotte ist bereit.\nWarte, bis der Gegner aufgestellt hat …', [['ABBRECHEN', abbrechen]]);
+  }
+  if (!$('#s-battle').classList.contains('on') && !$('#s-end').classList.contains('on')) { zeige('s-battle'); zeichneSchlacht(); }
+  await zuegeVerarbeiten(st);
+}
+
+function onlineSpielLaden(st, idx) {
+  const gesp = speicher.lies('mb-online');
+  const schiffe = gesp && gesp.id === st.id ? gesp.schiffe : null;
+  spiel = { modus: 'online', id: st.id, idx, dran: 0, verarbeitet: 0, phase: 'online',
+    spieler: [schiffe ? { schiffe, schuesse: gitter() } : null, { schiffe: [], schuesse: gitter() }],
+    statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
+  if (!schiffe) return;
+  // Nach einem Neustart: alle schon beantworteten Züge still nachspielen
+  for (const z of st.zuege) {
+    if (z.e == null) break;
+    const meiner = z.s === idx;
+    if (meiner) eintragen(spiel.spieler[1], z); else schiessen(spiel.spieler[0], z.r, z.c);
+    const st2 = spiel.statistik[meiner ? 0 : 1]; st2.schuss++; if (z.e !== 'miss') st2.treffer++;
+    spiel.verarbeitet++;
+  }
+}
+
+async function zuegeVerarbeiten(st) {
+  const ichSp = spiel.spieler[0], gegner = spiel.spieler[1];
+  let letztes = null;
+  for (let k = spiel.verarbeitet; k < st.zuege.length; k++) {
+    const z = st.zuege[k], meiner = z.s === spiel.idx;
+    if (z.e == null && meiner) { onlineBanner(true); return; }         // mein Schuss ist unterwegs
+    let erg;
+    if (z.e == null) {
+      // Auf mich wurde geschossen: bei mir nachsehen und antworten
+      if (!spiel.antwort || spiel.antwort.k !== k) spiel.antwort = { k, erg: schiessen(ichSp, z.r, z.c) };
+      erg = spiel.antwort.erg;
+      const verloren = alleVersenkt(ichSp);
+      banner('GEGNER FEUERT AUF ' + koord(z.r, z.c) + ' …', true);
+      oFeld.zielen(z.r, z.c); Ton.sonar();
+      await Sync.aendern(s => {
+        if (!s || s.id !== st.id || !s.zuege[k] || s.zuege[k].e != null) return null;
+        s.zuege[k].e = erg.art;
+        if (erg.art === 'sunk') s.zuege[k].f = erg.felder;
+        if (erg.art === 'miss') s.dran = spiel.idx;
+        if (verloren) { s.status = 'ende'; s.sieger = z.s; }
+        return s;
+      });
+      spiel.verarbeitet = k + 1;
+      zaehlen(1, erg);
+      await schussAnimation(oFeld, z.r, z.c, erg, false);
+      zeichneFlotte();
+      if (verloren) return ende(1);
+    } else if (meiner) {
+      erg = eintragen(gegner, z);
+      spiel.verarbeitet = k + 1;
+      zaehlen(0, erg);
+      await schussAnimation(tFeld, z.r, z.c, erg, true);
+      zeichneFlotte();
+      letztes = erg;
+    } else {                                                       // schon von mir beantwortet
+      schiessen(ichSp, z.r, z.c); spiel.verarbeitet = k + 1;
+    }
+  }
+  const akt = Sync.stand || st;
+  if (akt.status === 'ende') return ende(akt.sieger === spiel.idx ? 0 : 1);
+  spiel.dran = akt.dran === spiel.idx ? 0 : 1;
+  onlineBanner(false, letztes);
+}
+function zaehlen(wer, erg) { const s = spiel.statistik[wer]; s.schuss++; if (erg.art !== 'miss') s.treffer++; }
+
+function onlineBanner(unterwegs, letztes) {
+  if (unterwegs) {
+    beschaeftigt = true; tFeld.el.classList.remove('zielen'); $('#feuer').disabled = true;
+    return banner('FUNKSPRUCH UNTERWEGS …');
+  }
+  if (spiel.dran === 0) {
+    const zieltSchon = tFeld.el.classList.contains('zielen') && !beschaeftigt;
+    if (!zieltSchon) bereitZumZielen();                 // gewähltes Ziel nicht wegwischen
+    if (letztes && letztes.art !== 'miss') banner(letztes.art === 'sunk' ? 'VERSENKT! NOCHMAL SCHIESSEN!' : 'TREFFER! NOCHMAL SCHIESSEN!');
+    else banner('DU BIST DRAN – FEUER FREI!');
+  } else {
+    beschaeftigt = true; tFeld.el.classList.remove('zielen'); oFeld.el.classList.add('aktiv');
+    $('#feuer').disabled = true; $('#ziel').textContent = '– –';
+    banner('GEGNER ZIELT …', true);
+  }
+}
+
+async function onlineFeuer() {
+  const [r, c] = auswahl, id = spiel.id, idx = spiel.idx;
+  beschaeftigt = true; $('#feuer').disabled = true; tFeld.el.classList.remove('zielen');
+  tFeld.kreuz.classList.add('lock'); Ton.abschuss();
+  banner('FUNKSPRUCH UNTERWEGS …');
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.id !== id || s.status !== 'laeuft' || s.dran !== idx || s.zuege.some(z => z.e == null)) return null;
+      s.zuege.push({ s: idx, r, c, e: null });
+      return s;
+    });
+    Online.tick();
+  } catch (e) { banner('⚠ ' + e.message, true); beschaeftigt = false; bereitZumZielen(); }
+}
+
+async function neuesOnlineSpiel() {
+  const st = Sync.stand;
+  if (st && st.status === 'laeuft') {
+    const ok = await dialog('<h2 class="glow">ALTES SPIEL BEENDEN?</h2><p class="mono" style="color:var(--g-dim)">Es läuft noch ein Spiel. Wirklich ein neues starten?</p>', [['NEIN'], ['JA, NEU', true]]);
+    if (!ok) return;
+  }
+  const id = b64(crypto.getRandomValues(new Uint8Array(6)));
+  lobby('Starte …', []);
+  try {
+    await Sync.aendern(() => ({ id, status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], zeit: Date.now() }));
+    Online.tick();
+  } catch (e) { lobby('⚠ ' + e.message, [['NOCHMAL', neuesOnlineSpiel]]); }
+}
+async function beitreten() {
+  lobby('Trete bei …', []);
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.status !== 'wartet' || s.geraete.length !== 1 || s.geraete[0] === Sync.geraet) return null;
+      s.geraete.push(Sync.geraet); s.status = 'aufstellen'; return s;
+    });
+    Online.zuletzt = null; Online.tick();
+  } catch (e) { lobby('⚠ ' + e.message, [['NOCHMAL', beitreten]]); }
+}
+async function abbrechen() {
+  try { await Sync.aendern(s => s && s.geraete.includes(Sync.geraet) ? { ...s, status: 'ende', sieger: -1 } : null); } catch {}
+  spiel = null; speicher.weg('mb-online'); Online.zuletzt = null; Online.tick();
+}
+async function onlineFlotteFertig(schiffe) {
+  const meine = schiffe.map(({ len, r, c, senk }) => ({ len, r, c, senk, gesetzt: true }));
+  speicher.schreib('mb-online', { id: spiel.id, schiffe: meine });     // Schiffe bleiben auf DIESEM Gerät
+  spiel.spieler[0] = { schiffe: meine, schuesse: gitter() };
+  zeige('s-online'); lobby('Melde Flotte …', []);
+  const id = spiel.id, idx = spiel.idx;
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.id !== id) return null;
+      s.bereit[idx] = true;
+      if (s.bereit[0] && s.bereit[1]) { s.status = 'laeuft'; s.dran = 0; }
+      return s;
+    });
+  } catch (e) { lobby('⚠ ' + e.message, []); }
+  Online.zuletzt = null; Online.tick();
+}
+
+/* ---------- Einrichten & Einladung ---------- */
+function setupZeigen(meldung = '') {
+  $('#s-meldung').textContent = meldung; $('#s-meldung').classList.remove('fehler');
+  zeige('s-setup');
+}
+function meldung(text, fehler) { const m = $('#s-meldung'); m.textContent = text; m.classList.toggle('fehler', !!fehler); }
+
+$('#s-verbinden').onclick = async () => {
+  Ton.klick();
+  const teile = $('#s-repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+  const token = $('#s-token').value.trim();
+  if (teile.length !== 2 || !teile[0] || !teile[1]) return meldung('Repo bitte als besitzer/name eingeben.', true);
+  if (!token) return meldung('Bitte den Token einfügen.', true);
+  meldung('Prüfe …');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${teile[0]}/${teile[1]}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (res.status === 401) return meldung('Token wird nicht akzeptiert.', true);
+    if (!res.ok) return meldung('Repo nicht gefunden – darf der Token darauf zugreifen?', true);
+    const j = await res.json();
+    if (!j.private) return meldung('Das Repo ist öffentlich! Bitte ein PRIVATES Repo nehmen.', true);
+    const k = b64(crypto.getRandomValues(new Uint8Array(32)));     // neuer geheimer Schlüssel
+    Sync.speichern({ o: teile[0], r: teile[1], t: token, k });
+    $('#s-token').value = '';
+    Ton.fanfare();
+    einladungZeigen();
+  } catch (e) { meldung('Keine Verbindung: ' + e.message, true); }
+};
+$('#s-einfuegen').onclick = async () => {
+  Ton.klick();
+  try { $('#s-code').value = await navigator.clipboard.readText(); } catch { $('#s-code').focus(); }
+};
+$('#s-annehmen').onclick = () => einladungAnnehmen($('#s-code').value);
+
+async function einladungAnnehmen(text) {
+  const cfg = Sync.lesEinladung(text);
+  if (!cfg) { Ton.fehler(); return meldung('Das ist kein gültiger Einladungs-Code.', true); }
+  Sync.speichern(cfg); $('#s-code').value = '';
+  Ton.fanfare();
+  onlineMenue();
+}
+
+function einladungZeigen() {
+  QR.malen($('#qr'), Sync.einladungsLink());
+  zeige('s-einladung');
+}
+$('#o-einladung').onclick = () => { Ton.klick(); Online.stop(); einladungZeigen(); };
+$('#i-fertig').onclick = $('#i-zurueck').onclick = () => { Ton.klick(); onlineMenue(); };
+$('#i-kopieren').onclick = async () => {
+  try { await navigator.clipboard.writeText(Sync.einladung()); Ton.setzen(); $('#i-kopieren').textContent = '✓ KOPIERT'; }
+  catch { Ton.fehler(); }
+  setTimeout(() => $('#i-kopieren').textContent = '📋 CODE KOPIEREN', 2000);
+};
+$('#o-loeschen').onclick = async () => {
+  Ton.klick();
+  const ok = await dialog('<h2 class="glow">EINRICHTUNG LÖSCHEN?</h2><p class="mono" style="color:var(--g-dim)">Token und Schlüssel werden von diesem Gerät entfernt.</p>', [['NEIN'], ['LÖSCHEN', true]]);
+  if (!ok) return;
+  speicher.weg('mb-sync'); speicher.weg('mb-online'); Sync.cfg = null; menue();
+};
+
+// Einladung per QR-Code: Die Kamera öffnet die Seite mit #einladung=… in Safari
+function einladungAusLink() {
+  if (!location.hash.startsWith('#einladung=')) return false;
+  const text = location.hash.slice(1);
+  history.replaceState(null, '', location.pathname);           // Schlüssel nicht im Verlauf stehen lassen
+  const cfg = Sync.lesEinladung(text);
+  if (!cfg) return false;
+  Sync.speichern(cfg);
+  const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (app) { onlineMenue(); return true; }
+  // In Safari: Die Home-Bildschirm-App hat einen eigenen Speicher – deshalb Code zum Einfügen anbieten
+  const code = Sync.einladung();
+  dialog(`<h2 class="glow">EINLADUNG ERHALTEN ✓</h2>
+    <p class="mono" style="color:var(--g-dim);font-size:14px">Dieses Gerät ist jetzt eingerichtet (in Safari).<br><br>
+    Spielst du über die App auf dem Home-Bildschirm?<br>1. „Code kopieren“ tippen<br>2. App öffnen → Online → „Einfügen“ → „Annehmen“</p>`,
+    [['📋 CODE KOPIEREN', 'kopie'], ['HIER SPIELEN', 'hier']]).then(async w => {
+      if (w === 'kopie') { try { await navigator.clipboard.writeText(code); } catch {} menue(); }
+      else onlineMenue();
+    });
+  return true;
+}
 
 /* ---------- Haupt-Schleife: zeichnet Radar und Effekte ---------- */
 let letzt = performance.now(), letzterWinkel = 0;
@@ -1105,6 +1686,8 @@ function schleife(t) {
 }
 layout();
 menue();
+einladungAusLink();
+addEventListener('hashchange', einladungAusLink);      // Link geöffnet, während das Spiel schon offen ist
 requestAnimationFrame(schleife);
 
 // Offline-Fähigkeit (funktioniert nur über https oder localhost)
