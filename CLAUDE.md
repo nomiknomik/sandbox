@@ -27,6 +27,9 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 ## Arbeitsweise
 - Pro App: bei jeder Änderung `APP_VERSION` in `index.html` **und** `CACHE` in
   `sw.js` hochzählen (sonst sieht das iPad die alte Version).
+- Jede App hat unten rechts die Version; **Antippen = nach Update suchen**
+  (lädt frisch vom Server, umgeht Cache). Steckt in `apps/_vorlage` – bei
+  bestehenden Apps beibehalten.
 - Eine Datei pro App (`index.html` mit CSS+JS), solange es übersichtlich bleibt.
 - Kindgerechte Kommentare im Code sind erwünscht (kurz, deutsch).
 - Lokal testen: `python3 -m http.server 8000` im Repo-Wurzelordner.
