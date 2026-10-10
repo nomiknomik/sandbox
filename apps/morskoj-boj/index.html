@@ -22,11 +22,11 @@
     --mono:"Avenir Next Condensed","Avenir Next","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+  html,body{height:100%;margin:0;overflow:hidden;background:#031426}
   body{color:var(--text);font:17px/1.35 -apple-system,system-ui,sans-serif;position:fixed;inset:0;
        -webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-touch-callout:none}
   /* Hintergrund: tiefes Meer mit langsam ziehenden Wellen */
-  body::before{content:"";position:fixed;inset:-60px;pointer-events:none;z-index:0;
+  body::before{content:"";position:fixed;inset:-120px;pointer-events:none;z-index:0;
     background:
       radial-gradient(ellipse 34px 7px at 50% 50%,rgba(255,255,255,.07),transparent 70%) 0 0/90px 46px,
       radial-gradient(ellipse 26px 5px at 50% 50%,rgba(255,255,255,.05),transparent 70%) 45px 23px/90px 46px,
@@ -413,7 +413,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.0.1';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -514,9 +514,11 @@ tonKnoepfe();
    ===================================================================== */
 const FX = {
   cv: $('#fx'), teile: [], flieger: [], dpr: 1,
+  // Größe immer von der echten Leinwand nehmen (iPhone ändert die Bildschirmhöhe manchmal mitten im Spiel)
   groesse() {
     this.dpr = Math.min(devicePixelRatio || 1, 2);
-    this.cv.width = innerWidth * this.dpr; this.cv.height = innerHeight * this.dpr;
+    this.w = this.cv.clientWidth || innerWidth; this.h = this.cv.clientHeight || innerHeight;
+    this.cv.width = Math.round(this.w * this.dpr); this.cv.height = Math.round(this.h * this.dpr);
     this.ctx = this.cv.getContext('2d'); this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
   },
   dazu(p) { this.teile.push(Object.assign({ alter: 0, schwer: 0, groesse: 3, art: 'funke' }, p)); },
@@ -591,9 +593,13 @@ const FX = {
     c.restore();
   },
   schritt(dt) {
+    if (this.cv.clientWidth !== this.w || this.cv.clientHeight !== this.h) this.groesse();   // Bildschirm hat sich verändert
     const c = this.ctx; if (!c) return;
-    c.clearRect(0, 0, innerWidth, innerHeight);
-    if (!this.teile.length && !this.flieger.length) return;
+    if (this.leer && !this.teile.length && !this.flieger.length) return;            // nichts zu tun
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height);   // GANZE Fläche löschen
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.leer = !this.teile.length && !this.flieger.length;
+    if (this.leer) return;
     // Raketen bewegen (Bogen = quadratische Kurve) und Rauchspur hinterlassen
     this.flieger = this.flieger.filter(f => {
       f.alter += dt;
@@ -1008,6 +1014,7 @@ function layout() {
   tFeld.groesse(Math.floor(gross)); oFeld.groesse(Math.floor(klein));
 }
 addEventListener('resize', layout);
+if (window.visualViewport) visualViewport.addEventListener('resize', layout);   // iPhone: sichtbarer Bereich ändert sich
 
 function name(i) {
   if (spiel.modus === 'duo') return 'Kapitän ' + (i + 1);
