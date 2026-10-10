@@ -233,7 +233,7 @@
   #sc-text{text-align:center}
 
   #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:44}
-  #version{position:fixed;bottom:calc(4px + env(safe-area-inset-bottom));right:10px;font:11px var(--mono);color:var(--g-dim);z-index:2;opacity:.7}
+  #version{position:fixed;bottom:calc(env(safe-area-inset-bottom));right:2px;padding:8px;font:11px var(--mono);color:var(--g-dim);z-index:46;opacity:.8;cursor:pointer}
 </style>
 </head>
 <body>
@@ -392,8 +392,26 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.3';
-document.getElementById('version').textContent = 'v' + APP_VERSION;
+const APP_VERSION = '1.4';
+// Version unten rechts antippen = nach Update suchen.
+// (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
+const versionEl = document.getElementById('version');
+versionEl.textContent = 'v' + APP_VERSION;
+versionEl.onclick = async () => {
+  const zeig = (text, ms) => { versionEl.textContent = text; if (ms) setTimeout(() => versionEl.textContent = 'v' + APP_VERSION, ms); };
+  zeig('suche Update …');
+  try {
+    // ?u=… umgeht auch den Zwischenspeicher von GitHub Pages
+    const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
+    const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
+    if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
+    zeig('lade v' + neu + ' …');
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update().catch(() => {});             // neuen Service Worker (neuer CACHE) holen
+    await new Promise(r => setTimeout(r, 1200));
+    location.replace(location.pathname + '?v=' + encodeURIComponent(neu));
+  } catch { zeig('offline – v' + APP_VERSION, 2500); }
+};
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
