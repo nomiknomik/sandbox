@@ -21,3 +21,9 @@ lernt man, wie zwei Geräte miteinander reden.
 - Bei Морской бой: Schiffspositionen des Gegners **nicht** im Klartext auf das
   andere Gerät schicken (sonst kann man „schummeln“) – nur „Treffer/Wasser“
   zurückmelden. Schönes Lernthema: *Vertrauen & Geheimnisse*.
+
+## Umgesetzt in Морской бой (v1.1)
+- Spielstand: eine Datei `morskoj-boj/aktuell.json` im privaten Repo, AES-GCM-verschlüsselt.
+- Einladung fürs zweite Gerät: QR-Code (im Spiel erzeugt) oder Code kopieren/einfügen.
+- Schiffe bleiben auf dem eigenen Gerät; über GitHub laufen nur Schüsse und Antworten.
+- Geräte fragen alle 2 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
