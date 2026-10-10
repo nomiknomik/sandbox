@@ -27,3 +27,14 @@ lernt man, wie zwei Geräte miteinander reden.
 - Einladung fürs zweite Gerät: QR-Code (im Spiel erzeugt) oder Code kopieren/einfügen.
 - Schiffe bleiben auf dem eigenen Gerät; über GitHub laufen nur Schüsse und Antworten.
 - Geräte fragen alle 2 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
+
+## Umgesetzt in Würmer (v0.2)
+- 2–3 Spieler: auf einem Gerät abwechselnd **oder** online, ein Gerät pro Team.
+- Gleiches privates Repo und gleiche Einladung (QR/Code `MB1~…`) wie Морской бой,
+  eigene Datei `wuermer/aktuell.json`, AES-GCM-verschlüsselt.
+- Physik in Echtzeit lässt sich nicht alle 2 s übertragen. Deshalb schickt das Gerät,
+  das dran ist, am Zugende nur seine **Eingaben** (laufen, springen, schießen mit
+  Bild-Nummer) plus einen Kontroll-Stand. Die anderen Geräte spielen den Zug nach –
+  gleiche Startzahl + gleiche Eingaben = gleiches Ergebnis. Danach wird der
+  Kontroll-Stand übernommen, falls doch etwas abweicht.
+  Lernthema: *Zufall mit Startzahl* und *Determinismus*.

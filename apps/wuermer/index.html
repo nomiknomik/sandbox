@@ -14,32 +14,37 @@
 <title>Würmer</title>
 <style>
   /* Farben an einer Stelle */
-  :root{--rot:#E5484D;--blau:#3B82F6;--panel:rgba(20,32,48,.62);--text:#fff}
+  :root{--panel:rgba(20,32,48,.62);--text:#fff;--gruen:#2f8f3a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0;overflow:hidden;background:#7ec8f2}
   body{color:var(--text);font:16px/1.3 -apple-system,system-ui,sans-serif;
        -webkit-user-select:none;user-select:none;touch-action:none}
-  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  canvas#bild{position:fixed;inset:0;width:100%;height:100%;display:block}
 
   /* Oben: Teams, Zeit, Wind */
   #oben{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:flex;
-        justify-content:center;gap:10px;pointer-events:none;padding:0 10px}
+        justify-content:center;gap:8px;pointer-events:none;padding:0 60px}
   .box{background:var(--panel);border-radius:14px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  .team{min-width:130px}
-  .team b{font-size:13px;display:block}
+  .team{min-width:112px;border:2px solid transparent}
+  .team.dran{border-color:#ffd84d}
+  .team b{font-size:13px;display:block;white-space:nowrap}
   .bar{height:10px;border-radius:5px;background:#0004;overflow:hidden;margin-top:3px}
   .bar i{display:block;height:100%;border-radius:5px;transition:width .4s}
   #zeit{font-size:26px;font-weight:800;min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
   #zeit.knapp{color:#ffb4b4}
-  #wind{min-width:130px;text-align:center;font-size:12px}
+  #wind{min-width:110px;text-align:center;font-size:12px}
   #windbar{position:relative;height:10px;border-radius:5px;background:#0004;margin-top:4px}
   #windbar i{position:absolute;top:0;height:100%;border-radius:5px;background:linear-gradient(90deg,#9be7ff,#fff)}
   #windbar:after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:#fff8}
+  #status{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 62px);transform:translateX(-50%);font-size:14px;
+          pointer-events:none;white-space:nowrap}
+  #status:empty{display:none}
 
   /* Unten: Steuerung und Waffen */
   #unten{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;
-         justify-content:space-between;align-items:flex-end;padding:0 10px;pointer-events:none;gap:8px}
+         justify-content:space-between;align-items:flex-end;padding:0 10px;pointer-events:none;gap:8px;transition:opacity .3s}
   #unten > div{display:flex;gap:8px;pointer-events:auto}
+  #unten.aus{opacity:.3} #unten.aus > div{pointer-events:none}
   .knopf{width:62px;height:62px;border-radius:18px;border:0;background:var(--panel);color:#fff;font-size:28px;
          backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 3px 0 #0003}
   .knopf:active{transform:translateY(2px);box-shadow:none}
@@ -49,40 +54,53 @@
   .waffe.leer{opacity:.35}
   .waffe small{position:absolute;right:4px;bottom:2px;font-size:12px;font-weight:700}
   #waffen{margin-right:56px}
+  #raus,#ton{position:fixed;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:20px}
+  #raus{left:10px} #ton{right:10px}
 
   /* Mitte: Ansage */
-  #ansage{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;
-          text-align:center;transition:opacity .35s,transform .35s;text-shadow:0 3px 0 #0005}
+  #ansage{position:fixed;left:50%;top:24%;transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;
+          text-align:center;transition:opacity .35s,transform .35s;text-shadow:0 3px 0 #0005;width:90%}
   #ansage.zeigen{opacity:1;transform:translate(-50%,-50%) scale(1)}
   #ansage b{display:block;font-size:40px;font-weight:900}
   #ansage span{font-size:17px}
 
-  /* Menü (Start und Ende) */
-  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0003}
-  #menu .karte{background:rgba(255,255,255,.93);color:#1B2A3A;border-radius:28px;padding:28px 34px;text-align:center;
-               max-width:440px;margin:16px;box-shadow:0 12px 40px #0004}
-  #menu h1{margin:0;font-size:48px;letter-spacing:1px;color:#2f7a2c}
-  #menu p{margin:10px 0 20px;color:#4a5a6a}
-  #menu button{font:inherit;font-size:22px;font-weight:800;padding:14px 34px;border:0;border-radius:18px;
-               background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 4px 0 #1f6427}
-  #menu button:active{transform:translateY(3px);box-shadow:0 1px 0 #1f6427}
+  /* Menü-Karte (Start, Online, Ende) */
+  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0003;overflow:auto;padding:16px}
+  #karte{background:rgba(255,255,255,.95);color:#1B2A3A;border-radius:28px;padding:24px 28px;text-align:center;
+         width:100%;max-width:440px;box-shadow:0 12px 40px #0004;max-height:100%;overflow:auto;-webkit-user-select:text;user-select:text}
+  #karte h1{margin:0;font-size:46px;color:#2f7a2c}
+  #karte h2{margin:0 0 6px;color:#2f7a2c}
+  #karte h3{margin:18px 0 6px;font-size:14px;color:#5b6b7c;text-align:left}
+  #karte p{margin:8px 0 14px;color:#4a5a6a;white-space:pre-line}
+  #karte .knoepfe{display:flex;flex-direction:column;gap:10px}
+  #karte .reihe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  #karte button{font:inherit;font-size:19px;font-weight:800;padding:13px 20px;border:0;border-radius:16px;
+                background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 4px 0 #1f6427}
+  #karte button.zweit{background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8;font-size:15px;padding:10px 14px}
+  #karte button:active{transform:translateY(3px);box-shadow:none}
+  #karte input,#karte textarea{width:100%;font:15px/1.3 ui-monospace,monospace;padding:10px;border:2px solid #cfd8e2;border-radius:12px;margin-bottom:8px}
+  #karte textarea{height:60px;resize:none}
+  #karte .fehler{color:#c62828}
+  #karte canvas{width:min(70vw,46vh);max-width:300px;image-rendering:pixelated;border-radius:12px;border:4px solid #2f8f3a}
   .versteckt{display:none!important}
 
-  #ton{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:22px}
-  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffc;cursor:pointer;text-shadow:0 1px 2px #0008}
-  @media (max-width:700px){.team{min-width:90px}#wind{min-width:90px}.knopf,.waffe{width:50px;height:50px;font-size:22px}}
+  /* Kamera für den Einladungs-QR */
+  #scanner{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
+  #scanner.on{display:flex}
+  #scanner video{width:min(80vw,60vh);aspect-ratio:1;object-fit:cover;border-radius:18px;border:4px solid #5cc85a}
+  #scanner button{font:inherit;font-weight:800;padding:12px 26px;border:0;border-radius:14px;background:#fff;color:#000}
+
+  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffc;cursor:pointer;text-shadow:0 1px 2px #0008;z-index:60}
+  @media (max-width:760px){.team{min-width:76px}.team b{font-size:11px}#wind{min-width:80px}.knopf,.waffe{width:50px;height:50px;font-size:22px}}
 </style>
 </head>
 <body>
 <canvas id="bild"></canvas>
 
-<div id="oben" class="versteckt">
-  <div class="box team"><b style="color:#ffb3b5">Team Rot</b><div class="bar"><i id="hp0" style="background:var(--rot)"></i></div></div>
-  <div class="box" id="zeit">45</div>
-  <div class="box" id="wind">Wind<div id="windbar"><i></i></div></div>
-  <div class="box team"><b style="color:#b3d0ff">Team Blau</b><div class="bar"><i id="hp1" style="background:var(--blau)"></i></div></div>
-</div>
-<button class="knopf versteckt" id="ton">🔊</button>
+<div id="oben" class="versteckt"></div>
+<div id="status" class="box versteckt"></div>
+<button class="knopf versteckt" id="raus" aria-label="Spiel beenden">✕</button>
+<button class="knopf versteckt" id="ton" aria-label="Ton an/aus">🔊</button>
 
 <div id="unten" class="versteckt">
   <div>
@@ -100,19 +118,18 @@
 
 <div id="ansage"><b></b><span></span></div>
 
-<div id="menu">
-  <div class="karte">
-    <h1>🪱 Würmer</h1>
-    <p id="menutext">Team Rot gegen Team Blau – je 4 Würmer.<br>
-      <b>Zielen:</b> Vom Wurm wegziehen und loslassen – wie eine Steinschleuder!</p>
-    <button id="los">Los geht's!</button>
-  </div>
+<div id="menu"><div id="karte"></div></div>
+
+<div id="scanner">
+  <video playsinline muted></video>
+  <p id="sc-text">QR-Code der Einladung in den Rahmen halten</p>
+  <button id="sc-stopp">Abbrechen</button>
 </div>
 <div id="version"></div>
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.1';
+const APP_VERSION = '0.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -131,16 +148,25 @@ versionEl.onclick = async () => {
   } catch { zeig('offline – v' + APP_VERSION, 2500); }
 };
 
+const $ = id => document.getElementById(id);
+const warte = ms => new Promise(r => setTimeout(r, ms));
+// localStorage kann in privaten Fenstern fehlen – deshalb vorsichtig
+const speicher = {
+  lies(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  schreib(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  weg(k) { try { localStorage.removeItem(k); } catch {} },
+};
+
 // ================= Spielwelt =================
 const W = 2600, H = 1100;      // so groß ist die Welt
 const WASSER = H - 60;         // hier beginnt das Meer
 const G = 620;                 // Schwerkraft
 const R = 9;                   // Wurm-Radius
 const MAX_V = 900;             // stärkster Schuss
+const ZUG_WEG = 150;           // so weit ziehen (Bildschirmpunkte) = volle Kraft
 const WIND_MAX = 160;
 const ZUGZEIT = 45;            // Sekunden pro Zug
-const rnd = (a, b) => a + Math.random() * (b - a);
-const $ = id => document.getElementById(id);
+const SCHRITT = 1 / 60;        // die Welt rechnet 60-mal pro Sekunde
 
 // Die Waffen – hier kann man Werte ändern!
 const WAFFEN = {
@@ -154,32 +180,44 @@ const WAFFEN = {
 const TEAMS = [
   { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Blitz', 'Krümel', 'Socke', 'Pixel'] },
   { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel'] },
+  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Keks', 'Flitzer', 'Tiger', 'Zwerg'] },
 ];
 
-let maske, erde, ectx, wand;          // maske: 1 = Erde, 0 = Luft
+// Zufall mit „Startzahl“: Gleiche Startzahl = gleiche Zufallszahlen auf jedem Gerät.
+// So sehen alle Geräte dieselbe Landschaft und denselben Wind.
+function zufallsFolge(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+let zufall = zufallsFolge(1);
+const zr = (a, b) => a + zufall() * (b - a);            // Zufall fürs Spiel (gleich auf allen Geräten)
+const rnd = (a, b) => a + Math.random() * (b - a);      // Zufall nur fürs Aussehen (Funken, Rauch)
+
+let maske, erde, ectx, wand;    // maske: 1 = Erde, 0 = Luft
 let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [];
 let spiel = null;               // Zustand eines laufenden Spiels
 let zeit = 0, wackeln = 0;
 const kam = { x: W / 2, y: H / 2, frei: false };
 
 // ---------- Landschaft bauen ----------
-function baueLandschaft() {
+function baueLandschaft(startzahl) {
+  zufall = zufallsFolge(startzahl);
   const m = document.createElement('canvas'); m.width = W; m.height = H;
   const g = m.getContext('2d');
-  const p = [rnd(0, 7), rnd(0, 7), rnd(0, 7), rnd(0, 7)];
+  const p = [zr(0, 7), zr(0, 7), zr(0, 7), zr(0, 7)];
+  const tal = W * (0.45 + Math.sin(p[3]) * 0.1);
   g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, H);
   for (let x = 0; x <= W; x += 4) {
     const t = x / W * Math.PI * 2;
     let h = H * 0.6 + Math.sin(t * 1.3 + p[0]) * 120 + Math.sin(t * 3.1 + p[1]) * 60 + Math.sin(t * 7.7 + p[2]) * 18;
     const rand = Math.min(x, W - x);                   // an den Seiten ins Meer abfallen
     if (rand < 240) h += (240 - rand) * 1.8;
-    if (Math.abs(x - W * (0.45 + Math.sin(p[3]) * 0.1)) < 90) h += Math.cos((x - W * (0.45 + Math.sin(p[3]) * 0.1)) / 90 * Math.PI / 2) * 160; // ein Tal
+    if (Math.abs(x - tal) < 90) h += Math.cos((x - tal) / 90 * Math.PI / 2) * 160; // ein Tal
     g.lineTo(x, h);
   }
   g.lineTo(W, H); g.closePath(); g.fill();
   // schwebende Inseln
   for (let i = 0; i < 3; i++) {
-    const x = rnd(350, W - 350), y = rnd(220, 380), b = rnd(90, 160);
+    const x = zr(350, W - 350), y = zr(220, 380), b = zr(90, 160);
     g.beginPath(); g.ellipse(x, y, b, 26, 0, Math.PI, 0); g.ellipse(x, y, b, 55, 0, 0, Math.PI); g.fill();
   }
   // Rückwand: dunkle Erde, die man in Löchern und Höhlen sieht
@@ -191,7 +229,7 @@ function baueLandschaft() {
   // Höhlen
   g.globalCompositeOperation = 'destination-out';
   for (let i = 0; i < 5; i++) {
-    g.beginPath(); g.ellipse(rnd(300, W - 300), rnd(H * 0.72, H * 0.86), rnd(40, 90), rnd(25, 45), rnd(-.4, .4), 0, 7); g.fill();
+    g.beginPath(); g.ellipse(zr(300, W - 300), zr(H * 0.72, H * 0.86), zr(40, 90), zr(25, 45), zr(-.4, .4), 0, 7); g.fill();
   }
 
   // Maske aus der Form lesen
@@ -297,12 +335,12 @@ function freiMachen(o) { if (stoesst(o.x, o.y, o.r)) for (let k = 1; k < 30; k++
 function neuerWurm(team, name) {
   let x, y, ok = false;
   for (let v = 0; v < 400 && !ok; v++) {
-    x = rnd(120, W - 120);
+    x = Math.round(zr(120, W - 120));
     for (y = 0; y < WASSER; y += 2) if (stoesst(x, y, R)) break;
     y -= 2;
-    ok = y < WASSER - 60 && y > 40 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > 110);
+    ok = y < WASSER - 60 && y > 40 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > 100);
   }
-  return { team, name, x, y, vx: 0, vy: 0, r: R, hp: 100, luft: true, tot: false, richtung: Math.random() < .5 ? 1 : -1,
+  return { team, name, x, y, vx: 0, vy: 0, r: R, hp: 100, luft: true, tot: false, richtung: zr(0, 1) < .5 ? 1 : -1,
            ziel: -0.6, laufen: 0, schritte: 0, dreh: 0, blinzeln: rnd(1, 4), samen: rnd(0, 9), aua: 0 };
 }
 
@@ -348,6 +386,7 @@ function springen(w) {
 // ---------- Explosion ----------
 function explosion(x, y, r, dmg) {
   loch(x, y, r);
+  if (spiel) spiel.krater.push([x, y, r]);            // merken – für den Abgleich mit anderen Geräten
   ton.bumm(r);
   wackeln = Math.max(wackeln, r * 0.35);
   teilchen.push({ art: 'ring', x, y, r: r * 0.4, max: r * 1.5, t: 0 });
@@ -432,7 +471,7 @@ function platzen(o) {
   const w = WAFFEN[o.art] || { radius: 30, schaden: 28 };
   explosion(o.x, o.y, w.radius, w.schaden);
   if (o.art === 'banane') {
-    for (let i = 0; i < 5; i++) dinge.push({ art: 'baenanchen', x: o.x, y: o.y - 4, vx: rnd(-240, 240), vy: rnd(-520, -320), r: 4, t: 0, dreh: 0 });
+    for (let i = 0; i < 5; i++) dinge.push({ art: 'baenanchen', x: o.x, y: o.y - 4, vx: zr(-240, 240), vy: zr(-520, -320), r: 4, t: 0, dreh: 0 });
   }
   return false;
 }
@@ -456,67 +495,160 @@ function updateTeilchen(dt) {
 }
 
 // ================= Spielablauf =================
-function neuesSpiel() {
-  baueLandschaft();
+// Ein Zug wird als Liste von Eingaben aufgeschrieben: [Art, Bild-Nummer, Werte …]
+//   L/R = links/rechts gedrückt (1) oder losgelassen (0), J = springen,
+//   D = Blickrichtung, Z = Zielwinkel, F = Feuer (Kraft, Winkel, Richtung, Waffe), S = Schaf zünden.
+// Online schickt das Gerät, das dran ist, diese Liste. Die anderen Geräte spielen sie nach.
+function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null }) {
+  baueLandschaft(startzahl);
   wuermer = []; dinge = []; teilchen = []; texte = []; graeber = [];
-  // abwechselnd verteilen, damit es gemischt ist
-  for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
-  spiel = {
-    teams: TEAMS.map(() => ({ zeiger: -1, munition: { bazooka: -1, granate: -1, banane: WAFFEN.banane.start, schaf: WAFFEN.schaf.start } })),
-    dran: Math.random() < .5 ? 0 : 1, wurm: null, phase: 'warten', zugzeit: ZUGZEIT, rueckzug: 0, warte: 0,
-    wind: 0, waffe: 'bazooka', erster: true,
-  };
-  spiel.dran = 1 - spiel.dran;
-  ['oben', 'unten', 'ton'].forEach(id => $(id).classList.remove('versteckt'));
+  spiel = { n, startzahl, modus, ich, id, zug: -1, dran: 0, wurm: null, phase: 'warten', zugzeit: ZUGZEIT,
+            rueckzug: 0, warte: 0, wind: 0, waffe: 'bazooka', erster: true, bild: 0, ein: {}, eingaben: [], log: [],
+            krater: [], quelle: 'live', zuege: [], ausstehend: [],
+            teams: TEAMS.slice(0, n).map(() => ({ zeiger: -1, munition: { bazooka: -1, granate: -1, banane: WAFFEN.banane.start, schaf: WAFFEN.schaf.start } })) };
+  for (let i = 0; i < 4; i++) for (let t = 0; t < n; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+  // Würmer erst einmal fallen lassen
+  for (let i = 0; i < 240; i++) for (const w of wuermer) updateWurm(w, SCHRITT);
+  for (const w of wuermer) if (!w.tot) w.hp = 100;      // Fallschaden beim Start zählt nicht
+  spiel.dran = Math.floor(zr(0, n)) % n;
+  spiel.dran = (spiel.dran + n - 1) % n;
+  spiel.krater = [];
+  baueHud();
+  ['oben', 'unten', 'ton', 'raus', 'status'].forEach(id => $(id).classList.remove('versteckt'));
   $('menu').classList.add('versteckt');
-  naechsterZug();
+  $('status').textContent = '';
 }
 
+function lebt(t) { return wuermer.some(w => w.team === t && !w.tot); }
+
 function naechsterZug() {
-  const lebt = t => wuermer.some(w => w.team === t && !w.tot);
-  if (!lebt(0) || !lebt(1)) return ende(lebt(0) ? 0 : lebt(1) ? 1 : -1);
-  spiel.dran = 1 - spiel.dran;
+  const lebende = spiel.teams.map((_, t) => t).filter(lebt);
+  if (lebende.length <= 1) return ende(lebende.length ? lebende[0] : -1);
+  do spiel.dran = (spiel.dran + 1) % spiel.n; while (!lebt(spiel.dran));
+  spiel.zug++;
+  zufall = zufallsFolge((spiel.startzahl ^ Math.imul(spiel.zug + 1, 2654435761)) >>> 0);
   const team = spiel.teams[spiel.dran], liste = wuermer.filter(w => w.team === spiel.dran);
   do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
   spiel.wurm = liste[team.zeiger];
-  spiel.phase = 'zielen'; spiel.zugzeit = ZUGZEIT; spiel.zugStart = zeit;
-  spiel.wind = Math.round(rnd(-1, 1) * 10) / 10 * WIND_MAX;
-  spiel.waffe = 'bazooka';
+  Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0 });
+  spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
+  spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich ? 'live' : 'fern';
   kam.frei = false;
-  ansage(TEAMS[spiel.dran].name, spiel.wurm.name + ' ist dran!' + (spiel.erster ? '  Zieh vom Wurm weg zum Zielen.' : ''), TEAMS[spiel.dran].hell);
-  spiel.erster = false;
+  const t = TEAMS[spiel.dran];
+  if (spiel.quelle === 'live') {
+    ansage(spiel.modus === 'online' ? 'Du bist dran!' : t.name, spiel.wurm.name + ' ist dran!' + (spiel.erster ? '  Finger irgendwo hinlegen und ziehen – wie eine Steinschleuder.' : ''), t.hell);
+    spiel.erster = false;
+  } else ansage(t.name, 'spielt auf dem anderen Gerät …', t.hell);
   zeigeWaffen();
 }
 
+// Der Zug ist vorbei: online abschicken oder abgleichen, dann weiter
+function zugEnde() {
+  const stand = schnappschuss();
+  if (spiel.modus === 'online') {
+    if (spiel.quelle === 'live') {
+      const rec = { n: spiel.zug, t: spiel.dran, e: spiel.log, k: spiel.krater, s: stand, fe: spiel.bild };
+      const lebende = spiel.teams.map((_, t) => t).filter(lebt);
+      if (lebende.length <= 1) rec.ende = lebende.length ? lebende[0] : -1;
+      spiel.zuege[rec.n] = rec;
+      spiel.ausstehend.push(rec);
+      Online.senden();
+    } else if (spiel.rec) {
+      // Wiederholung fertig: Stimmt alles mit dem anderen Gerät überein?
+      if (JSON.stringify(spiel.krater) !== JSON.stringify(spiel.rec.k)) neuAufbauen(spiel.zug);
+      standSetzen(spiel.rec.s);
+    }
+  }
+  naechsterZug();
+}
+
+function schnappschuss() {
+  return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
+           m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran };
+}
+function standSetzen(s) {
+  s.w.forEach(([x, y, hp, tot, ri], i) => {
+    const w = wuermer[i]; if (!w) return;
+    if (tot && !w.tot && !w.ertrunken) graeber.push({ x, y, vy: 0, r: 6, farbe: TEAMS[w.team].farbe });
+    Object.assign(w, { x, y, hp, tot: !!tot, richtung: ri, vx: 0, vy: 0, luft: false });
+  });
+  s.m.forEach((m, t) => spiel.teams[t].munition = { ...m });
+  s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
+  spiel.dran = s.d;
+  dinge = [];
+}
+// Landschaft neu bauen und alle Krater bis Zug „bis“ (einschließlich) einsetzen
+function neuAufbauen(bis) {
+  baueLandschaft(spiel.startzahl);
+  for (let i = 0; i <= bis; i++) if (spiel.zuege[i]) for (const [x, y, r] of spiel.zuege[i].k) loch(x, y, r);
+}
+
 function ende(sieger) {
-  spiel.phase = 'ende';
-  const t = $('menutext');
-  t.innerHTML = sieger < 0 ? 'Unentschieden – alle Würmer sind weg!' : '<b style="color:' + TEAMS[sieger].farbe + ';font-size:28px">🏆 ' + TEAMS[sieger].name + ' gewinnt!</b>';
-  $('los').textContent = 'Nochmal!';
-  setTimeout(() => $('menu').classList.remove('versteckt'), 1200);
+  spiel.phase = 'ende'; spiel.fertig = true;
+  $('unten').classList.add('aus');
+  const titel = sieger < 0 ? 'Unentschieden!' : '🏆 ' + TEAMS[sieger].name + ' gewinnt!';
+  const farbe = sieger < 0 ? '#1B2A3A' : TEAMS[sieger].farbe;
+  setTimeout(() => {
+    if (!spiel || !spiel.fertig) return;
+    karte(`<h2 style="color:${farbe};font-size:30px">${titel}</h2>`,
+      sieger < 0 ? 'Alle Würmer sind weg.' : (spiel.modus === 'online' && sieger === spiel.ich ? 'Du hast gewonnen! 🎉' : 'Super gespielt!'),
+      spiel.modus === 'online' ? [['Zurück zur Online-Lobby', onlineMenue], ['Hauptmenü', startMenue, 'zweit']]
+                               : [['Nochmal!', () => lokalesSpiel(spiel.n)], ['Hauptmenü', startMenue, 'zweit']]);
+  }, 1500);
   for (let i = 0; i < 160; i++) teilchen.push({ art: 'konfetti', x: kam.x + rnd(-500, 500), y: kam.y - rnd(300, 600), vx: rnd(-60, 60), vy: rnd(-100, 50), t: 0, max: 4, r: rnd(3, 6), farbe: ['#ffd84d', '#ff6b9a', '#6fe0ff', '#7dff8a', '#fff'][i % 5] });
 }
 
 function ruhig() { return !dinge.length && wuermer.every(w => w.tot || !w.luft); }
 
+// Eine Eingabe ausführen (live oder aus der Aufzeichnung)
+function anwenden(e) {
+  const w = aktiver(); if (!w) return;
+  switch (e[0]) {
+    case 'L': spiel.ein.links = !!e[2]; break;
+    case 'R': spiel.ein.rechts = !!e[2]; break;
+    case 'J': spiel.ein.springen = true; break;
+    case 'D': if (spiel.phase === 'zielen') w.richtung = e[2]; break;
+    case 'Z': if (spiel.phase === 'zielen') w.ziel = e[2]; break;
+    case 'F': if (spiel.phase === 'zielen') { w.ziel = e[3]; w.richtung = e[4]; spiel.waffe = e[5]; feuern(e[2]); } break;
+    case 'S': { const s = dinge.find(o => o.art === 'schaf'); if (s) s.zuender = 0; } break;
+  }
+}
+// Eingabe vom Bildschirm/Tastatur – zählt nur, wenn dieses Gerät gerade dran ist
+function eingeben(e) { if (spiel && spiel.quelle === 'live' && !spiel.fertig) spiel.eingaben.push(e); }
+const runde = (z, s = 1000) => Math.round(z * s) / s;
+
+// Ein Bild (1/60 s) der Spielwelt weiterrechnen
+function simSchritt() {
+  if (spiel.quelle === 'live') {
+    for (const e of spiel.eingaben) { e[1] = spiel.bild; spiel.log.push(e); anwenden(e); }
+    spiel.eingaben = [];
+  } else {
+    const ev = spiel.rec.e;
+    while (spiel.ri < ev.length && ev[spiel.ri][1] <= spiel.bild) anwenden(ev[spiel.ri++]);
+    if (spiel.bild > spiel.rec.fe + 300) {          // Notbremse, falls etwas auseinanderläuft
+      dinge = []; wuermer.forEach(w => { w.luft = false; w.vx = w.vy = 0; if (w.hp <= 0) w.tot = true; });
+      neuAufbauen(spiel.zug); standSetzen(spiel.rec.s); spiel.krater = spiel.rec.k; return zugEnde();
+    }
+  }
+  updateSpiel(SCHRITT);
+  spiel.bild++;
+}
+
 function updateSpiel(dt) {
   const w = aktiver();
   const darfLaufen = (spiel.phase === 'zielen' || spiel.phase === 'rueckzug') && w && !w.tot;
   if (darfLaufen && !w.luft) {
-    const d = (tasten.links ? -1 : 0) + (tasten.rechts ? 1 : 0);
+    const d = (spiel.ein.links ? -1 : 0) + (spiel.ein.rechts ? 1 : 0);
     if (d) {
       if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; }
-      laufen(w, d, dt); kam.frei = false;
+      laufen(w, d, dt); if (spiel.quelle === 'live') kam.frei = false;
     }
-    if (tasten.springen) { springen(w); tasten.springen = false; }
+    if (spiel.ein.springen) springen(w);
   }
-  if (spiel.phase === 'zielen' && w) {
-    if (tasten.hoch || tasten.runter) { w.ziel += (tasten.hoch ? -1 : 1) * w.richtung * 1.6 * dt; begrenzeZiel(w); }
-    if (tasten.leertaste) spiel.ladung = Math.min(1, (spiel.ladung || 0) + dt / 1.4);
-  }
+  spiel.ein.springen = false;
   for (const x of wuermer) updateWurm(x, dt);
   dinge = dinge.filter(o => updateDing(o, dt) !== false);
-  for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(Object.assign(g, { r: 6 })); g.vy = 0; } } }
+  for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(g); g.vy = 0; } } }
   graeber = graeber.filter(g => g.y < WASSER + 10);
 
   if (spiel.phase === 'zielen') {
@@ -536,73 +668,82 @@ function updateSpiel(dt) {
         if (opfer) {                                   // Wurm mit 0 Leben verabschiedet sich
           opfer.tot = true; graeber.push({ x: opfer.x, y: opfer.y, vy: 0, r: 6, farbe: TEAMS[opfer.team].farbe });
           explosion(opfer.x, opfer.y, 22, 10);
-        } else naechsterZug();
+        } else zugEnde();
       }
     } else spiel.warte = 0;
   }
 }
-function begrenzeZiel(w) {
-  let rel = w.richtung === 1 ? w.ziel : Math.PI - w.ziel;
+function begrenzeZiel(w, ri = w.richtung) {
+  let rel = ri === 1 ? w.ziel : Math.PI - w.ziel;
   rel = Math.atan2(Math.sin(rel), Math.cos(rel));
   rel = Math.max(-1.55, Math.min(1.55, rel));
-  w.ziel = w.richtung === 1 ? rel : Math.PI - rel;
+  w.ziel = ri === 1 ? rel : Math.PI - rel;
 }
 
 // ================= Steuerung =================
 const tasten = {};
 const leinwand = $('bild'), ctx = leinwand.getContext('2d');
-let zielt = null, schieben = null;
+let zielt = null;                 // Steinschleuder: {id, sx, sy, x, y, staerke, richtung}
+const finger = new Map();         // alle Finger auf dem Bildschirm (für zwei-Finger-Schieben)
 
-function wurmAufBild(w) { return { x: (w.x - kam.x) * massstab + bw / 2, y: (w.y - kam.y) * massstab + bh / 2 }; }
+function darfZielen() { return spiel && spiel.quelle === 'live' && spiel.phase === 'zielen' && aktiver() && !aktiver().tot && !spiel.fertig; }
 
 leinwand.addEventListener('pointerdown', e => {
   ton.an();
-  if (!spiel || spiel.phase === 'ende') return;
-  const schaf = dinge.find(o => o.art === 'schaf');
-  if (schaf && spiel.phase === 'flug') { schaf.zuender = 0; return; }   // Schaf zünden
-  const w = aktiver();
-  if (spiel.phase === 'zielen' && w && !w.tot) {
-    const p = wurmAufBild(w);
-    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 110) { zielt = { id: e.pointerId, staerke: 0 }; return; }
-  }
-  schieben = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  finger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!spiel || spiel.fertig) return;
+  if (finger.size >= 2) { zielt = null; return; }      // zwei Finger = Kamera schieben
+  if (spiel.quelle === 'live' && spiel.phase === 'flug' && dinge.some(o => o.art === 'schaf')) { eingeben(['S', 0]); return; }
+  if (darfZielen()) zielt = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, staerke: 0, richtung: aktiver().richtung };
 });
 addEventListener('pointermove', e => {
+  const alt = finger.get(e.pointerId); if (!alt) return;
+  const neu = { x: e.clientX, y: e.clientY };
   if (zielt && zielt.id === e.pointerId) {
-    const w = aktiver(), p = wurmAufBild(w);
-    const dx = p.x - e.clientX, dy = p.y - e.clientY;   // Steinschleuder: in Gegenrichtung schießen
-    zielt.staerke = Math.min(1, Math.hypot(dx, dy) / 200);
-    if (Math.abs(dx) > 4) w.richtung = dx > 0 ? 1 : -1;
-    w.ziel = Math.atan2(dy, dx); begrenzeZiel(w);
-  } else if (schieben && schieben.id === e.pointerId) {
-    kam.x -= (e.clientX - schieben.x) / massstab; kam.y -= (e.clientY - schieben.y) / massstab;
-    schieben.x = e.clientX; schieben.y = e.clientY; kam.frei = true;
+    if (!darfZielen()) { zielt = null; return; }
+    const w = aktiver();
+    zielt.x = neu.x; zielt.y = neu.y;
+    const dx = zielt.sx - neu.x, dy = zielt.sy - neu.y, weg = Math.hypot(dx, dy);   // in Gegenrichtung schießen
+    zielt.staerke = Math.min(1, weg / ZUG_WEG);
+    if (weg > 12) {
+      const ri = Math.abs(dx) > 4 ? (dx > 0 ? 1 : -1) : zielt.richtung;
+      if (ri !== zielt.richtung) { zielt.richtung = ri; eingeben(['D', 0, ri]); }
+      w.ziel = Math.atan2(dy, dx); begrenzeZiel(w, ri);
+    }
+  } else if (finger.size >= 2 || !darfZielen()) {
+    // Kamera schieben: mit zwei Fingern (oder einem, wenn man gerade nicht zielt)
+    const teiler = finger.size >= 2 ? finger.size : 1;
+    kam.x -= (neu.x - alt.x) / massstab / teiler; kam.y -= (neu.y - alt.y) / massstab / teiler; kam.frei = true;
   }
+  finger.set(e.pointerId, neu);
 });
 function loslassen(e) {
+  finger.delete(e.pointerId);
   if (zielt && zielt.id === e.pointerId) {
-    if (zielt.staerke > .12 && spiel.phase === 'zielen') feuern(zielt.staerke);
+    if (zielt.staerke > .12 && darfZielen()) {
+      const w = aktiver();
+      eingeben(['F', 0, runde(zielt.staerke), runde(w.ziel), zielt.richtung, spiel.waffe]);
+    }
     zielt = null;
   }
-  if (schieben && schieben.id === e.pointerId) schieben = null;
 }
 addEventListener('pointerup', loslassen);
 addEventListener('pointercancel', loslassen);
 
 function halten(id, taste) {
   const el = $(id);
-  el.addEventListener('pointerdown', e => { e.preventDefault(); ton.an(); tasten[taste] = true; });
-  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, () => { if (taste !== 'springen') tasten[taste] = false; });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); ton.an(); taste === 'J' ? eingeben(['J', 0]) : eingeben([taste, 0, 1]); });
+  if (taste !== 'J') for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, () => eingeben([taste, 0, 0]));
 }
-halten('links', 'links'); halten('rechts', 'rechts'); halten('springen', 'springen');
+halten('links', 'L'); halten('rechts', 'R'); halten('springen', 'J');
 
 document.querySelectorAll('.waffe').forEach(b => b.onclick = () => {
-  if (!spiel || spiel.phase !== 'zielen') return;
+  if (!darfZielen()) return;
   if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) return;
   spiel.waffe = b.dataset.w; zeigeWaffen();
 });
 function zeigeWaffen() {
-  if (!spiel) return;
+  if (!spiel || !spiel.teams[spiel.dran]) return;
   const m = spiel.teams[spiel.dran].munition;
   document.querySelectorAll('.waffe').forEach(b => {
     const n = m[b.dataset.w];
@@ -612,22 +753,47 @@ function zeigeWaffen() {
   });
 }
 
-const TASTEN = { ArrowLeft: 'links', ArrowRight: 'rechts', ArrowUp: 'hoch', ArrowDown: 'runter', Enter: 'springen', ' ': 'leertaste' };
+// Tastatur (am Computer): Pfeile laufen/zielen, Enter springen, Leertaste gedrückt halten = Kraft
+const TASTEN = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'hoch', ArrowDown: 'runter', Enter: 'J', ' ': 'leertaste' };
 addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   const t = TASTEN[e.key]; if (!t) { const n = '1234'.indexOf(e.key); if (n >= 0) document.querySelectorAll('.waffe')[n].click(); return; }
   e.preventDefault(); ton.an();
-  if (t === 'leertaste' && spiel && spiel.phase === 'flug') { const s = dinge.find(o => o.art === 'schaf'); if (s) s.zuender = 0; }
-  if (!e.repeat) tasten[t] = true;
+  if (e.repeat) return;
+  if (t === 'leertaste' && spiel && spiel.quelle === 'live' && spiel.phase === 'flug') eingeben(['S', 0]);
+  if (t === 'L' || t === 'R') eingeben([t, 0, 1]);
+  if (t === 'J') eingeben(['J', 0]);
+  tasten[t] = true;
 });
 addEventListener('keyup', e => {
   const t = TASTEN[e.key]; if (!t) return;
   tasten[t] = false;
-  if (t === 'leertaste' && spiel && spiel.phase === 'zielen' && spiel.ladung) { feuern(Math.max(.15, spiel.ladung)); }
+  if (t === 'L' || t === 'R') eingeben([t, 0, 0]);
+  if (t === 'leertaste' && darfZielen() && spiel.ladung) { const w = aktiver(); eingeben(['F', 0, runde(Math.max(.15, spiel.ladung)), runde(w.ziel), w.richtung, spiel.waffe]); }
   if (t === 'leertaste' && spiel) spiel.ladung = 0;
 });
+// Was nur auf dem Gerät passiert, das gerade dran ist (zielen mit Tasten, Ziel an andere senden)
+function liveEingaben(dt) {
+  if (!darfZielen()) return;
+  const w = aktiver();
+  if (tasten.hoch || tasten.runter) { w.ziel += (tasten.hoch ? -1 : 1) * w.richtung * 1.6 * dt; begrenzeZiel(w); }
+  if (tasten.leertaste) spiel.ladung = Math.min(1, (spiel.ladung || 0) + dt / 1.4);
+  if (spiel.modus === 'online' && Math.abs(w.ziel - (spiel.gesendetesZiel ?? 99)) > .05 && spiel.bild - (spiel.zielBild || 0) > 8) {
+    spiel.gesendetesZiel = w.ziel; spiel.zielBild = spiel.bild; eingeben(['Z', 0, runde(w.ziel)]);
+  }
+}
 
-$('los').onclick = () => { ton.an(); neuesSpiel(); };
 $('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
+$('raus').onclick = async () => {
+  if (!spiel) return;
+  if (spiel.fertig) return spiel.modus === 'online' ? onlineMenue() : startMenue();
+  if (!confirm(spiel.modus === 'online' ? 'Spiel für alle Geräte beenden?' : 'Spiel beenden?')) return;
+  if (spiel.modus === 'online') {
+    const id = spiel.id;
+    try { await Sync.aendern(s => s && s.id === id ? { ...s, status: 'ende', sieger: -1 } : null); } catch {}
+    onlineMenue();
+  } else startMenue();
+};
 
 let ansageZeit;
 function ansage(gross, klein, farbe) {
@@ -635,7 +801,7 @@ function ansage(gross, klein, farbe) {
   a.querySelector('b').textContent = gross; a.querySelector('b').style.color = farbe || '#fff';
   a.querySelector('span').textContent = klein;
   a.classList.add('zeigen'); clearTimeout(ansageZeit);
-  ansageZeit = setTimeout(() => a.classList.remove('zeigen'), 2600);
+  ansageZeit = setTimeout(() => a.classList.remove('zeigen'), 2800);
 }
 
 // ================= Töne (selbst erzeugt, keine Dateien) =================
@@ -746,7 +912,7 @@ function welle(y0, farbe, amp, phase, links, rechts, unten) {
 
 function zeichneWurm(w) {
   const f = w.richtung, wipp = Math.sin(zeit * 3 + w.samen) * 1.2, team = TEAMS[w.team];
-  const lauf = !w.luft && (tasten.links || tasten.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
+  const lauf = !w.luft && spiel && (spiel.ein.links || spiel.ein.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
   ctx.save(); ctx.translate(w.x, w.y);
   if (w.luft) ctx.rotate(w.dreh);
   if (w.aua > 0) ctx.translate(Math.sin(zeit * 60) * w.aua * 2, 0);
@@ -784,7 +950,7 @@ function zeichneWurm(w) {
   ctx.fillStyle = 'rgba(255,110,140,.45)'; ctx.beginPath(); ctx.arc(kx + 6.5 * f, ky + 2.5, 1.6, 0, 7); ctx.fill();
   ctx.restore();
   // Waffe in der Hand
-  if (spiel && w === aktiver() && spiel.phase === 'zielen' && !w.luft) zeichneWaffe(w);
+  if (spiel && w === aktiver() && spiel.phase === 'zielen' && !w.luft && spiel.quelle !== 'fern') zeichneWaffe(w);
 }
 
 function zeichneWaffe(w) {
@@ -892,10 +1058,25 @@ function zeichneZielhilfe(w) {
     ctx.beginPath(); ctx.arc(w.x + Math.cos(w.ziel) * d, w.y - 4 + Math.sin(w.ziel) * d, 1.5 + i * .35, 0, 7); ctx.fill();
   }
 }
+// Die Steinschleuder unter dem Finger (in Bildschirm-Punkten)
+function zeichneSchleuder() {
+  if (!zielt) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.moveTo(zielt.sx, zielt.sy); ctx.lineTo(zielt.x, zielt.y); ctx.stroke();
+  ctx.strokeStyle = `hsl(${60 - zielt.staerke * 60},100%,60%)`; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(zielt.sx, zielt.sy); ctx.lineTo(zielt.x, zielt.y); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, 9, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, ZUG_WEG, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 14, 0, 7); ctx.fill();
+  ctx.font = 'bold 12px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1B2A3A'; ctx.fillText(Math.round(zielt.staerke * 100), zielt.x, zielt.y);
+}
 
 function namensschild(w) {
   const t = TEAMS[w.team], y = w.y - 30;
-  ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)';
+  ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)';
   ctx.strokeText(w.name, w.x, y - 12); ctx.fillStyle = t.hell; ctx.fillText(w.name, w.x, y - 12);
   const txt = String(w.hp), bb = ctx.measureText(txt).width + 10;
   ctx.fillStyle = t.farbe; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
@@ -923,8 +1104,8 @@ function zeichne() {
   for (let x = Math.floor(links / 90) * 90; x < rechts; x += 90) { const s = Math.sin(zeit * 2 + x) * .5 + .5; ctx.fillRect(x + (x * 7 % 40), WASSER + 2 + (x * 13 % 20), 10 * s, 1.5); }
   for (const w of wuermer) if (!w.tot) namensschild(w);
   const w = aktiver();
-  if (spiel && w && !w.tot && spiel.phase === 'zielen') {
-    zeichneZielhilfe(w);
+  if (spiel && w && !w.tot && spiel.phase === 'zielen' && spiel.quelle !== 'fern') {
+    if (spiel.quelle === 'live') zeichneZielhilfe(w);
     const hy = w.y - 62 + Math.sin(zeit * 6) * 4;              // Pfeil über dem aktiven Wurm
     ctx.fillStyle = TEAMS[w.team].farbe; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(w.x - 8, hy); ctx.lineTo(w.x + 8, hy); ctx.lineTo(w.x, hy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -935,31 +1116,61 @@ function zeichne() {
     ctx.strokeText(t.text, t.x, t.y); ctx.fillStyle = t.farbe; ctx.fillText(t.text, t.x, t.y);
   }
   ctx.globalAlpha = 1;
+  zeichneSchleuder();
 }
 
-let hudZeit = 0;
+// ---------- Anzeige oben ----------
+function baueHud() {
+  const o = $('oben'); o.innerHTML = '';
+  spiel.teams.forEach((_, t) => {
+    const d = document.createElement('div'); d.className = 'box team'; d.id = 'team' + t;
+    d.innerHTML = `<b style="color:${TEAMS[t].hell}">${TEAMS[t].name}${spiel.modus === 'online' && t === spiel.ich ? ' (du)' : ''}</b><div class="bar"><i id="hp${t}" style="background:${TEAMS[t].farbe}"></i></div>`;
+    o.appendChild(d);
+  });
+  o.insertAdjacentHTML('beforeend', '<div class="box" id="zeit">45</div><div class="box" id="wind">Wind<div id="windbar"><i></i></div></div>');
+  // Zeit und Wind in die Mitte
+  o.insertBefore($('wind'), o.children[Math.ceil(spiel.n / 2)]);
+  o.insertBefore($('zeit'), $('wind'));
+}
 function hud() {
   if (!spiel) return;
-  for (let t = 0; t < 2; t++) {
+  spiel.teams.forEach((_, t) => {
     const sum = wuermer.filter(w => w.team === t && !w.tot).reduce((s, w) => s + w.hp, 0);
     $('hp' + t).style.width = sum / 4 + '%';
-  }
+    $('team' + t).classList.toggle('dran', t === spiel.dran && !spiel.fertig);
+  });
   const z = $('zeit'), s = spiel.phase === 'rueckzug' ? Math.ceil(spiel.rueckzug) : Math.max(0, Math.ceil(spiel.zugzeit));
   z.textContent = s; z.classList.toggle('knapp', spiel.phase === 'zielen' && s <= 10 || spiel.phase === 'rueckzug');
   const wi = spiel.wind / WIND_MAX, b = $('windbar').firstElementChild;
   b.style.left = (wi < 0 ? 50 + wi * 50 : 50) + '%'; b.style.width = Math.abs(wi) * 50 + '%';
+  $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig);
+  let st = '';
+  if (spiel.modus === 'online' && !spiel.fertig) {
+    if (spiel.quelle === 'fern') st = '⏳ ' + TEAMS[spiel.dran].name + ' spielt auf dem anderen Gerät …';
+    else if (spiel.quelle === 'wiederholung') st = '📺 Zug von ' + TEAMS[spiel.dran].name;
+    if (spiel.ausstehend.length) st = (st ? st + '   ' : '') + '☁ sende …';
+    if (Online.fehlerText) st = '⚠ ' + Online.fehlerText;
+  }
+  if ($('status').textContent !== st) $('status').textContent = st;
 }
 
 // ================= Hauptschleife =================
-const SCHRITT = 1 / 60;
-let vorher = performance.now(), rest = 0;
+let vorher = performance.now(), rest = 0, hudZeit = 0;
 function schleife(jetzt) {
   rest += Math.min(.1, (jetzt - vorher) / 1000); vorher = jetzt;
   while (rest >= SCHRITT) {
     rest -= SCHRITT; zeit += SCHRITT;
     for (const w of wolken) w.x += ((spiel ? spiel.wind : 30) * .15 + 6) * SCHRITT;
-    if (spiel && spiel.phase !== 'ende') updateSpiel(SCHRITT);
-    else if (spiel) { for (const w of wuermer) updateWurm(w, SCHRITT); }
+    if (spiel && !spiel.fertig) {
+      // Wartet dieses Gerät auf einen Zug von einem anderen? Sobald er da ist: abspielen
+      if (spiel.quelle === 'fern' && spiel.zuege[spiel.zug]) { spiel.quelle = 'wiederholung'; spiel.rec = spiel.zuege[spiel.zug]; spiel.ri = 0; }
+      if (spiel.quelle === 'live') { liveEingaben(SCHRITT); simSchritt(); }
+      else if (spiel.quelle === 'wiederholung') {
+        // schneller abspielen, wenn noch mehr Züge warten oder vor dem Schuss nur gelaufen wird
+        const mal = spiel.zuege.length > spiel.zug + 1 ? 6 : spiel.phase === 'zielen' ? 2 : 1;
+        for (let i = 0; i < mal && spiel.quelle === 'wiederholung' && !spiel.fertig; i++) simSchritt();
+      }
+    } else for (const w of wuermer) updateWurm(w, SCHRITT);
     updateTeilchen(SCHRITT);
     wackeln *= .9;
     kamera(SCHRITT);
@@ -968,13 +1179,475 @@ function schleife(jetzt) {
   if (jetzt - hudZeit > 100) { hud(); hudZeit = jetzt; }
   requestAnimationFrame(schleife);
 }
+
+/* =====================================================================
+   MENÜ
+   ===================================================================== */
+// Karte in der Mitte füllen: Überschrift, Text, Knöpfe [Text, Funktion, 'zweit']
+function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
+  $('menu').classList.remove('versteckt');
+  const k = $('karte');
+  k.innerHTML = kopf + (text ? `<p>${text}</p>` : '') + extra + '<div class="knoepfe"></div><div class="reihe"></div>';
+  const fuellen = (box, liste) => liste.forEach(([t, fn, art]) => {
+    const b = document.createElement('button'); b.innerHTML = t; if (art) b.className = art;
+    b.onclick = () => { ton.an(); fn(); }; box.appendChild(b);
+  });
+  fuellen(k.querySelector('.knoepfe'), knoepfe);
+  fuellen(k.querySelector('.reihe'), unten.map(([t, fn]) => [t, fn, 'zweit']));
+}
+function hintergrund() {
+  spiel = null; dinge = []; zielt = null;
+  ['oben', 'unten', 'ton', 'raus', 'status'].forEach(id => $(id).classList.add('versteckt'));
+}
+function startMenue() {
+  Online.stop(); hintergrund();
+  karte('<h1>🪱 Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Kamera:</b> mit zwei Fingern schieben.',
+    [['👥 2 Spieler – ein Gerät', () => lokalesSpiel(2)], ['👥 3 Spieler – ein Gerät', () => lokalesSpiel(3)], ['🌐 Online – mehrere Geräte', onlineMenue]]);
+}
+function lokalesSpiel(n) { Online.stop(); neuesSpiel({ n, startzahl: (Math.random() * 2 ** 31) >>> 0 }); naechsterZug(); }
+
+/* =====================================================================
+   QR-CODE – aus Морской бой übernommen (selbst gebaut, Fehlerstufe M)
+   ===================================================================== */
+const QR = (() => {
+  const ECC = [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28];
+  const BLOECKE = [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49];
+  const roh = v => { let r = (16 * v + 128) * v + 64; if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; };
+  const datenWorte = v => Math.floor(roh(v) / 8) - ECC[v] * BLOECKE[v];
+  const mal = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z; };
+  const teiler = d => { const r = Array(d).fill(0); r[d - 1] = 1; let w = 1;
+    for (let i = 0; i < d; i++) { for (let j = 0; j < d; j++) { r[j] = mal(r[j], w); if (j + 1 < d) r[j] ^= r[j + 1]; } w = mal(w, 2); } return r; };
+  const rest = (daten, t) => { const r = t.map(() => 0);
+    for (const b of daten) { const f = b ^ r.shift(); r.push(0); t.forEach((k, i) => r[i] ^= mal(k, f)); } return r; };
+  const MASKEN = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, x => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+
+  function erzeuge(text) {
+    const bytes = [...new TextEncoder().encode(text)];
+    let v = 1;
+    while (v <= 40 && 4 + (v < 10 ? 8 : 16) + bytes.length * 8 > datenWorte(v) * 8) v++;
+    if (v > 40) throw new Error('Text zu lang');
+    // 1. Bits sammeln: Modus „Bytes“, Länge, Daten, Füllbytes
+    const bits = [], put = (w, n) => { for (let i = n - 1; i >= 0; i--) bits.push((w >>> i) & 1); };
+    const kap = datenWorte(v) * 8;
+    put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+    put(0, Math.min(4, kap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+    for (let p = 0xEC; bits.length < kap; p ^= 0xEC ^ 0x11) put(p, 8);
+    const daten = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = b << 1 | bits[i + j]; daten.push(b); }
+    // 2. Reparatur-Bits (Reed-Solomon) pro Block, dann verzahnen
+    const nb = BLOECKE[v], el = ECC[v], rw = Math.floor(roh(v) / 8), kurz = nb - rw % nb, kl = Math.floor(rw / nb), t = teiler(el), bl = [];
+    for (let i = 0, k = 0; i < nb; i++) { const d = daten.slice(k, k + kl - el + (i < kurz ? 0 : 1)); k += d.length; const e = rest(d, t); if (i < kurz) d.push(0); bl.push(d.concat(e)); }
+    const worte = []; for (let i = 0; i < bl[0].length; i++) bl.forEach((b, j) => { if (i !== kl - el || j >= kurz) worte.push(b[i]); });
+    // 3. Gitter: feste Muster (Ecken, Taktlinien, Ausrichtung)
+    const n = v * 4 + 17, m = [...Array(n)].map(() => Array(n).fill(false)), fest = [...Array(n)].map(() => Array(n).fill(false));
+    const setze = (x, y, d) => { m[y][x] = d; fest[y][x] = true; };
+    for (let i = 0; i < n; i++) { setze(6, i, i % 2 === 0); setze(i, 6, i % 2 === 0); }
+    const ecke = (x, y) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const d = Math.max(Math.abs(dx), Math.abs(dy)), xx = x + dx, yy = y + dy;
+      if (xx >= 0 && xx < n && yy >= 0 && yy < n) setze(xx, yy, d !== 2 && d !== 4); } };
+    ecke(3, 3); ecke(n - 4, 3); ecke(3, n - 4);
+    if (v > 1) {
+      const na = Math.floor(v / 7) + 2, schritt = v === 32 ? 26 : Math.ceil((v * 4 + 4) / (na * 2 - 2)) * 2, pos = [6];
+      for (let p = n - 7; pos.length < na; p -= schritt) pos.splice(1, 0, p);
+      for (let i = 0; i < na; i++) for (let j = 0; j < na; j++) {
+        if ((i === 0 && j === 0) || (i === 0 && j === na - 1) || (i === na - 1 && j === 0)) continue;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setze(pos[i] + dx, pos[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }
+    }
+    const format = mk => {
+      const d = mk; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);   // Stufe M = 00
+      const b = (d << 10 | r) ^ 0x5412, bit = i => ((b >>> i) & 1) === 1;
+      for (let i = 0; i <= 5; i++) setze(8, i, bit(i));
+      setze(8, 7, bit(6)); setze(8, 8, bit(7)); setze(7, 8, bit(8));
+      for (let i = 9; i < 15; i++) setze(14 - i, 8, bit(i));
+      for (let i = 0; i < 8; i++) setze(n - 1 - i, 8, bit(i));
+      for (let i = 8; i < 15; i++) setze(8, n - 15 + i, bit(i));
+      setze(8, n - 8, true);
+    };
+    format(0);
+    if (v >= 7) {
+      let r = v; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const b = v << 12 | r;
+      for (let i = 0; i < 18; i++) { const bit = ((b >>> i) & 1) === 1, a = n - 11 + i % 3, c = Math.floor(i / 3); setze(a, c, bit); setze(c, a, bit); }
+    }
+    // 4. Daten im Zickzack von unten rechts einfüllen
+    let i = 0;
+    for (let rechts = n - 1; rechts >= 1; rechts -= 2) {
+      if (rechts === 6) rechts = 5;
+      for (let s = 0; s < n; s++) for (let j = 0; j < 2; j++) {
+        const x = rechts - j, hoch = ((rechts + 1) & 2) === 0, y = hoch ? n - 1 - s : s;
+        if (!fest[y][x] && i < worte.length * 8) { m[y][x] = ((worte[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; }
+      }
+    }
+    // 5. Muster-Maske wählen, die am „ruhigsten“ aussieht
+    const maske = k => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!fest[y][x] && MASKEN[k](x, y)) m[y][x] = !m[y][x]; };
+    const strafe = () => {
+      let p = 0, dunkel = 0;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        if (m[y][x]) dunkel++;
+        if (x < n - 1 && y < n - 1 && m[y][x] === m[y][x + 1] && m[y][x] === m[y + 1][x] && m[y][x] === m[y + 1][x + 1]) p += 3;
+      }
+      for (let a = 0; a < n; a++) { let lx = 1, ly = 1;
+        for (let b = 1; b < n; b++) {
+          if (m[a][b] === m[a][b - 1]) { lx++; p += lx === 5 ? 3 : lx > 5 ? 1 : 0; } else lx = 1;
+          if (m[b][a] === m[b - 1][a]) { ly++; p += ly === 5 ? 3 : ly > 5 ? 1 : 0; } else ly = 1;
+        } }
+      return p + Math.floor(Math.abs(dunkel * 20 - n * n * 10) / (n * n)) * 10;
+    };
+    let beste = 0, bp = Infinity;
+    for (let k = 0; k < 8; k++) { maske(k); format(k); const p = strafe(); if (p < bp) { bp = p; beste = k; } maske(k); }
+    maske(beste); format(beste);
+    return m;
+  }
+  function malen(cv, text) {
+    const m = erzeuge(text), n = m.length, px = 8, s = (n + 8) * px;
+    cv.width = cv.height = s;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, s, s); c.fillStyle = '#000';
+    m.forEach((zeile, y) => zeile.forEach((d, x) => d && c.fillRect((x + 4) * px, (y + 4) * px, px, px)));
+  }
+  return { erzeuge, malen };
+})();
+
+/* =====================================================================
+   SYNC ÜBER GITHUB – wie bei Морской бой
+   Alle Geräte lesen/schreiben EINE verschlüsselte Datei im privaten Repo.
+   Der Schlüssel (AES-GCM) und der Token liegen nur auf den Geräten.
+   Die Einladung ist dieselbe wie bei Морской бой (MB1~…).
+   ===================================================================== */
+const b64 = u8 => { let s = ''; u8.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); };
+
+const Sync = {
+  cfg: speicher.lies('wu-sync') || speicher.lies('mb-sync'),   // { o: Besitzer, r: Repo, t: Token, k: Schlüssel }
+  geraet: speicher.lies('wu-geraet') || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('wu-geraet', id); return id; })(),
+  pfad: 'wuermer/aktuell.json',
+  etag: null, sha: null, stand: null, schluessel: null,
+
+  einladung() { const c = this.cfg; return ['MB1', c.o, c.r, c.t, c.k].join('~'); },
+  einladungsLink() { return location.origin + location.pathname + '#einladung=' + this.einladung(); },
+  lesEinladung(text) {
+    text = decodeURIComponent((text || '').trim()).replace(/^.*einladung=/, '').replace(/\s/g, '');
+    const t = text.split('~');
+    if (t.length !== 5 || t[0] !== 'MB1') return null;
+    try { if (unb64(t[4]).length !== 32) return null; } catch { return null; }
+    return { o: t[1], r: t[2], t: t[3], k: t[4] };
+  },
+  speichern(cfg) { this.cfg = cfg; this.schluessel = null; this.etag = this.sha = this.stand = null; speicher.schreib('wu-sync', cfg); },
+
+  url() { return `https://api.github.com/repos/${this.cfg.o}/${this.cfg.r}/contents/${this.pfad}`; },
+  kopf() { return { Authorization: 'Bearer ' + this.cfg.t, Accept: 'application/vnd.github+json' }; },
+  async key() {
+    if (!this.schluessel) this.schluessel = await crypto.subtle.importKey('raw', unb64(this.cfg.k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    return this.schluessel;
+  },
+  async verschluesseln(obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const d = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.key(), new TextEncoder().encode(JSON.stringify(obj)));
+    return { v: 1, iv: b64(iv), d: b64(new Uint8Array(d)) };
+  },
+  async entschluesseln(roh) {
+    try {
+      const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(roh.iv) }, await this.key(), unb64(roh.d));
+      return JSON.parse(new TextDecoder().decode(d));
+    } catch {
+      const f = new Error('Der Spielstand auf GitHub hat einen anderen Schlüssel als dieses Gerät.');
+      f.schluessel = true; throw f;
+    }
+  },
+  // Lesen. Mit ETag fragt GitHub nur „hat sich was geändert?“ – das ist schnell.
+  async lesen(frisch = false) {
+    const h = this.kopf(); if (!frisch && this.etag) h['If-None-Match'] = this.etag;
+    const res = await fetch(this.url(), { headers: h, cache: 'no-store' });
+    if (res.status === 304) return this.stand;
+    if (res.status === 404) { this.sha = this.etag = this.stand = null; return null; }
+    if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json();
+    this.sha = j.sha;
+    this.stand = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    this.etag = res.headers.get('ETag');                 // erst merken, wenn Entschlüsseln geklappt hat
+    return this.stand;
+  },
+  async schreiben(stand) {
+    const body = { message: 'Würmer: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
+    if (this.sha) body.sha = this.sha;
+    const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.status === 409 || res.status === 422) return false;          // jemand war schneller
+    if (res.status === 403 || res.status === 404) throw new Error('Token darf nicht schreiben (Contents: Read and write?).');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null;
+    return true;
+  },
+  // Ändern = neu lesen, Funktion anwenden, zurückschreiben. Bei Gleichzeitigkeit: nochmal.
+  async aendern(fn) {
+    for (let i = 0; i < 6; i++) {
+      const alt = await this.lesen(true);
+      const neu = fn(alt ? JSON.parse(JSON.stringify(alt)) : null);
+      if (!neu) return alt;
+      if (await this.schreiben(neu)) return neu;
+      await warte(300 + Math.random() * 700);
+    }
+    throw new Error('Ein anderes Gerät schreibt gerade – bitte nochmal.');
+  },
+};
+
+/* =====================================================================
+   ONLINE-SPIEL
+   Gemeinsamer Stand: { id, status, teams: 2|3, startzahl, geraete:[A,B,C], zuege:[…] }
+   status: wartet → laeuft → ende.  Gerät Nr. i spielt Team Nr. i.
+   Ein Zug: { n, t, e: Eingaben, k: Krater, s: Stand am Ende, fe: letzte Bild-Nummer }
+   ===================================================================== */
+const Online = {
+  timer: null, tickt: false, fehlerText: '', sendet: false,
+  start() { this.stop(); this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  async tick() {
+    if (this.tickt || document.hidden || !this.timer || !Sync.cfg) return;
+    this.tickt = true;
+    try {
+      if (spiel && spiel.ausstehend.length) await this.senden();
+      const st = await Sync.lesen();
+      if (!this.sendet) this.fehlerText = '';
+      steuern(st);
+    } catch (e) {
+      this.fehlerText = e.message;
+      if (!spiel) lobby('⚠ ' + e.message, e.schluessel ? [['Alten Spielstand ersetzen', () => neuesOnlineSpiel(2, true)]] : [['Nochmal', () => this.tick()]]);
+    } finally { this.tickt = false; }
+  },
+  // Eigene Züge der Reihe nach hochladen
+  async senden() {
+    if (this.sendet) return;
+    this.sendet = true;
+    try {
+      while (spiel && spiel.ausstehend.length) {
+        const rec = spiel.ausstehend[0], id = spiel.id;
+        const neu = await Sync.aendern(s => {
+          if (!s || s.id !== id || s.status !== 'laeuft' || s.zuege.length !== rec.n) return null;
+          s.zuege.push(rec);
+          if (rec.ende !== undefined) { s.status = 'ende'; s.sieger = rec.ende; }
+          return s;
+        });
+        if (spiel) spiel.ausstehend.shift();             // geschickt – oder das Spiel gibt es nicht mehr
+        if (!neu || neu.id !== id) break;
+      }
+      this.fehlerText = '';
+    } catch (e) { this.fehlerText = e.message; }
+    finally { this.sendet = false; }
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Online.timer) Online.tick(); });
+
+function onlineMenue() {
+  hintergrund();
+  if (!Sync.cfg) return setupZeigen();
+  lobbyText = ''; lobby('Verbinde mit GitHub …', []);
+  Online.start();
+}
+
+function lobby(text, knoepfe) {
+  karte('<h2>🌐 Online</h2>', text, knoepfe, '', [['📱 Einladung zeigen', einladungZeigen], ['⚙ Gerät zurücksetzen', zuruecksetzen], ['← Zurück', startMenue]]);
+}
+const NEU_KNOEPFE = () => [['Neues Spiel – 2 Spieler', () => neuesOnlineSpiel(2)], ['Neues Spiel – 3 Spieler', () => neuesOnlineSpiel(3)]];
+
+// Entscheidet anhand des gemeinsamen Stands, was dieses Gerät zeigt
+let lobbyText = '';
+function steuern(st) {
+  if (spiel && spiel.modus === 'online') {
+    if (spiel.fertig) return;
+    if (!st || st.id !== spiel.id || (st.status === 'ende' && st.sieger === -1)) {
+      hintergrund(); lobbyText = '';
+      return lobby('Das Spiel wurde beendet.', NEU_KNOEPFE());
+    }
+    for (let i = 0; i < st.zuege.length; i++) if (!spiel.zuege[i]) spiel.zuege[i] = st.zuege[i];
+    return;
+  }
+  if (spiel) return;                                          // lokales Spiel läuft
+  const ich = st ? st.geraete.indexOf(Sync.geraet) : -1;
+  // Lobby nur neu malen, wenn sich etwas geändert hat (sonst flackern die Knöpfe)
+  const zeige = (text, knoepfe) => { if (text !== lobbyText) { lobbyText = text; lobby(text, knoepfe); } };
+  if (!st || st.status === 'ende') return zeige('Kein offenes Spiel.\nWie viele Geräte (Spieler) machen mit?', NEU_KNOEPFE());
+  if (st.status === 'wartet') {
+    const wer = st.geraete.map((_, i) => TEAMS[i].name).join(', ');
+    if (ich >= 0) return zeige(`Warte auf Mitspieler … (${st.geraete.length} von ${st.teams})\nSchon da: ${wer}\nDu bist ${TEAMS[ich].name}.\n\nAuf dem anderen Gerät: Würmer → Online → Beitreten`, [['Abbrechen', abbrechen]]);
+    return zeige(`Ein Spiel wartet auf dich! (${st.geraete.length} von ${st.teams} da)`, [['🪱 Beitreten', beitreten], ['Neues Spiel (altes beenden)', () => neuesOnlineSpiel(2)]]);
+  }
+  if (st.status === 'laeuft') {
+    if (ich >= 0) { lobbyText = ''; return spielLaden(st, ich); }
+    return zeige('Auf anderen Geräten läuft gerade ein Spiel.', [['Neues Spiel (altes beenden)', () => neuesOnlineSpiel(2)]]);
+  }
+}
+
+// Online-Spiel aufbauen – auch nach einem Neustart der App mitten im Spiel
+function spielLaden(st, ich) {
+  neuesSpiel({ n: st.teams, startzahl: st.startzahl, modus: 'online', ich, id: st.id });
+  spiel.zuege = st.zuege.slice();
+  if (st.zuege.length) {
+    const letzter = st.zuege[st.zuege.length - 1];
+    neuAufbauen(letzter.n);
+    standSetzen(letzter.s);
+    graeber = wuermer.filter(w => w.tot).map(w => ({ x: w.x, y: w.y, vy: 0, r: 6, farbe: TEAMS[w.team].farbe }));
+    spiel.zug = letzter.n;
+  }
+  naechsterZug();
+}
+
+async function neuesOnlineSpiel(n, ersetzen = false) {
+  const st = Sync.stand;
+  if (!ersetzen && st && st.status === 'laeuft' && !confirm('Es läuft noch ein Spiel. Wirklich ein neues starten?')) return;
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: n,
+                startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
+  lobbyText = ''; lobby('Starte …', []);
+  try {
+    if (ersetzen) {
+      for (let i = 0; i < 3; i++) { await Sync.lesen(true).catch(() => {}); if (await Sync.schreiben(neu)) break; }
+    } else await Sync.aendern(() => neu);
+    Online.tick();
+  } catch (e) { lobby('⚠ ' + e.message, [['Nochmal', () => neuesOnlineSpiel(n, ersetzen)]]); }
+}
+async function beitreten() {
+  lobbyText = ''; lobby('Trete bei …', []);
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.status !== 'wartet' || s.geraete.includes(Sync.geraet) || s.geraete.length >= s.teams) return null;
+      s.geraete.push(Sync.geraet);
+      if (s.geraete.length === s.teams) s.status = 'laeuft';      // alle da – los geht's
+      return s;
+    });
+    Online.tick();
+  } catch (e) { lobby('⚠ ' + e.message, [['Nochmal', beitreten]]); }
+}
+async function abbrechen() {
+  try { await Sync.aendern(s => s && s.geraete.includes(Sync.geraet) ? { ...s, status: 'ende', sieger: -1 } : null); } catch {}
+  lobbyText = ''; Online.tick();
+}
+function zuruecksetzen() {
+  if (!confirm('Token und Schlüssel von diesem Gerät entfernen?')) return;
+  speicher.weg('wu-sync'); Sync.cfg = null; Online.stop(); setupZeigen();
+}
+
+/* ---------- Einrichten & Einladung ---------- */
+function setupZeigen(meldungText = '') {
+  Online.stop(); lobbyText = '';
+  karte('<h2>Gerät einrichten</h2>', '', [], `
+    <h3>A · ICH HABE EINE EINLADUNG</h3>
+    <div class="knoepfe"><button id="s-scannen">📷 QR-Code scannen</button></div>
+    <p style="margin-top:10px">Oder den Einladungs-Code einfügen<br><small>(Морской бой-Einladung geht auch!)</small></p>
+    <textarea id="s-code" placeholder="MB1~…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    <div class="knoepfe"><button id="s-annehmen">Annehmen</button></div>
+    <h3>B · ERSTES GERÄT (ELTERN)</h3>
+    <p style="text-align:left">Privates Repo für die Spielstände und ein Token, der nur dieses Repo lesen und schreiben darf.</p>
+    <input id="s-repo" placeholder="besitzer/repo" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <input id="s-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="knoepfe"><button id="s-verbinden">Verbinden</button></div>
+    <p id="s-meldung"></p>`, [['← Zurück', startMenue]]);
+  meldung(meldungText);
+  $('s-scannen').onclick = () => Scanner.start();
+  $('s-annehmen').onclick = () => einladungAnnehmen($('s-code').value);
+  $('s-verbinden').onclick = verbinden;
+}
+function meldung(text, fehler) { const m = $('s-meldung'); if (!m) return; m.textContent = text; m.classList.toggle('fehler', !!fehler); }
+
+async function verbinden() {
+  const teile = $('s-repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+  const token = $('s-token').value.trim();
+  if (teile.length !== 2 || !teile[0] || !teile[1]) return meldung('Repo bitte als besitzer/name eingeben.', true);
+  if (!token) return meldung('Bitte den Token einfügen.', true);
+  meldung('Prüfe …');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${teile[0]}/${teile[1]}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (res.status === 401) return meldung('Token wird nicht akzeptiert.', true);
+    if (!res.ok) return meldung('Repo nicht gefunden – darf der Token darauf zugreifen?', true);
+    const j = await res.json();
+    if (!j.private) return meldung('Das Repo ist öffentlich! Bitte ein PRIVATES Repo nehmen.', true);
+    const k = b64(crypto.getRandomValues(new Uint8Array(32)));     // neuer geheimer Schlüssel
+    Sync.speichern({ o: teile[0], r: teile[1], t: token, k });
+    einladungZeigen();
+  } catch (e) { meldung('Keine Verbindung: ' + e.message, true); }
+}
+
+function einladungAnnehmen(text) {
+  const cfg = Sync.lesEinladung(text);
+  if (!cfg) return meldung('Das ist kein gültiger Einladungs-Code.', true);
+  Sync.speichern(cfg);
+  onlineMenue();
+}
+
+function einladungZeigen() {
+  Online.stop(); lobbyText = '';
+  karte('<h2>Einladung</h2>', 'Mit der Kamera des anderen Geräts scannen.\nOder Code kopieren und dort unter „Einfügen“ einsetzen.\n<b class="fehler">Nur eigenen Geräten zeigen – enthält den Schlüssel!</b>',
+    [['📋 Code kopieren', async () => { try { await navigator.clipboard.writeText(Sync.einladung()); $('kopiert').textContent = '✓ kopiert'; } catch {} }], ['Fertig', onlineMenue]],
+    '<canvas id="qr"></canvas><p id="kopiert"></p>');
+  QR.malen($('qr'), Sync.einladungsLink());
+}
+
+/* ---------- QR-Code mit der Kamera lesen (jsQR wird erst hier geladen) ---------- */
+const Scanner = {
+  strom: null, an: false,
+  async laden() {
+    if (window.jsQR) return;
+    await new Promise((ok, fehler) => { const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = ok; s.onerror = fehler; document.head.appendChild(s); });
+  },
+  async start() {
+    const video = document.querySelector('#scanner video');
+    $('sc-text').textContent = 'QR-Code der Einladung in den Rahmen halten';
+    $('scanner').classList.add('on');
+    try {
+      await this.laden();
+      this.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = this.strom; await video.play();
+    } catch (e) {
+      this.stopp();
+      return meldung('Kamera nicht verfügbar – in den Einstellungen erlauben oder den Code einfügen.', true);
+    }
+    this.an = true;
+    const cv = document.createElement('canvas'), c = cv.getContext('2d', { willReadFrequently: true });
+    const suchen = () => {
+      if (!this.an) return;
+      if (video.readyState >= 2 && video.videoWidth) {
+        const f = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+        cv.width = video.videoWidth * f; cv.height = video.videoHeight * f;
+        c.drawImage(video, 0, 0, cv.width, cv.height);
+        const code = jsQR(c.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: 'dontInvert' });
+        if (code && Sync.lesEinladung(code.data)) { this.stopp(); return einladungAnnehmen(code.data); }
+        if (code) $('sc-text').textContent = 'Das ist kein Einladungs-Code.';
+      }
+      requestAnimationFrame(suchen);
+    };
+    requestAnimationFrame(suchen);
+  },
+  stopp() {
+    this.an = false;
+    if (this.strom) this.strom.getTracks().forEach(t => t.stop());
+    this.strom = null; $('scanner').classList.remove('on');
+  },
+};
+$('sc-stopp').onclick = () => Scanner.stopp();
+
+// Einladung per QR-Code: Die Kamera öffnet die Seite mit #einladung=… in Safari
+function einladungAusLink() {
+  if (!location.hash.startsWith('#einladung=')) return false;
+  const text = location.hash.slice(1);
+  history.replaceState(null, '', location.pathname);           // Schlüssel nicht im Verlauf stehen lassen
+  const cfg = Sync.lesEinladung(text);
+  if (!cfg) return false;
+  Sync.speichern(cfg);
+  const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (app) { onlineMenue(); return true; }
+  // In Safari: Die Home-Bildschirm-App hat einen eigenen Speicher – deshalb Code zum Einfügen anbieten
+  karte('<h2>Einladung erhalten ✓</h2>', 'Dieses Gerät ist jetzt eingerichtet (in Safari).\n\nSpielst du über die App auf dem Home-Bildschirm?\n1. „Code kopieren“ tippen\n2. App öffnen → Online → einfügen → „Annehmen“',
+    [['📋 Code kopieren', async () => { try { await navigator.clipboard.writeText(Sync.einladung()); } catch {} startMenue(); }], ['Hier spielen', onlineMenue]]);
+  return true;
+}
+
+// ================= Start =================
 // Hintergrund-Welt fürs Menü
-baueLandschaft();
+baueLandschaft((Math.random() * 2 ** 31) >>> 0);
 for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
 kam.x = W / 2; kam.y = H * .55;
+if (!einladungAusLink()) startMenue();
 requestAnimationFrame(schleife);
-// Würmer im Menü fallen auch auf den Boden
-setInterval(() => { if (!spiel) for (const w of wuermer) updateWurm(w, 1 / 30); }, 33);
 
 // Offline-Fähigkeit (funktioniert nur über https oder localhost)
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
