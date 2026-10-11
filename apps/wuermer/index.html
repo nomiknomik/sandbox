@@ -147,7 +147,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.8';
+const APP_VERSION = '0.9';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1094,11 +1094,30 @@ function groesse() {
   dpr = Math.min(2, devicePixelRatio || 1);
   bw = innerWidth; bh = innerHeight;
   leinwand.width = bw * dpr; leinwand.height = bh * dpr;
-  const basis = bh < 500 ? Math.min(bh / 430, bw / 700) : Math.min(bh / 760, bw / 1000);   // Handy: näher ran
-  massstab = basis * zoom;
+  basisMassstab = bh < 500 ? Math.min(bh / 430, bw / 700) : Math.min(bh / 760, bw / 1000);   // Handy: näher ran
+  massstab = basisMassstab * zoom * autoZoom;
 }
-let zoom = 1;
-function zoomen(f) { zoom = Math.max(.6, Math.min(2.2, zoom * f)); groesse(); }
+let zoom = 1, autoZoom = 1, basisMassstab = 1, flugZoom = 1;   // zoom: mit Fingern, autoZoom: beim Zielen
+function zoomen(f) { zoom = Math.max(.6, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
+
+// Ungefähre Flugbahn vorausrechnen (mit Wind, ohne Abprallen) → Rechteck, das auf den Bildschirm soll
+function flugbahnBox(w, staerke) {
+  const a = w.ziel, wind = spiel.waffe === 'bazooka' ? spiel.wind : 0;
+  let x = w.x + Math.cos(a) * 16, y = w.y - 4 + Math.sin(a) * 16, vx = Math.cos(a) * staerke * MAX_V, vy = Math.sin(a) * staerke * MAX_V;
+  const box = { x1: Math.min(w.x, x), x2: Math.max(w.x, x), y1: Math.min(w.y, y), y2: Math.max(w.y, y) };
+  let draussen = false;
+  for (let i = 0; i < 360; i++) {
+    vy += G / 60; vx += wind / 60;
+    const n = Math.ceil(Math.hypot(vx, vy) / 240);
+    for (let j = 0; j < n; j++) {
+      x += vx / 60 / n; y += vy / 60 / n;
+      box.x1 = Math.min(box.x1, x); box.x2 = Math.max(box.x2, x); box.y1 = Math.min(box.y1, y); box.y2 = Math.max(box.y2, y);
+      if (!fest(x, y)) draussen = true;                         // startet die Mündung in der Erde: erst mal raus
+      if (y > WASSER || x < -60 || x > W + 60 || (draussen && i > 3 && fest(x, y))) return box;
+    }
+  }
+  return box;
+}
 addEventListener('resize', groesse); groesse();
 
 for (let i = 0; i < 9; i++) wolken.push({ x: rnd(0, W), y: rnd(60, 380), s: rnd(.6, 1.4) });
@@ -1118,8 +1137,21 @@ const mischen = (a, b, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.subs
 function farbe(name) { const i = Math.min(3, Math.floor(tz)), k = tz - i; return mischen(HIMMEL[i][name], HIMMEL[Math.min(4, i + 1)][name], k); }
 
 function kamera(dt) {
-  let ziel = null;
-  if (dinge.length) ziel = dinge[dinge.length - 1];
+  let ziel = null, autoZiel = 1;
+  // Beim Zielen automatisch so weit herauszoomen, dass Wurm und ungefährer Einschlag zu sehen sind
+  const w0 = aktiver(), staerke = zielt ? zielt.staerke : spiel && spiel.ladung || 0;
+  const ballistisch = spiel && !['schaf', 'dynamit', 'graben', 'luftschlag'].includes(spiel.waffe);
+  if (darfZielen() && staerke > .1 && ballistisch) {
+    const b = flugbahnBox(w0, staerke), breite = b.x2 - b.x1 + 220, hoehe = b.y2 - b.y1 + 200;
+    autoZiel = Math.max(.3, Math.min(1, bw / breite / (basisMassstab * zoom), bh * .8 / hoehe / (basisMassstab * zoom)));
+    flugZoom = autoZiel;
+    ziel = { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 + 80 };
+  } else if (spiel && spiel.phase === 'flug' && spiel.quelle === 'live' && !kiDran()) autoZiel = flugZoom;   // im Flug so bleiben
+  else flugZoom = 1;
+  autoZoom += (autoZiel - autoZoom) * Math.min(1, dt * 3);
+  massstab = basisMassstab * zoom * autoZoom;
+  if (ziel) {}
+  else if (dinge.length) ziel = dinge[dinge.length - 1];
   else if (spiel) {
     const fliegt = wuermer.find(w => !w.tot && w.luft && Math.hypot(w.vx, w.vy) > 60);
     if (fliegt) ziel = fliegt;
