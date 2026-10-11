@@ -30,6 +30,12 @@ lernt man, wie zwei Geräte miteinander reden.
   (1 Schreibzugriff pro Schuss). Bewusste Abwägung: Tempo vor Schummel-Schutz –
   die App zeigt fremde Schiffe nie an.
 - Geräte fragen alle 1,5 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
+- v2.3 „⚡ WLAN-Direkt“ (immer an, wie in Würmer): WebRTC-Datenkanal Gerät ↔ Gerät,
+  Handschlag über `morskoj-boj/signal.json` (verschlüsselt). Kein STUN/TURN → nur im
+  selben WLAN. Jeder Stand trägt eine Zugnummer `rev`, damit ein älterer GitHub-Stand
+  nie einen neueren Direkt-Stand überschreibt. GitHub bleibt Reserve (jeder Zug wird
+  trotzdem gespeichert). Gemessen: Gegner sieht den Einschlag nach ~0,8 s statt ~2,3 s.
+  Anzeige oben „⚡ WLAN-Direkt / ☁ über GitHub“; bei Safari-Problem antippen (Kamera-Erlaubnis).
 
 ## Umgesetzt in Würmer (v0.2)
 - 2–3 Spieler: auf einem Gerät abwechselnd **oder** online, ein Gerät pro Team.
