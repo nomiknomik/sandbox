@@ -25,8 +25,11 @@ lernt man, wie zwei Geräte miteinander reden.
 ## Umgesetzt in Морской бой (v1.1)
 - Spielstand: eine Datei `morskoj-boj/aktuell.json` im privaten Repo, AES-GCM-verschlüsselt.
 - Einladung fürs zweite Gerät: QR-Code (im Spiel erzeugt) oder Code kopieren/einfügen.
-- Schiffe bleiben auf dem eigenen Gerät; über GitHub laufen nur Schüsse und Antworten.
-- Geräte fragen alle 2 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
+- Ab v2.2 (schneller): Beide Flotten liegen verschlüsselt im Spielstand; der Schütze
+  rechnet Treffer/Wasser sofort selbst aus, das andere Gerät wird nur informiert
+  (1 Schreibzugriff pro Schuss). Bewusste Abwägung: Tempo vor Schummel-Schutz –
+  die App zeigt fremde Schiffe nie an.
+- Geräte fragen alle 1,5 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
 
 ## Umgesetzt in Würmer (v0.2)
 - 2–3 Spieler: auf einem Gerät abwechselnd **oder** online, ein Gerät pro Team.

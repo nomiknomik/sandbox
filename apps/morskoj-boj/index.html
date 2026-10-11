@@ -476,7 +476,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.1';
+const APP_VERSION = '2.2';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -1310,7 +1310,7 @@ function zeichneFlotte() {
   const g = spiel.spieler[1 - ich()], a = spiel.spieler[ich()], w = Math.max(9, Math.min(14, oFeld.cell * .55));
   // Liste {len, weg}. Online kennen wir vom Gegner nur die versenkten Schiffe.
   const liste = sp => {
-    if (spiel.modus !== 'online' || sp === a) return sp.schiffe.map(s => ({ len: s.len, weg: istVersenkt(sp, s) }));
+    if (spiel.modus !== 'online' || sp === a || spiel.vollFlotte) return sp.schiffe.map(s => ({ len: s.len, weg: istVersenkt(sp, s) }));
     const rest = FLOTTE.slice();
     sp.schiffe.forEach(s => rest.splice(rest.indexOf(s.len), 1));
     return sp.schiffe.map(s => ({ len: s.len, weg: true })).concat(rest.map(len => ({ len, weg: false })));
@@ -1463,7 +1463,7 @@ async function ende(sieger) {
   if (spiel.modus === 'online') speicher.weg('mb-online'); else speicher.weg('mb-spiel');
   await warte(900);
   const verloren = spiel.modus !== 'duo' && sieger === 1;
-  if (verloren && spiel.modus === 'cpu') {          // Zeigen, wo die Computer-Schiffe waren
+  if (verloren && (spiel.modus === 'cpu' || spiel.vollFlotte)) {   // Zeigen, wo die feindlichen Schiffe waren
     const g = spiel.spieler[1];
     tFeld.zeigeSchiffe(g.schiffe.map(s => ({ ...s, klasse: istVersenkt(g, s) ? 'sunk' : 'auftauchen' })));
     banner('DIE FEINDFLOTTE LAG HIER …', true);
@@ -1557,7 +1557,7 @@ function akteEintragen(sieger) {
   if (spiel.modus === 'duo') return null;
   const k = akteLesen(), ich0 = spiel.spieler[0], geg = spiel.spieler[1], st = spiel.statistik[0], verlauf = spiel.verlauf || [];
   const verloren = ich0 ? ich0.schiffe.filter(s => istVersenkt(ich0, s)).length : 0;
-  const versenkt = spiel.modus === 'online' ? geg.schiffe.length : geg.schiffe.filter(s => istVersenkt(geg, s)).length;
+  const versenkt = spiel.modus === 'online' && !spiel.vollFlotte ? geg.schiffe.length : geg.schiffe.filter(s => istVersenkt(geg, s)).length;
   let serie = 0, best = 0; verlauf.forEach(e => { serie = e === 'miss' ? 0 : serie + 1; best = Math.max(best, serie); });
   const d = { gewonnen: sieger === 0, modus: spiel.modus, stufe: spiel.stufe, voll: !spiel.aufgabe, schuesse: st.schuss,
     quote: st.schuss ? st.treffer / st.schuss * 100 : 0, verloren, uebrig: (ich0 ? ich0.schiffe.length : 0) - verloren,
@@ -1828,10 +1828,10 @@ const Sync = {
    ===================================================================== */
 const Online = {
   timer: null, tickt: false, zuletzt: null,
-  start() { this.stop(); this.zuletzt = null; this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
+  start() { this.stop(); this.zuletzt = null; this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
-    if (this.tickt || document.hidden || !this.timer) return;
+    if (this.tickt || document.hidden || !this.timer || (spiel && spiel.schiesst)) return;
     this.tickt = true;
     try {
       const st = await Sync.lesen();
@@ -1914,18 +1914,21 @@ function onlineSpielLaden(st, idx) {
   spiel = { modus: 'online', id: st.id, idx, dran: 0, verarbeitet: 0, phase: 'online',
     spieler: [schiffe ? { schiffe, schuesse: gitter() } : null, { schiffe: [], schuesse: gitter() }],
     statistik: [{ schuss: 0, treffer: 0 }, { schuss: 0, treffer: 0 }] };
+  gegnerFlotteUebernehmen(st);
   if (!schiffe) return;
   // Nach einem Neustart: alle schon beantworteten Züge still nachspielen
   for (const z of st.zuege) {
     if (z.e == null) break;
     const meiner = z.s === idx;
-    if (meiner) { eintragen(spiel.spieler[1], z); (spiel.verlauf = spiel.verlauf || []).push(z.e); } else schiessen(spiel.spieler[0], z.r, z.c);
+    if (meiner) { if (spiel.vollFlotte) schiessen(spiel.spieler[1], z.r, z.c); else eintragen(spiel.spieler[1], z); (spiel.verlauf = spiel.verlauf || []).push(z.e); }
+    else schiessen(spiel.spieler[0], z.r, z.c);
     const st2 = spiel.statistik[meiner ? 0 : 1]; st2.schuss++; if (z.e !== 'miss') st2.treffer++;
     spiel.verarbeitet++;
   }
 }
 
 async function zuegeVerarbeiten(st) {
+  gegnerFlotteUebernehmen(st);
   const ichSp = spiel.spieler[0], gegner = spiel.spieler[1];
   let letztes = null;
   for (let k = spiel.verarbeitet; k < st.zuege.length; k++) {
@@ -1960,8 +1963,15 @@ async function zuegeVerarbeiten(st) {
       await schussAnimation(tFeld, z.r, z.c, erg, true);
       zeichneFlotte();
       letztes = erg;
-    } else {                                                       // schon von mir beantwortet
-      schiessen(ichSp, z.r, z.c); spiel.verarbeitet = k + 1;
+    } else {
+      // Der Gegner hat geschossen und selbst ausgerechnet – wir rechnen nach und zeigen es
+      erg = schiessen(ichSp, z.r, z.c);
+      spiel.verarbeitet = k + 1;
+      if (!erg) continue;
+      zaehlen(1, erg);
+      banner('GEGNER FEUERT AUF ' + koord(z.r, z.c) + ' …', true);
+      await schussAnimation(oFeld, z.r, z.c, erg, false);
+      zeichneFlotte();
     }
   }
   const akt = Sync.stand || st;
@@ -1991,7 +2001,17 @@ function onlineBanner(unterwegs, letztes) {
   }
 }
 
+// Schnelles Verfahren: Beide Geräte kennen beide Flotten (verschlüsselt im Spielstand).
+// Der Schütze rechnet das Ergebnis sofort selbst aus, das andere Gerät wird nur informiert.
+function gegnerFlotteUebernehmen(st) {
+  const f = st && st.flotten && st.flotten[1 - spiel.idx];
+  if (spiel.vollFlotte || !f || spiel.verarbeitet) return;
+  spiel.spieler[1] = { schiffe: f.map(s => ({ ...s })), schuesse: gitter() };
+  spiel.vollFlotte = true;
+}
+
 async function onlineFeuer() {
+  if (spiel.vollFlotte) return schnellFeuer();
   const [r, c] = auswahl, id = spiel.id, idx = spiel.idx;
   beschaeftigt = true; $('#feuer').disabled = true; tFeld.el.classList.remove('zielen');
   tFeld.kreuz.classList.add('lock'); Ton.abschuss();
@@ -2004,6 +2024,38 @@ async function onlineFeuer() {
     });
     Online.tick();
   } catch (e) { banner('⚠ ' + e.message, true); beschaeftigt = false; bereitZumZielen(); }
+}
+
+async function schnellFeuer() {
+  const [r, c] = auswahl, id = spiel.id, idx = spiel.idx, k = spiel.verarbeitet, gegner = spiel.spieler[1];
+  const erg = schiessen(gegner, r, c);
+  if (!erg) return;
+  beschaeftigt = true; spiel.schiesst = true; $('#feuer').disabled = true; tFeld.el.classList.remove('zielen');
+  const sieg = alleVersenkt(gegner), zug = { s: idx, r, c, e: erg.art };
+  if (erg.art === 'sunk') zug.f = erg.felder;
+  spiel.verarbeitet = k + 1; zaehlen(0, erg); (spiel.verlauf = spiel.verlauf || []).push(erg.art);
+  // Funkspruch an das andere Gerät – läuft, während die Rakete fliegt
+  const senden = (async () => {
+    for (let versuch = 0; ; versuch++) {
+      try {
+        await Sync.aendern(s => {
+          if (!s || s.id !== id || s.zuege.length > k || s.status !== 'laeuft' || s.dran !== idx) return null;   // schon gespeichert
+          s.zuege.push(zug);
+          if (erg.art === 'miss') s.dran = 1 - idx;
+          if (sieg) { s.status = 'ende'; s.sieger = idx; }
+          return s;
+        });
+        return;
+      } catch (e) { if (versuch) banner('⚠ FUNK GESTÖRT – VERSUCHE ES WEITER …', true); await warte(1500); }
+    }
+  })();
+  await schussAnimation(tFeld, r, c, erg, true);
+  zeichneFlotte();
+  await senden;
+  spiel.schiesst = false;
+  if (sieg) return ende(0);
+  spiel.dran = erg.art === 'miss' ? 1 : 0;
+  onlineBanner(false, erg);
 }
 
 async function neuesOnlineSpiel() {
@@ -2050,7 +2102,7 @@ async function abbrechen() {
 }
 async function onlineFlotteFertig(schiffe) {
   const meine = schiffe.map(({ len, r, c, senk }) => ({ len, r, c, senk, gesetzt: true }));
-  speicher.schreib('mb-online', { id: spiel.id, schiffe: meine });     // Schiffe bleiben auf DIESEM Gerät
+  speicher.schreib('mb-online', { id: spiel.id, schiffe: meine });
   spiel.spieler[0] = { schiffe: meine, schuesse: gitter() };
   zeige('s-online'); lobby('Melde Flotte …', []);
   const id = spiel.id, idx = spiel.idx;
@@ -2058,6 +2110,7 @@ async function onlineFlotteFertig(schiffe) {
     await Sync.aendern(s => {
       if (!s || s.id !== id) return null;
       s.bereit[idx] = true;
+      s.flotten = s.flotten || {}; s.flotten[idx] = meine.map(({ len, r, c, senk }) => ({ len, r, c, senk }));
       if (s.bereit[0] && s.bereit[1]) { s.status = 'laeuft'; s.dran = 0; }
       return s;
     });
