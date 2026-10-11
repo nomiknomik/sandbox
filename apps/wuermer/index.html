@@ -174,7 +174,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -991,8 +991,8 @@ function zeigeWaffen() {
   $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : a.info}` : '';
 }
 
-// Tastatur (am Computer): Pfeile laufen/zielen, Enter springen, Leertaste gedrückt halten = Kraft
-const TASTEN = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'hoch', ArrowDown: 'runter', Enter: 'J', ' ': 'leertaste' };
+// Tastatur (am Computer): ◀ ▶ laufen, ▲ (oder Enter) springen, W/S zielen, Leertaste gedrückt halten = Kraft
+const TASTEN = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'J', Enter: 'J', w: 'hoch', W: 'hoch', s: 'runter', S: 'runter', ' ': 'leertaste' };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   const t = TASTEN[e.key]; if (!t) { const n = '123456'.indexOf(e.key); if (n >= 0) document.querySelectorAll('.waffe')[n].click(); return; }
