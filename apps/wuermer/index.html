@@ -93,6 +93,7 @@
   #karte .wahl b{min-width:86px;text-align:left}
   #karte .wahl span{display:flex;gap:6px}
   #karte .wahl button{font-size:14px;padding:8px 10px;background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8}
+  #karte .wahl button.farbknopf{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8;vertical-align:middle;margin-right:4px}
   #karte .wahl button.an{background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 3px 0 #1f6427}
   .versteckt{display:none!important}
 
@@ -147,7 +148,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.9';
+const APP_VERSION = '1.0';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -208,6 +209,21 @@ const TEAMS = [
   { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel'] },
   { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Keks', 'Flitzer', 'Tiger', 'Zwerg'] },
 ];
+// Teamfarben zum Aussuchen (hell = Schrift auf dunklem Grund, balken = Lebensbalken)
+const FARBEN = [
+  { name: 'Rot',     farbe: '#E5484D', hell: '#ffb3b5' },
+  { name: 'Blau',    farbe: '#3B82F6', hell: '#b3d0ff' },
+  { name: 'Gelb',    farbe: '#E8A317', hell: '#ffe08a' },
+  { name: 'Grün',    farbe: '#2FB344', hell: '#a6efb4' },
+  { name: 'Lila',    farbe: '#8B5CF6', hell: '#d2c2ff' },
+  { name: 'Orange',  farbe: '#F97316', hell: '#ffc59a' },
+  { name: 'Pink',    farbe: '#EC4899', hell: '#ffb3d9' },
+  { name: 'Türkis',  farbe: '#14B8A6', hell: '#9ff0e4' },
+  { name: 'Schwarz', farbe: '#1f1f24', hell: '#e6e6ee', balken: '#8a8a96' },
+];
+function teamsSetzen(farben) {
+  (farben || [0, 1, 2]).forEach((f, i) => { const F = FARBEN[f] || FARBEN[i]; Object.assign(TEAMS[i], { name: 'Team ' + F.name, farbe: F.farbe, hell: F.hell, balken: F.balken || F.farbe }); });
+}
 
 // Zufall mit „Startzahl“: Gleiche Startzahl = gleiche Zufallszahlen auf jedem Gerät.
 // So sehen alle Geräte dieselbe Landschaft und denselben Wind.
@@ -1502,7 +1518,7 @@ function baueHud() {
   const o = $('oben'); o.innerHTML = '';
   spiel.teams.forEach((_, t) => {
     const d = document.createElement('div'); d.className = 'box team'; d.id = 'team' + t;
-    d.innerHTML = `<b style="color:${TEAMS[t].hell}">${TEAMS[t].name}${spiel.art[t] === 'c' ? ' 🤖' : spiel.modus === 'online' && t === spiel.ich ? ' (du)' : ''}</b><div class="bar"><i id="hp${t}" style="background:${TEAMS[t].farbe}"></i></div>`;
+    d.innerHTML = `<b style="color:${TEAMS[t].hell}">${TEAMS[t].name}${spiel.art[t] === 'c' ? ' 🤖' : spiel.modus === 'online' && t === spiel.ich ? ' (du)' : ''}</b><div class="bar"><i id="hp${t}" style="background:${TEAMS[t].balken || TEAMS[t].farbe}"></i></div>`;
     o.appendChild(d);
   });
   o.insertAdjacentHTML('beforeend', '<div class="box" id="zeit">45</div><div class="box" id="wind">Wind<div id="windbar"><i></i></div></div><div class="box" id="runde"></div>');
@@ -1604,19 +1620,20 @@ function startMenue() {
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
-function wahlLesen(modus) { return speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); }
+function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = w.farben || [0, 1, 2]; return w; }
 function teamWahl(modus) {
   const wahl = wahlLesen(modus);
   const los = () => {
     const art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
     if (modus === 'online' && !art.includes('m')) return alert('Mindestens ein Team muss ein Mensch sein.');
     speicher.schreib('wu-wahl-' + modus, wahl);
-    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false);
+    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false, wahl.farben);
   };
   const malen = () => {
-    const zeilen = TEAMS.map((t, i) => `<div class="wahl"><b style="color:${t.farbe}">${t.name}</b><span>` +
+    const zeilen = TEAMS.map((_, i) => { const F = FARBEN[wahl.farben[i]]; return `<div class="wahl"><b style="color:${F.farbe}">` +
+      `<button class="farbknopf" data-f="${i}" style="background:${F.farbe}" aria-label="Farbe wechseln"></button> ${F.name}</b><span>` +
       [['m', '👤 Mensch'], ['c', '🤖 Computer'], ...(i === 2 ? [['-', 'aus']] : [])]
-        .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>').join('');
+        .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>'; }).join('');
     const stufen = `<div class="wahl"><b>🤖 Stärke</b><span>` + ['leicht', 'mittel', 'schwer']
       .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>' +
       (modus === 'online' ? `<div class="wahl"><b>⚡ WLAN-Direkt</b><span>` + [['1', 'an'], ['0', 'aus']]
@@ -1624,7 +1641,11 @@ function teamWahl(modus) {
     karte('<h2>Wer spielt mit?</h2>', modus === 'online' ? 'Jedes 👤-Team spielt auf einem eigenen Gerät.\n🤖-Teams rechnet dieses Gerät mit.' : '',
       [["Los geht's!", los]], zeilen + stufen + '<br>', [['← Zurück', modus === 'online' ? onlineMenue : startMenue]]);
     $('karte').querySelectorAll('.wahl button').forEach(b => b.onclick = () => {
-      if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
+      if (b.dataset.f) {                                  // nächste Farbe, die kein anderes Team hat
+        const i = +b.dataset.f; let f = wahl.farben[i];
+        do f = (f + 1) % FARBEN.length; while (wahl.farben.some((x, j) => j !== i && x === f));
+        wahl.farben[i] = f;
+      } else if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
       malen();
     });
   };
@@ -1633,6 +1654,7 @@ function teamWahl(modus) {
 function lokalesSpiel() {
   Online.stop();
   const wahl = wahlLesen('lokal'), art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
+  teamsSetzen(wahl.farben);
   neuesSpiel({ n: art.length, art, stufe: wahl.stufe, startzahl: (Math.random() * 2 ** 31) >>> 0 });
   naechsterZug();
 }
@@ -1900,6 +1922,7 @@ function steuern(st) {
   }
   if (spiel) return;                                          // lokales Spiel läuft
   const ich = st ? st.geraete.indexOf(Sync.geraet) : -1;
+  if (st) teamsSetzen(st.farben);
   // Lobby nur neu malen, wenn sich etwas geändert hat (sonst flackern die Knöpfe)
   const zeige = (text, knoepfe) => { if (text !== lobbyText) { lobbyText = text; lobby(text, knoepfe); } };
   if (!st || st.status === 'ende') return zeige('Kein offenes Spiel.', NEU_KNOEPFE());
@@ -1932,10 +1955,10 @@ function spielLaden(st, ich) {
   Direkt.start(st);
 }
 
-async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true) {
+async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, farben = [0, 1, 2]) {
   const st = Sync.stand;
   if (!ersetzen && st && st.status === 'laeuft' && !confirm('Es läuft noch ein Spiel. Wirklich ein neues starten?')) return;
-  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt,
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben,
                 startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
   if (menschen(neu).length === 1) neu.status = 'laeuft';        // nur ich gegen Computer: sofort los
   lobbyText = ''; lobby('Starte …', []);
