@@ -172,7 +172,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.10';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -896,7 +896,8 @@ addEventListener('pointermove', e => {
     const w = aktiver();
     zielt.x = neu.x; zielt.y = neu.y;
     if (spiel.waffe === 'luftschlag') return;            // Luftschlag: Finger zeigt nur das Ziel
-    const dx = zielt.sx - neu.x, dy = zielt.sy - neu.y, weg = Math.hypot(dx, dy);   // in Gegenrichtung schießen
+    const um = spiel.waffe === 'graben' ? -1 : 1;           // Graben: in Zugrichtung, sonst Gegenrichtung (Schleuder)
+    const dx = (zielt.sx - neu.x) * um, dy = (zielt.sy - neu.y) * um, weg = Math.hypot(dx, dy);
     zielt.staerke = Math.min(1, weg / zugWeg());
     if (weg > 12) {
       const ri = Math.abs(dx) > 4 ? (dx > 0 ? 1 : -1) : zielt.richtung;
@@ -1518,16 +1519,8 @@ function zeichneSchleuder() {
     ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✈️', zielt.x, zielt.y - 40);
     return;
   }
-  const sx = zielt.sx, sy = zielt.sy, fx = zielt.x, fy = zielt.y;
-  ctx.lineCap = ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 8]);
-  ctx.beginPath(); ctx.arc(sx, sy, zugWeg(), 0, 7); ctx.stroke(); ctx.setLineDash([]);
-  // Dezent: Startpunkt, dünnes Band, Knubbel unterm Finger, Kraft in Prozent
-  const farbe = `hsla(${60 - zielt.staerke * 60},100%,65%,.75)`;
-  ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(fx, fy); ctx.stroke();
-  ctx.strokeStyle = farbe; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(fx, fy); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 7); ctx.fill();
-  ctx.fillStyle = farbe; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, fy, 9, 0, 7); ctx.fill(); ctx.stroke();
+  // Kein Gummiband mehr – nur die Kraft in Prozent neben dem Finger
+  const fx = zielt.x, fy = zielt.y;
   ctx.font = '800 12px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.strokeText(Math.round(zielt.staerke * 100) + '%', fx, fy - 20);
   ctx.fillStyle = '#fff'; ctx.fillText(Math.round(zielt.staerke * 100) + '%', fx, fy - 20);
