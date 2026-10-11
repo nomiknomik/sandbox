@@ -63,6 +63,7 @@
   #runde b{display:block;font-size:14px;color:#ffd84d}
   #raus,#ton{position:fixed;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:20px}
   #raus{left:10px} #ton{right:10px}
+  #uebersicht{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:62px;width:46px;height:46px;font-size:20px}
   #direkt{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:62px;width:46px;height:46px;font-size:20px;background:#b8860b}
 
   /* Mitte: Ansage */
@@ -98,17 +99,22 @@
   #karte .wahl b{min-width:86px;text-align:left}
   #karte .wahl span{display:flex;gap:6px}
   #karte .wahl button{font-size:14px;padding:8px 10px;background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8}
+  #karte .wahl button{text-shadow:none}
+  #karte .wahl button.an{text-shadow:0 2px 0 #1f6427}
+  #karte .wahl .zaehler{display:inline-flex;align-items:center;gap:2px;border:3px solid;border-radius:16px;padding:1px;background:#fff}
+  #karte .wahl .zaehler button{padding:3px 9px;font-size:16px;box-shadow:none;border-radius:12px}
+  #karte .wahl .zaehler b{min-width:18px;text-align:center}
   #karte .wahl button.farbknopf{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8;vertical-align:middle;margin-right:4px}
   #karte .wahl button.an{background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 3px 0 #1f6427}
-  #fernbedienung{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translateX(-50%);
-                 width:112px;height:112px;border-radius:50%;border:6px solid #fff;background:radial-gradient(circle at 35% 30%,#ff7b7b,#d81f26 60%,#8e0f14);
+  #fernbedienung{position:fixed;right:70px;bottom:calc(env(safe-area-inset-bottom) + 8px);
+                 width:76px;height:76px;border-radius:50%;border:5px solid #fff;font-size:12px;background:radial-gradient(circle at 35% 30%,#ff7b7b,#d81f26 60%,#8e0f14);
                  color:#fff;font:800 15px -apple-system,system-ui,sans-serif;box-shadow:0 6px 0 #6b0b0f,0 10px 24px #0006;
                  display:flex;flex-direction:column;align-items:center;justify-content:center;animation:puls 1s infinite}
-  #fernbedienung b{font-size:34px;line-height:1}
+  #fernbedienung b{font-size:24px;line-height:1}
   #fernbedienung small{font-size:12px;opacity:.9}
-  #fernbedienung:active{transform:translateX(-50%) translateY(4px);box-shadow:0 2px 0 #6b0b0f}
+  #fernbedienung:active{transform:translateY(4px);box-shadow:0 2px 0 #6b0b0f}
   @keyframes puls{50%{box-shadow:0 6px 0 #6b0b0f,0 0 0 10px #ff3b3b55}}
-  @media (max-height:500px){#fernbedienung{width:86px;height:86px;bottom:calc(env(safe-area-inset-bottom) + 64px);font-size:12px}#fernbedienung b{font-size:26px}}
+  @media (max-height:500px){#fernbedienung{width:60px;height:60px;font-size:10px;border-width:4px}#fernbedienung b{font-size:18px}}
   .versteckt{display:none!important}
 
   /* Kamera für den Einladungs-QR */
@@ -130,6 +136,7 @@
 <button class="knopf versteckt" id="raus" aria-label="Spiel beenden">✕</button>
 <button class="knopf versteckt" id="direkt" aria-label="WLAN-Direkt erlauben">⚡</button>
 <button class="knopf versteckt" id="ton" aria-label="Ton an/aus">🔊</button>
+<button class="knopf versteckt" id="uebersicht" aria-label="Übersicht">🔭</button>
 
 <div id="unten" class="versteckt">
   <div>
@@ -164,7 +171,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -221,9 +228,9 @@ function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 
 
 // Teams – Namen der Würmer sind Fantasienamen
 const TEAMS = [
-  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Blitz', 'Krümel', 'Socke', 'Pixel'] },
-  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel'] },
-  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Keks', 'Flitzer', 'Tiger', 'Zwerg'] },
+  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Blitz', 'Krümel', 'Socke', 'Pixel', 'Flummi', 'Zappel'] },
+  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel', 'Wusel', 'Kringel'] },
+  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Keks', 'Flitzer', 'Tiger', 'Zwerg', 'Pfeffer', 'Möhre'] },
 ];
 // Teamfarben zum Aussuchen (hell = Schrift auf dunklem Grund, balken = Lebensbalken)
 const FARBEN = [
@@ -412,7 +419,7 @@ function neuerWurm(team, name) {
     x = Math.round(zr(120, W - 120));
     for (y = 0; y < WASSER; y += 2) if (stoesst(x, y, R)) break;
     y -= 2;
-    ok = y < WASSER - 60 && y > 40 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > 100);
+    ok = y < WASSER - 60 && y > 40 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > (wuermer.length > 11 ? 75 : 100));
   }
   return { team, name, x, y, vx: 0, vy: 0, r: R, hp: 100, luft: true, tot: false, richtung: zr(0, 1) < .5 ? 1 : -1,
            ziel: -0.6, laufen: 0, schritte: 0, dreh: 0, blinzeln: rnd(1, 4), samen: rnd(0, 9), aua: 0 };
@@ -591,14 +598,14 @@ function updateTeilchen(dt) {
 //   L/R = links/rechts gedrückt (1) oder losgelassen (0), J = springen,
 //   D = Blickrichtung, Z = Zielwinkel, F = Feuer (Kraft, Winkel, Richtung, Waffe), S = Schaf zünden.
 // Online schickt das Gerät, das dran ist, diese Liste. Die anderen Geräte spielen sie nach.
-function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = null, stufe = 'mittel', host = false, mitWind = true }) {
+function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = null, stufe = 'mittel', host = false, mitWind = true, anzahl = null }) {
   baueLandschaft(startzahl);
   wuermer = []; dinge = []; teilchen = []; texte = []; graeber = []; kisten = [];
-  spiel = { n, startzahl, modus, ich, id, art: art || Array(n).fill('m'), stufe, host, mitWind, zug: -1, dran: 0, wurm: null, phase: 'warten', zugzeit: ZUGZEIT,
+  spiel = { n, startzahl, modus, ich, id, art: art || Array(n).fill('m'), stufe, host, mitWind, anzahl: anzahl || Array(n).fill(4), zug: -1, dran: 0, wurm: null, phase: 'warten', zugzeit: ZUGZEIT,
             rueckzug: 0, warte: 0, wind: 0, waffe: 'bazooka', erster: true, bild: 0, ein: {}, eingaben: [], log: [],
             krater: [], quelle: 'live', zuege: [], ausstehend: [],
             teams: TEAMS.slice(0, n).map(() => ({ zeiger: -1, munition: Object.fromEntries(Object.entries(WAFFEN).map(([k, v]) => [k, v.start ?? -1])) })) };
-  for (let i = 0; i < 4; i++) for (let t = 0; t < n; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+  for (let i = 0; i < Math.max(...spiel.anzahl); i++) for (let t = 0; t < n; t++) if (i < spiel.anzahl[t]) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
   // Würmer erst einmal fallen lassen
   for (let i = 0; i < 240; i++) for (const w of wuermer) updateWurm(w, SCHRITT);
   for (const w of wuermer) if (!w.tot) w.hp = 100;      // Fallschaden beim Start zählt nicht
@@ -606,7 +613,7 @@ function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = 
   spiel.dran = (spiel.dran + n - 1) % n;
   spiel.krater = [];
   baueHud();
-  ['oben', 'unten', 'ton', 'raus', 'status'].forEach(id => $(id).classList.remove('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'uebersicht'].forEach(id => $(id).classList.remove('versteckt'));
   $('menu').classList.add('versteckt');
   $('status').textContent = '';
 }
@@ -872,7 +879,10 @@ leinwand.addEventListener('pointerdown', e => {
   ton.an();
   finger.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!spiel || spiel.fertig) return;
-  if (finger.size >= 2) { zielt = null; return; }      // zwei Finger = Kamera schieben
+  if (finger.size >= 2) {                              // zwei Finger = Kamera schieben/zoomen
+    zielt = null; const [a, b] = [...finger.values()];
+    pinch = { start: Math.hypot(a.x - b.x, a.y - b.y), zoom }; return;
+  }
   if (darfZielen()) zielt = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, staerke: 0, richtung: aktiver().richtung };
 });
 addEventListener('pointermove', e => {
@@ -892,11 +902,14 @@ addEventListener('pointermove', e => {
     }
   } else if (finger.size >= 2) {
     // Zwei Finger: schieben und zoomen (auseinander = näher ran)
-    const [a, b] = [...finger.values()], abstand = Math.hypot(a.x - b.x, a.y - b.y);
+    // Erst zoomen, wenn die Finger deutlich (mehr als 10 %) gespreizt oder zusammengezogen werden
     finger.set(e.pointerId, neu);
     const [c, d] = [...finger.values()], neuAbstand = Math.hypot(c.x - d.x, c.y - d.y);
     kam.x -= (neu.x - alt.x) / massstab / 2; kam.y -= (neu.y - alt.y) / massstab / 2; kam.frei = true;
-    if (abstand > 20) zoomen(neuAbstand / abstand);
+    if (pinch && pinch.start > 20) {
+      const r = neuAbstand / pinch.start, f = r > 1.1 ? r / 1.1 : r < .9 ? r / .9 : 1;
+      zoom = Math.max(.25, Math.min(2.2, pinch.zoom * f)); massstab = basisMassstab * zoom * autoZoom;
+    }
     return;
   } else if (!darfZielen()) {
     kam.x -= (neu.x - alt.x) / massstab; kam.y -= (neu.y - alt.y) / massstab; kam.frei = true;
@@ -905,6 +918,7 @@ addEventListener('pointermove', e => {
 });
 function loslassen(e) {
   finger.delete(e.pointerId);
+  if (finger.size < 2) pinch = null;
   if (zielt && zielt.id === e.pointerId) {
     const w = aktiver(), weg = Math.hypot(zielt.x - zielt.sx, zielt.y - zielt.sy);
     if (darfZielen() && spiel.waffe === 'luftschlag') eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'luftschlag', Math.round(inWelt(zielt.x, zielt.y).x)]);
@@ -1077,6 +1091,7 @@ function kiWaehlen(w) {
 }
 
 $('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); eingeben(['S', 0]); $('fernbedienung').classList.add('versteckt'); });
+$('uebersicht').onclick = uebersicht;
 $('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
@@ -1143,7 +1158,15 @@ function groesse() {
   massstab = basisMassstab * zoom * autoZoom;
 }
 let zoom = 1, autoZoom = 1, basisMassstab = 1, flugZoom = 1;   // zoom: mit Fingern, autoZoom: beim Zielen
-function zoomen(f) { zoom = Math.max(.6, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
+function zoomen(f) { zoom = Math.max(.3, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
+let pinch = null, zoomVorher = 1;
+// 🔭 Übersicht: ganze Insel zeigen – nochmal tippen = zurück
+function uebersicht() {
+  const ganz = Math.min(bw / (W + 80), bh / (H * .9)) / basisMassstab;
+  if (zoom > ganz * 1.05) { zoomVorher = zoom; zoom = Math.max(.25, ganz); kam.frei = true; kam.x = W / 2; kam.y = H / 2; }
+  else { zoom = zoomVorher || 1; kam.frei = false; }
+  massstab = basisMassstab * zoom * autoZoom;
+}
 
 // Ungefähre Flugbahn vorausrechnen (mit Wind, ohne Abprallen) → Rechteck, das auf den Bildschirm soll
 function flugbahnBox(w, staerke) {
@@ -1192,7 +1215,11 @@ function kamera(dt) {
     flugZoom = autoZiel;
     ziel = { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 + 80 };
   } else if (spiel && spiel.phase === 'flug' && spiel.quelle === 'live' && !kiDran()) autoZiel = flugZoom;   // im Flug so bleiben
-  else flugZoom = 1;
+  else {
+    // Nach dem Schuss NICHT von selbst wieder heranzoomen – die weite Ansicht bleibt, bis man selbst zoomt
+    if (flugZoom < 1) { zoom = Math.max(.25, zoom * autoZoom); autoZoom = 1; }
+    flugZoom = 1;
+  }
   autoZoom += (autoZiel - autoZoom) * Math.min(1, dt * 3);
   massstab = basisMassstab * zoom * autoZoom;
   if (ziel) {}
@@ -1586,7 +1613,7 @@ function hud() {
   if (!spiel) return;
   spiel.teams.forEach((_, t) => {
     const sum = wuermer.filter(w => w.team === t && !w.tot).reduce((s, w) => s + w.hp, 0);
-    $('hp' + t).style.width = sum / 4 + '%';
+    $('hp' + t).style.width = sum / spiel.anzahl[t] + '%';
     $('team' + t).classList.toggle('dran', t === spiel.dran && !spiel.fertig);
   });
   const z = $('zeit'), s = spiel.phase === 'rueckzug' ? Math.ceil(spiel.rueckzug) : Math.max(0, Math.ceil(spiel.zugzeit));
@@ -1598,6 +1625,7 @@ function hud() {
   // Fernbedienung zeigen, solange das eigene Schaf läuft
   const schaf = spiel.quelle === 'live' && !kiDran() && !spiel.fertig && dinge.find(o => o.art === 'schaf');
   $('fernbedienung').classList.toggle('versteckt', !schaf);
+  $('waffen').style.visibility = schaf ? 'hidden' : '';     // Knopf sitzt dort, wo sonst die Waffen sind
   if (schaf) $('fernbedienung').querySelector('small').textContent = Math.ceil(schaf.zuender) + ' s';
   $('direkt').classList.toggle('versteckt', !(Direkt.an && Direkt.host && Direkt.problem && !Direkt.alleVerbunden()));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
@@ -1674,7 +1702,7 @@ function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
 }
 function hintergrund() {
   spiel = null; dinge = []; zielt = null; Direkt.stop();
-  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung'].forEach(id => $(id).classList.add('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung', 'uebersicht'].forEach(id => $(id).classList.add('versteckt'));
 }
 function startMenue() {
   Online.stop(); hintergrund();
@@ -1683,21 +1711,23 @@ function startMenue() {
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
-function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = w.farben || [0, 1, 2]; return w; }
+function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = w.farben || [0, 1, 2]; w.anzahl = w.anzahl || [4, 4, 4]; return w; }
 function teamWahl(modus) {
   const wahl = wahlLesen(modus);
   const los = () => {
     const art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
     if (modus === 'online' && !art.includes('m')) return alert('Mindestens ein Team muss ein Mensch sein.');
     speicher.schreib('wu-wahl-' + modus, wahl);
-    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false, wahl.farben, wahl.wind !== false);
+    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false, wahl.farben, wahl.wind !== false, wahl.anzahl.slice(0, art.length));
   };
   const malen = () => {
     const zeilen = TEAMS.map((_, i) => { const F = FARBEN[wahl.farben[i]]; return `<div class="wahl"><b style="color:${F.farbe}">` +
       `<button class="farbknopf" data-f="${i}" style="background:${F.farbe}" aria-label="Farbe wechseln"></button> ${F.name}</b><span>` +
       [['m', '👤 Mensch'], ['c', '🤖 Computer'], ...(i === 2 ? [['-', 'aus']] : [])]
         .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>'; }).join('');
-    const stufen = `<div class="wahl"><b>🤖 Stärke</b><span>` + ['leicht', 'mittel', 'schwer']
+    const wurmZeile = `<div class="wahl"><b>🪱 Würmer</b><span>` + TEAMS.map((_, i) => wahl.art[i] === '-' ? '' :
+      `<span class="zaehler" style="border-color:${FARBEN[wahl.farben[i]].farbe}"><button data-z="${i}" data-n="-1">−</button><b>${wahl.anzahl[i]}</b><button data-z="${i}" data-n="1">+</button></span>`).join('') + '</span></div>';
+    const stufen = wurmZeile + `<div class="wahl"><b>🤖 Stärke</b><span>` + ['leicht', 'mittel', 'schwer']
       .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>' +
       `<div class="wahl"><b>💨 Wind</b><span>` + [['1', 'an'], ['0', 'aus']]
         .map(([v, txt]) => `<button data-w="${v}" class="${(wahl.wind !== false) === (v === '1') ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>' +
@@ -1706,7 +1736,8 @@ function teamWahl(modus) {
     karte('<h2>Wer spielt mit?</h2>', modus === 'online' ? 'Jedes 👤-Team spielt auf einem eigenen Gerät.\n🤖-Teams rechnet dieses Gerät mit.' : '',
       [["Los geht's!", los]], zeilen + stufen + '<br>', [['← Zurück', modus === 'online' ? onlineMenue : startMenue]]);
     $('karte').querySelectorAll('.wahl button').forEach(b => b.onclick = () => {
-      if (b.dataset.f) {                                  // nächste Farbe, die kein anderes Team hat
+      if (b.dataset.z) { const i = +b.dataset.z; wahl.anzahl[i] = Math.max(1, Math.min(6, wahl.anzahl[i] + +b.dataset.n)); }   // 1 bis 6 Würmer
+      else if (b.dataset.f) {                             // nächste Farbe, die kein anderes Team hat
         const i = +b.dataset.f; let f = wahl.farben[i];
         do f = (f + 1) % FARBEN.length; while (wahl.farben.some((x, j) => j !== i && x === f));
         wahl.farben[i] = f;
@@ -1721,7 +1752,7 @@ function lokalesSpiel() {
   Online.stop();
   const wahl = wahlLesen('lokal'), art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
   teamsSetzen(wahl.farben);
-  neuesSpiel({ n: art.length, art, stufe: wahl.stufe, mitWind: wahl.wind !== false, startzahl: (Math.random() * 2 ** 31) >>> 0 });
+  neuesSpiel({ n: art.length, art, stufe: wahl.stufe, mitWind: wahl.wind !== false, anzahl: wahl.anzahl.slice(0, art.length), startzahl: (Math.random() * 2 ** 31) >>> 0 });
   naechsterZug();
 }
 
@@ -2007,7 +2038,7 @@ function steuern(st) {
 
 // Online-Spiel aufbauen – auch nach einem Neustart der App mitten im Spiel
 function spielLaden(st, ich) {
-  neuesSpiel({ n: st.teams, art: st.art, stufe: st.stufe, mitWind: st.wind !== false, startzahl: st.startzahl, modus: 'online', ich: menschen(st)[ich], host: ich === 0, id: st.id });
+  neuesSpiel({ n: st.teams, art: st.art, stufe: st.stufe, mitWind: st.wind !== false, anzahl: st.anzahl, startzahl: st.startzahl, modus: 'online', ich: menschen(st)[ich], host: ich === 0, id: st.id });
   spiel.zuege = st.zuege.slice();
   const fertige = st.zuege.filter(z => z.s);
   if (fertige.length) {
@@ -2021,10 +2052,10 @@ function spielLaden(st, ich) {
   Direkt.start(st);
 }
 
-async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, farben = [0, 1, 2], wind = true) {
+async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, farben = [0, 1, 2], wind = true, anzahl = null) {
   const st = Sync.stand;
   if (!ersetzen && st && st.status === 'laeuft' && !confirm('Es läuft noch ein Spiel. Wirklich ein neues starten?')) return;
-  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben, wind,
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben, wind, anzahl,
                 startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
   if (menschen(neu).length === 1) neu.status = 'laeuft';        // nur ich gegen Computer: sofort los
   lobbyText = ''; lobby('Starte …', []);
