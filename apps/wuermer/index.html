@@ -153,6 +153,8 @@
     <button class="waffe" data-w="luftschlag">✈️<small></small></button>
     <button class="waffe" data-w="dynamit">🧨<small></small></button>
     <button class="waffe" data-w="graben">⛏️<small></small></button>
+    <button class="waffe" data-w="erdbrecher">🪨<small></small></button>
+    <button class="waffe" data-w="teleport">🌀<small></small></button>
     <div id="waffeninfo" class="box"></div>
   </div>
 </div>
@@ -172,7 +174,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.11';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -221,6 +223,8 @@ const WAFFEN = {
   luftschlag: { icon: '✈️', name: 'Luftschlag',   sterne: 4, radius: 30, schaden: 26, ab: 4, start: 1, info: 'Tippe auf das Ziel!' },
   dynamit:    { icon: '🧨', name: 'Dynamit',      sterne: 5, radius: 80, schaden: 75, ab: 5, zuender: 5, start: 1, info: 'Hinlegen – und schnell weglaufen!' },
   graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
+  erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
+  teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
 const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
@@ -468,9 +472,15 @@ function springen(w, vor) {
 }
 
 // ---------- Explosion ----------
-function explosion(x, y, r, dmg) {
+function explosion(x, y, r, dmg, nurErde) {
   loch(x, y, r);
   if (spiel) spiel.krater.push([x, y, r]);            // merken – für den Abgleich mit anderen Geräten
+  if (nurErde) {                                      // Erdbrecher: nur Erdbrocken und Staub, sonst nichts
+    ton.klack(); wackeln = Math.max(wackeln, r * .15);
+    for (let i = 0; i < 30; i++) { const a = rnd(0, 7), sp = rnd(100, 380); teilchen.push({ art: 'brocken', x: x + Math.cos(a) * r * .5, y: y + Math.sin(a) * r * .5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, t: 0, max: rnd(.8, 1.5), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#5d3a20'][i % 3] }); }
+    for (let i = 0; i < 10; i++) teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .6, y: y + rnd(-r, r) * .6, vx: rnd(-40, 40), vy: rnd(-50, -10), t: 0, max: rnd(.8, 1.5), r: rnd(8, 14) });
+    return;
+  }
   ton.bumm(r);
   wackeln = Math.max(wackeln, r * 0.35);
   teilchen.push({ art: 'ring', x, y, r: r * 0.4, gross: r * 1.5, t: 0, max: .5 });
@@ -499,11 +509,22 @@ function explosion(x, y, r, dmg) {
 }
 
 // ---------- Geschosse ----------
-function feuern(staerke, zielX) {
+// Passt dort ein Wurm hin? (nicht in der Erde, nicht im Wasser, nicht außerhalb)
+function platzFrei(x, y) { return x > 15 && x < W - 15 && y > -300 && y < WASSER - 20 && !stoesst(x, y, R + 1); }
+function funkeln(x, y) {
+  for (let i = 0; i < 14; i++) { const a = rnd(0, 7), sp = rnd(60, 220); teilchen.push({ art: 'stern', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0, max: .9, r: rnd(3, 6), dreh: rnd(0, 6) }); }
+  teilchen.push({ art: 'ring', x, y, r: 6, gross: 34, t: 0, max: .4 });
+}
+function feuern(staerke, zielX, zielY) {
   const w = aktiver(), art = spiel.waffe, team = spiel.teams[w.team];
   if (!WAFFEN[art] || team.munition[art] === 0 || WAFFEN[art].ab > rundeNr()) return;
   if (team.munition[art] > 0) team.munition[art]--;
   if (art === 'graben') { spiel.graben = { t: 1.6, winkel: w.ziel, takt: 0 }; return; }   // Zug geht danach weiter
+  if (art === 'teleport') {                           // Teleporter: Wurm verschwindet und taucht am Ziel wieder auf
+    if (!platzFrei(zielX, zielY)) { team.munition[art]++; return; }
+    funkeln(w.x, w.y); w.x = zielX; w.y = zielY; w.vx = w.vy = 0; w.luft = true; funkeln(w.x, w.y);
+    ton.boing(); spiel.waffe = 'bazooka'; kam.frei = false; zeigeWaffen(); return;   // Zug geht danach weiter
+  }
   spiel.phase = 'flug'; kam.frei = false;
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
     for (let i = 0; i < 5; i++) dinge.push({ art: 'luftrakete', x: zielX + (i - 2) * 26 - spiel.wind * .4, y: -120 - i * 34, vx: 0, vy: 260, r: 4, t: 0, dreh: Math.PI / 2 });
@@ -527,12 +548,13 @@ function feuern(staerke, zielX) {
 function updateDing(o, dt) {
   o.t += dt;
   if (o.zuender !== undefined) { o.zuender -= dt; if (o.zuender <= 0) return platzen(o); }
-  if (o.art === 'bazooka' || o.art === 'baenanchen' || o.art === 'luftrakete') {
-    o.vy += G * dt; if (o.art !== 'baenanchen') o.vx += spiel.wind * dt * (o.art === 'luftrakete' ? .5 : 1);
+  if (o.art === 'bazooka' || o.art === 'baenanchen' || o.art === 'luftrakete' || o.art === 'erdbrecher') {
+    o.vy += G * dt; if (o.art !== 'baenanchen' && o.art !== 'erdbrecher') o.vx += spiel.wind * dt * (o.art === 'luftrakete' ? .5 : 1);
     o.dreh = Math.atan2(o.vy, o.vx);
-    if (o.art !== 'baenanchen' && Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
-    if (o.art === 'baenanchen') o.dreh = o.t * 12;
+    if (o.art !== 'baenanchen' && o.art !== 'erdbrecher' && Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
+    if (o.art === 'baenanchen' || o.art === 'erdbrecher') o.dreh = o.t * 12;
     if (bewege(o, dt, () => {})) return platzen(o);
+    if (o.art === 'erdbrecher') return o.y > WASSER + 5 ? (platsch(o.x), false) : o.x > -400 && o.x < W + 400;   // fliegt durch Würmer durch
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && Math.hypot(w.x - o.x, w.y - o.y) < R + o.r + 2) return platzen(o);
   } else if (o.art === 'granate' || o.art === 'banane' || o.art === 'dynamit') {
     if (o.ruhe && !stoesst(o.x, o.y + 1, o.r)) o.ruhe = false;
@@ -569,7 +591,7 @@ function updateDing(o, dt) {
 
 function platzen(o) {
   const w = WAFFEN[o.art] || MINI[o.art], f = staerkeFaktor();
-  explosion(o.x, o.y, w.radius * f.r, Math.round(w.schaden * f.d));
+  explosion(o.x, o.y, w.radius * f.r, Math.round(w.schaden * f.d), w.nurErde);
   if (o.art === 'banane') {
     for (let i = 0; i < 5; i++) dinge.push({ art: 'baenanchen', x: o.x, y: o.y - 4, vx: zr(-240, 240), vy: zr(-520, -320), r: 4, t: 0, dreh: 0 });
   }
@@ -646,7 +668,7 @@ function naechsterZug() {
   // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
   let kiste = '';
   if (spiel.zug > 0 && zr(0, 1) < .5) {
-    const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start && WAFFEN[a].ab <= rundeNr() + 1);
+    const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1);
     if (arten.length) { const art = arten[Math.floor(zr(0, arten.length))]; kisten.push({ x: Math.round(zr(150, W - 150)), y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
   }
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
@@ -770,7 +792,7 @@ function anwenden(e) {
     case 'J': spiel.ein.springen = true; break;
     case 'D': if (spiel.phase === 'zielen') w.richtung = e[2]; break;
     case 'Z': if (spiel.phase === 'zielen') w.ziel = e[2]; break;
-    case 'F': if (spiel.phase === 'zielen' && !spiel.graben) { w.ziel = e[3]; w.richtung = e[4]; spiel.waffe = e[5]; feuern(e[2], e[6]); } break;
+    case 'F': if (spiel.phase === 'zielen' && !spiel.graben) { w.ziel = e[3]; w.richtung = e[4]; spiel.waffe = e[5]; feuern(e[2], e[6], e[7]); } break;
     case 'S': { const s = dinge.find(o => o.art === 'schaf'); if (s) s.zuender = 0; } break;
   }
 }
@@ -895,7 +917,7 @@ addEventListener('pointermove', e => {
     if (!darfZielen()) { zielt = null; return; }
     const w = aktiver();
     zielt.x = neu.x; zielt.y = neu.y;
-    if (spiel.waffe === 'luftschlag') return;            // Luftschlag: Finger zeigt nur das Ziel
+    if (spiel.waffe === 'luftschlag' || spiel.waffe === 'teleport') return;   // Finger zeigt nur das Ziel
     const um = spiel.waffe === 'graben' ? -1 : 1;           // Graben: in Zugrichtung, sonst Gegenrichtung (Schleuder)
     const dx = (zielt.sx - neu.x) * um, dy = (zielt.sy - neu.y) * um, weg = Math.hypot(dx, dy);
     zielt.staerke = Math.min(1, weg / zugWeg());
@@ -926,6 +948,11 @@ function loslassen(e) {
   if (zielt && zielt.id === e.pointerId) {
     const w = aktiver(), weg = Math.hypot(zielt.x - zielt.sx, zielt.y - zielt.sy);
     if (darfZielen() && spiel.waffe === 'luftschlag') eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'luftschlag', Math.round(inWelt(zielt.x, zielt.y).x)]);
+    else if (darfZielen() && spiel.waffe === 'teleport') {
+      const p = inWelt(zielt.x, zielt.y);
+      if (platzFrei(p.x, p.y)) eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'teleport', Math.round(p.x), Math.round(p.y)]);
+      else $('waffeninfo').textContent = '🌀 Da passt kein Wurm hin!';
+    }
     else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && (spiel.waffe === 'schaf' || spiel.waffe === 'dynamit' || spiel.waffe === 'graben'))))
       eingeben(['F', 0, runde(Math.max(.2, zielt.staerke)), runde(w.ziel), zielt.richtung, spiel.waffe]);
     zielt = null;
@@ -946,7 +973,7 @@ document.querySelectorAll('.waffe').forEach(b => b.onclick = () => {
   if (!darfZielen()) return;
   const a = WAFFEN[b.dataset.w];
   if (a.ab > rundeNr()) { $('waffeninfo').textContent = `🔒 ${a.icon} ${a.name} gibt es ab Runde ${a.ab}`; return; }
-  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) { $('waffeninfo').textContent = `${a.icon} ${a.name} ist aufgebraucht`; return; }
+  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) { $('waffeninfo').textContent = `${a.icon} ${a.name} ist aufgebraucht` + (a.nurKiste ? ' – gibt es nur aus Kisten 📦' : ''); return; }
   spiel.waffe = b.dataset.w; zeigeWaffen();
 });
 function zeigeWaffen() {
@@ -957,6 +984,7 @@ function zeigeWaffen() {
     b.classList.toggle('an', b.dataset.w === spiel.waffe);
     b.classList.toggle('leer', n === 0);
     b.classList.toggle('zu', zu);
+    b.classList.toggle('versteckt', !!WAFFEN[b.dataset.w].nurKiste && n === 0);   // Kisten-Waffe erst zeigen, wenn man eine hat
     const s = b.querySelector('small'); if (s) s.textContent = zu ? 'R' + WAFFEN[b.dataset.w].ab : n < 0 ? '' : '×' + n;
   });
   const a = WAFFEN[spiel.waffe];
@@ -1213,7 +1241,7 @@ function kamera(dt) {
   let ziel = null, autoZiel = 1;
   // Beim Zielen automatisch so weit herauszoomen, dass Wurm und ungefährer Einschlag zu sehen sind
   const w0 = aktiver(), staerke = zielt ? zielt.staerke : spiel && spiel.ladung || 0;
-  const ballistisch = spiel && !['schaf', 'dynamit', 'graben', 'luftschlag'].includes(spiel.waffe);
+  const ballistisch = spiel && !['schaf', 'dynamit', 'graben', 'luftschlag', 'teleport'].includes(spiel.waffe);
   if (darfZielen() && staerke > .1 && ballistisch) {
     const b = flugbahnBox(w0, staerke), breite = b.x2 - b.x1 + 220, hoehe = b.y2 - b.y1 + 200;
     autoZiel = Math.max(.3, Math.min(1, bw / breite / (basisMassstab * zoom), bh * .8 / hoehe / (basisMassstab * zoom)));
@@ -1417,6 +1445,12 @@ function zeichneDing(o) {
   else if (o.art === 'baenanchen') banane(o.x, o.y + 3, o.dreh, .6);
   else if (o.art === 'schaf') schaf(o);
   else if (o.art === 'dynamit') dynamit(o.x, o.y, 0);
+  else if (o.art === 'erdbrecher') {
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
+    ctx.fillStyle = '#8a8d93'; ctx.strokeStyle = '#4a4c50'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(-1, -6); ctx.lineTo(5, -4); ctx.lineTo(6, 2); ctx.lineTo(1, 6); ctx.lineTo(-5, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   if (o.zuender !== undefined && o.art !== 'schaf') {
     ctx.font = 'bold 13px -apple-system,sans-serif'; ctx.textAlign = 'center';
     ctx.lineWidth = 3; ctx.strokeStyle = '#000a'; ctx.fillStyle = '#fff';
@@ -1517,6 +1551,13 @@ function zeichneSchleuder() {
     ctx.strokeStyle = '#e33'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 22, 0, 7);
     ctx.moveTo(zielt.x - 32, zielt.y); ctx.lineTo(zielt.x + 32, zielt.y); ctx.moveTo(zielt.x, zielt.y - 32); ctx.lineTo(zielt.x, zielt.y + 32); ctx.stroke();
     ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✈️', zielt.x, zielt.y - 40);
+    return;
+  }
+  if (spiel && spiel.waffe === 'teleport') {           // Zielkreis: grün = passt, rot = geht nicht
+    const p = inWelt(zielt.x, zielt.y), ok = platzFrei(p.x, p.y);
+    ctx.strokeStyle = ok ? '#5f5' : '#f55'; ctx.lineWidth = 3; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 20, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🌀', zielt.x, zielt.y - 38);
     return;
   }
   // Kein Gummiband mehr – nur die Kraft in Prozent neben dem Finger
