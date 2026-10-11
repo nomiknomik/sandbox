@@ -180,7 +180,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.23';
+const APP_VERSION = '1.24';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -234,6 +234,11 @@ const WAFFEN = {
   trampolin:  { icon: '🤸', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
+// Kisten: wie oft sie pro Zug fallen (0.05 = 5 %)
+const KISTEN = { apotheke: .06, bonus: .04, waffe: .4 };
+const HEILUNG = 40;                      // so viele Leben gibt die Apotheke (höchstens bis 100)
+// Unwetter: Chance pro 3 Züge, und bis zu so viele Blitze pro Zug
+const UNWETTER = { chance: .25, blitze: 2, loch: 34 };
 const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
@@ -530,6 +535,17 @@ function explosion(x, y, r, dmg, nurErde) {
   }
 }
 
+// ---------- Blitz (nur bei Unwetter) ----------
+function blitz(x) {
+  let y = 0; while (y < WASSER && !fest(x, y)) y += 2;  // wo ist der Boden?
+  blitzSicht = { x, y, t: 0 };
+  ton.bumm(40); wackeln = Math.max(wackeln, 8);
+  if (y >= WASSER) { platsch(x); return; }
+  explosion(x, y, UNWETTER.loch, 0, true);            // nur ein Loch, kein Schaden
+  for (let i = 0; i < 12; i++) teilchen.push({ art: 'funke', x, y, vx: rnd(-250, 250), vy: rnd(-350, -50), t: 0, max: rnd(.3, .6) });
+}
+let blitzSicht = null;                                // fürs Zeichnen: wo und wann der letzte Blitz war
+
 // ---------- Geschosse ----------
 // Passt dort ein Wurm hin? (nicht in der Erde, nicht im Wasser, nicht außerhalb)
 function platzFrei(x, y) { return x > 15 && x < W - 15 && y > -300 && y < WASSER - 20 && !stoesst(x, y, R + 1); }
@@ -553,7 +569,7 @@ function feuern(staerke, zielX, zielY) {
     funkeln(w.x, w.y); w.x = zielX; w.y = zielY; w.vx = w.vy = 0; w.luft = true; funkeln(w.x, w.y);
     ton.boing(); spiel.waffe = 'bazooka'; kam.frei = false; zeigeWaffen(); return;   // Zug geht danach weiter
   }
-  spiel.phase = 'flug'; kam.frei = false;
+  spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true;
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
     for (let i = 0; i < 5; i++) dinge.push({ art: 'luftrakete', x: zielX + (i - 2) * 26 - spiel.wind * .4, y: -120 - i * 34, vx: 0, vy: 260, r: 4, t: 0, dreh: Math.PI / 2 });
     teilchen.push({ art: 'flieger', x: zielX - 900, y: -170, vx: 900, vy: 0, t: 0, max: 2 });
@@ -694,12 +710,22 @@ function naechsterZug() {
   spiel.toteStart = toteGegner();
   spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
   if (!spiel.mitWind) spiel.wind = 0;                  // Einstellung „Wind aus“
-  // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
+  // Nachschub: Ab und zu schwebt eine Kiste herunter – selten eine Apotheke ❤️ oder ein Bonus 🎁
   let kiste = '';
-  if (spiel.zug > 0 && zr(0, 1) < .5) {
+  const wurf = zr(0, 1), kx = Math.round(zr(150, W - 150));
+  if (spiel.zug > 0 && wurf < KISTEN.apotheke) { kisten.push({ x: kx, y: -60, art: 'apotheke', r: 9, luft: true }); kiste = '  ❤️ Apotheke!'; }
+  else if (spiel.zug > 0 && wurf < KISTEN.apotheke + KISTEN.bonus) { kisten.push({ x: kx, y: -60, art: 'bonus', r: 9, luft: true }); kiste = '  🎁 Bonus-Kiste!'; }
+  else if (spiel.zug > 0 && wurf < KISTEN.apotheke + KISTEN.bonus + KISTEN.waffe) {
     const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1);
-    if (arten.length) { const art = arten[Math.floor(zr(0, arten.length))]; kisten.push({ x: Math.round(zr(150, W - 150)), y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
+    if (arten.length) { const art = arten[Math.floor(zr(0, arten.length))]; kisten.push({ x: kx, y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
   }
+  // Wetter: immer für 3 Züge gleich; bei Unwetter schlagen Blitze ein (Zeitpunkt und Ort vorher ausgewürfelt)
+  spiel.regen = zufallsFolge((spiel.startzahl ^ Math.imul(Math.floor(spiel.zug / 3) + 7, 40503)) >>> 0)() < UNWETTER.chance;
+  spiel.blitze = [];
+  if (spiel.regen) { const n = 1 + Math.floor(zr(0, UNWETTER.blitze)); for (let i = 0; i < n; i++) spiel.blitze.push({ bild: Math.round(zr(4, ZUGZEIT - 5) * 60), x: Math.round(zr(60, W - 60)) }); }
+  spiel.bonusSchuesse = spiel.teams[spiel.dran].extra || 0; spiel.teams[spiel.dran].extra = 0; spiel.geschossen = false;
+  if (spiel.regen) kiste += '  ⛈️ Unwetter!';
+  if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
   spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich || (spiel.art[spiel.dran] === 'c' && spiel.host) ? 'live' : 'fern';
   kam.frei = false;
@@ -727,6 +753,15 @@ function zugEnde() {
     Object.assign(spiel, { phase: 'zielen', zugzeit: 20, warte: 0 });
     kam.frei = false;
     ansage('💀 Besiegt!', 'Bonus: noch ein Schuss!', TEAMS[spiel.dran].hell);
+    zeigeWaffen();
+    return;
+  }
+  // Bonus-Kiste: noch ein Schuss
+  if (w && !w.tot && spiel.geschossen && spiel.bonusSchuesse > 0 && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
+    spiel.bonusSchuesse--; spiel.geschossen = false; spiel.schuss++;
+    Object.assign(spiel, { phase: 'zielen', zugzeit: 20, warte: 0 });
+    kam.frei = false;
+    ansage('🎁 Bonus!', 'Noch ein Schuss!', TEAMS[spiel.dran].hell);
     zeigeWaffen();
     return;
   }
@@ -775,7 +810,7 @@ function zugMerken(rec) { if (spiel && rec && neuerAls(rec, spiel.zuege[rec.n]))
 function schnappschuss() {
   return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
            m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran,
-           ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]) };
+           ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]), x: spiel.teams.map(t => t.extra || 0) };
 }
 function standSetzen(s) {
   s.w.forEach(([x, y, hp, tot, ri], i) => {
@@ -786,6 +821,7 @@ function standSetzen(s) {
   s.m.forEach((m, t) => spiel.teams[t].munition = { ...m });
   s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
   spiel.dran = s.d;
+  if (s.x) s.x.forEach((x, t) => spiel.teams[t].extra = x);
   if (s.ki) kisten = s.ki.map(([x, y, art, luft]) => ({ x, y, art, r: 9, luft: !!luft }));
   dinge = [];
 }
@@ -845,6 +881,7 @@ function simSchritt() {
     }
   }
   updateSpiel(SCHRITT);
+  for (const b of spiel.blitze || []) if (b.bild === spiel.bild && !spiel.fertig) blitz(b.x);
   spiel.bild++;
 }
 
@@ -883,8 +920,18 @@ function updateSpiel(dt) {
     else if (!stoesst(k.x, k.y + 1, k.r)) k.luft = true;
     const w = wuermer.find(w => !w.tot && Math.hypot(w.x - k.x, w.y - k.y) < 22);
     if (w) {
-      const m = spiel.teams[w.team].munition; if (m[k.art] >= 0) m[k.art]++;
-      texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 ' + WAFFEN[k.art].icon, farbe: TEAMS[w.team].farbe });
+      if (k.art === 'apotheke') {                     // sofort heilen
+        const vorher = w.hp; w.hp = Math.min(100, w.hp + HEILUNG);
+        texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+' + (w.hp - vorher) + ' ❤️', farbe: '#2fbf4f' });
+        w.jubelBis = zeit + 1.5;
+      } else if (k.art === 'bonus') {                 // ein Schuss mehr – jetzt, wenn er dran ist, sonst im nächsten Zug
+        if (w.team === spiel.dran) spiel.bonusSchuesse = (spiel.bonusSchuesse || 0) + 1;
+        else spiel.teams[w.team].extra = (spiel.teams[w.team].extra || 0) + 1;
+        texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 Schuss 🎁', farbe: TEAMS[w.team].farbe });
+      } else {
+        const m = spiel.teams[w.team].munition; if (m[k.art] >= 0) m[k.art]++;
+        texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 ' + WAFFEN[k.art].icon, farbe: TEAMS[w.team].farbe });
+      }
       ton.boing(); k.weg = true; zeigeWaffen();
     }
     if (k.y > WASSER + 5) { platsch(k.x); k.weg = true; }
@@ -1729,6 +1776,20 @@ function zeichneKiste(k) {
     ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(0, -34, 20, Math.PI, 0); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-7, -34); ctx.arc(0, -34, 20, Math.PI * 1.35, Math.PI * 1.65); ctx.lineTo(7, -34); ctx.fill();
   }
+  if (k.art === 'apotheke') {                         // weiße Kiste mit rotem Kreuz
+    ctx.fillStyle = '#f4f4f4'; ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5;
+    ctx.fillRect(-10, -8, 20, 17); ctx.strokeRect(-10, -8, 20, 17);
+    ctx.fillStyle = '#e02a2a'; ctx.fillRect(-2.5, -5.5, 5, 12); ctx.fillRect(-6, -2, 12, 5);
+    ctx.restore(); return;
+  }
+  if (k.art === 'bonus') {                            // goldene Kiste mit ×2
+    ctx.fillStyle = '#f2c230'; ctx.strokeStyle = '#9a6b10'; ctx.lineWidth = 1.5;
+    ctx.fillRect(-10, -8, 20, 17); ctx.strokeRect(-10, -8, 20, 17);
+    ctx.fillStyle = '#d33'; ctx.fillRect(-1.5, -8, 3, 17); ctx.fillRect(-10, -1, 20, 3);
+    ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = '#000';
+    ctx.strokeText('×2', 0, .5); ctx.fillStyle = '#fff'; ctx.fillText('×2', 0, .5);
+    ctx.restore(); return;
+  }
   ctx.fillStyle = '#c08a4b'; ctx.strokeStyle = '#6e4520'; ctx.lineWidth = 1.5;
   ctx.fillRect(-10, -8, 20, 17); ctx.strokeRect(-10, -8, 20, 17);
   ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(10, 9); ctx.moveTo(10, -8); ctx.lineTo(-10, 9); ctx.stroke();
@@ -1887,6 +1948,28 @@ function zeichne() {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+  // Blitzstrahl (in der Welt) und heller Schein
+  if (blitzSicht && blitzSicht.t < .5) {
+    blitzSicht.t += 1 / 60;
+    const b = blitzSicht; let x = b.x + rnd(-6, 6), y = kam.y - bh / massstab;
+    ctx.strokeStyle = `rgba(255,255,220,${1 - b.t * 2})`; ctx.lineWidth = 3 + Math.random() * 2; ctx.lineJoin = 'round';
+    ctx.shadowColor = '#bde'; ctx.shadowBlur = 18; ctx.beginPath(); ctx.moveTo(x, y);
+    while (y < b.y) { y = Math.min(b.y, y + rnd(14, 30)); x = b.x + rnd(-14, 14) * (1 - y / Math.max(1, b.y)); ctx.lineTo(y >= b.y ? b.x : x, y); }
+    ctx.stroke(); ctx.shadowBlur = 0;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (spiel && spiel.regen) {                         // Unwetter: dunkler und Regen
+    ctx.fillStyle = 'rgba(20,30,55,.28)'; ctx.fillRect(0, 0, bw, bh);
+    ctx.strokeStyle = 'rgba(200,220,255,.45)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    const schraeg = (spiel.wind || 0) / 30;
+    for (let i = 0; i < 140; i++) {
+      const x = ((i * 97.3 + zeit * (60 + i % 7 * 9) * schraeg) % (bw + 40) + bw + 40) % (bw + 40) - 20;
+      const y = ((i * 53.7 + zeit * (520 + i % 5 * 60)) % (bh + 40)) - 20;
+      ctx.moveTo(x, y); ctx.lineTo(x + schraeg * 2, y + 14);
+    }
+    ctx.stroke();
+  }
+  if (blitzSicht && blitzSicht.t < .25) { ctx.fillStyle = `rgba(255,255,255,${.5 - blitzSicht.t * 2})`; ctx.fillRect(0, 0, bw, bh); }
   // Blätter im Wind
   if (spiel && Math.abs(spiel.wind) > 15) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
