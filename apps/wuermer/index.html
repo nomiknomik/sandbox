@@ -102,6 +102,7 @@
   #scanner button{font:inherit;font-weight:800;padding:12px 26px;border:0;border-radius:14px;background:#fff;color:#000}
 
   #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffc;cursor:pointer;text-shadow:0 1px 2px #0008;z-index:60}
+  @media (max-height:500px){#waffeninfo{font-size:11px;bottom:56px;padding:4px 8px}#status{top:calc(env(safe-area-inset-top) + 56px);font-size:12px}}
   @media (max-width:760px){.team{min-width:76px}.team b{font-size:11px}#wind{min-width:80px}.knopf,.waffe{width:50px;height:50px;font-size:22px}}
 </style>
 </head>
@@ -143,7 +144,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.4';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -172,12 +173,12 @@ const speicher = {
 };
 
 // ================= Spielwelt =================
-const W = 2600, H = 1100;      // so groß ist die Welt
+const W = 2000, H = 1100;      // so groß ist die Welt
 const WASSER = H - 60;         // hier beginnt das Meer
 const G = 620;                 // Schwerkraft
 const R = 9;                   // Wurm-Radius
 const MAX_V = 900;             // stärkster Schuss
-const ZUG_WEG = 150;           // so weit ziehen (Bildschirmpunkte) = volle Kraft
+const zugWeg = () => Math.max(80, Math.min(150, bh * .22));   // so weit ziehen (Bildschirmpunkte) = volle Kraft
 const WIND_MAX = 160;
 const ZUGZEIT = 45;            // Sekunden pro Zug
 const SCHRITT = 1 / 60;        // die Welt rechnet 60-mal pro Sekunde
@@ -214,7 +215,7 @@ const zr = (a, b) => a + zufall() * (b - a);            // Zufall fürs Spiel (g
 const rnd = (a, b) => a + Math.random() * (b - a);      // Zufall nur fürs Aussehen (Funken, Rauch)
 
 let maske, erde, ectx, wand;    // maske: 1 = Erde, 0 = Luft
-let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [];
+let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [], kisten = [];
 let spiel = null;               // Zustand eines laufenden Spiels
 let zeit = 0, wackeln = 0;
 const kam = { x: W / 2, y: H / 2, frei: false };
@@ -425,13 +426,18 @@ function explosion(x, y, r, dmg) {
   if (spiel) spiel.krater.push([x, y, r]);            // merken – für den Abgleich mit anderen Geräten
   ton.bumm(r);
   wackeln = Math.max(wackeln, r * 0.35);
-  teilchen.push({ art: 'ring', x, y, r: r * 0.4, max: r * 1.5, t: 0 });
+  teilchen.push({ art: 'ring', x, y, r: r * 0.4, gross: r * 1.5, t: 0, max: .5 });
   teilchen.push({ art: 'blitz', x, y, r: r * 1.6, t: 0 });
   teilchen.push({ art: 'feuerball', x, y, r: r * 1.15, t: 0, max: .5 });
   for (let i = 0; i < 16; i++) { const a = rnd(0, 7), s = rnd(250, 600); teilchen.push({ art: 'funke', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 100, t: 0, max: rnd(.3, .6) }); }
   for (let i = 0; i < 22; i++) { const a = rnd(0, 7), s = rnd(40, 260); teilchen.push({ art: 'feuer', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, t: 0, max: rnd(.3, .7), r: rnd(5, 11) }); }
   for (let i = 0; i < 14; i++) { const a = rnd(0, 7), s = rnd(10, 90); teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0, max: rnd(1, 2), r: rnd(8, 16) }); }
   for (let i = 0; i < 26; i++) { const a = rnd(Math.PI, Math.PI * 2), s = rnd(150, 450); teilchen.push({ art: 'brocken', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, max: rnd(.8, 1.6), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#4fae3f', '#5d3a20'][i % 4] }); }
+  for (const k of kisten) if (Math.hypot(k.x - x, k.y - y) < r + 10) {        // Kiste zerplatzt
+    k.weg = true;
+    for (let i = 0; i < 10; i++) teilchen.push({ art: 'brocken', x: k.x, y: k.y, vx: rnd(-200, 200), vy: rnd(-350, -100), t: 0, max: 1.2, r: rnd(2, 4), farbe: i % 2 ? '#b07a3e' : '#8a5a2b' });
+  }
+  kisten = kisten.filter(k => !k.weg);
   // Würmer und Dinge wegschleudern
   for (const o of [...wuermer, ...dinge]) {
     if (o.tot) continue;
@@ -545,7 +551,7 @@ function updateTeilchen(dt) {
 // Online schickt das Gerät, das dran ist, diese Liste. Die anderen Geräte spielen sie nach.
 function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = null, stufe = 'mittel', host = false }) {
   baueLandschaft(startzahl);
-  wuermer = []; dinge = []; teilchen = []; texte = []; graeber = [];
+  wuermer = []; dinge = []; teilchen = []; texte = []; graeber = []; kisten = [];
   spiel = { n, startzahl, modus, ich, id, art: art || Array(n).fill('m'), stufe, host, zug: -1, dran: 0, wurm: null, phase: 'warten', zugzeit: ZUGZEIT,
             rueckzug: 0, warte: 0, wind: 0, waffe: 'bazooka', erster: true, bild: 0, ein: {}, eingaben: [], log: [],
             krater: [], quelle: 'live', zuege: [], ausstehend: [],
@@ -576,6 +582,12 @@ function naechsterZug() {
   spiel.wurm = liste[team.zeiger];
   Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0 });
   spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
+  // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
+  let kiste = '';
+  if (spiel.zug > 0 && zr(0, 1) < .5) {
+    const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start && WAFFEN[a].ab <= rundeNr() + 1);
+    if (arten.length) { const art = arten[Math.floor(zr(0, arten.length))]; kisten.push({ x: Math.round(zr(150, W - 150)), y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
+  }
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
   spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich || (spiel.art[spiel.dran] === 'c' && spiel.host) ? 'live' : 'fern';
   kam.frei = false;
@@ -587,7 +599,7 @@ function naechsterZug() {
   }
   if (spiel.art[spiel.dran] === 'c') ansage(t.name + ' 🤖', spiel.wurm.name + ' – der Computer überlegt …' + neu, t.hell);
   else if (spiel.quelle === 'live') {
-    ansage(spiel.modus === 'online' ? 'Du bist dran!' : t.name, spiel.wurm.name + ' ist dran!' + (spiel.erster ? '  Finger irgendwo hinlegen und ziehen – wie eine Steinschleuder.' : '') + neu, t.hell);
+    ansage(spiel.modus === 'online' ? 'Du bist dran!' : t.name, spiel.wurm.name + ' ist dran!' + kiste + (spiel.erster ? '  Finger irgendwo hinlegen und ziehen – wie eine Steinschleuder.' : '') + neu, t.hell);
     spiel.erster = false;
   } else ansage(t.name, 'spielt auf dem anderen Gerät …' + neu, t.hell);
   zeigeWaffen();
@@ -615,7 +627,8 @@ function zugEnde() {
 
 function schnappschuss() {
   return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
-           m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran };
+           m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran,
+           ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]) };
 }
 function standSetzen(s) {
   s.w.forEach(([x, y, hp, tot, ri], i) => {
@@ -626,6 +639,7 @@ function standSetzen(s) {
   s.m.forEach((m, t) => spiel.teams[t].munition = { ...m });
   s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
   spiel.dran = s.d;
+  if (s.ki) kisten = s.ki.map(([x, y, art, luft]) => ({ x, y, art, r: 9, luft: !!luft }));
   dinge = [];
 }
 // Landschaft neu bauen und alle Krater bis Zug „bis“ (einschließlich) einsetzen
@@ -703,6 +717,19 @@ function updateSpiel(dt) {
   dinge = dinge.filter(o => updateDing(o, dt) !== false);
   for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(g); g.vy = 0; } } }
   graeber = graeber.filter(g => g.y < WASSER + 10);
+  // Kisten schweben am Fallschirm herunter; wer sie berührt, bekommt die Waffe
+  for (const k of kisten) {
+    if (k.luft) { k.y += 70 * dt; if (stoesst(k.x, k.y + 1, k.r)) { k.luft = false; freiMachen(k); } }
+    else if (!stoesst(k.x, k.y + 1, k.r)) k.luft = true;
+    const w = wuermer.find(w => !w.tot && Math.hypot(w.x - k.x, w.y - k.y) < 22);
+    if (w) {
+      const m = spiel.teams[w.team].munition; if (m[k.art] >= 0) m[k.art]++;
+      texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 ' + WAFFEN[k.art].icon, farbe: TEAMS[w.team].farbe });
+      ton.boing(); k.weg = true; zeigeWaffen();
+    }
+    if (k.y > WASSER + 5) { platsch(k.x); k.weg = true; }
+  }
+  kisten = kisten.filter(k => !k.weg);
 
   if (spiel.phase === 'zielen') {
     spiel.zugzeit -= dt;
@@ -759,16 +786,22 @@ addEventListener('pointermove', e => {
     zielt.x = neu.x; zielt.y = neu.y;
     if (spiel.waffe === 'luftschlag') return;            // Luftschlag: Finger zeigt nur das Ziel
     const dx = zielt.sx - neu.x, dy = zielt.sy - neu.y, weg = Math.hypot(dx, dy);   // in Gegenrichtung schießen
-    zielt.staerke = Math.min(1, weg / ZUG_WEG);
+    zielt.staerke = Math.min(1, weg / zugWeg());
     if (weg > 12) {
       const ri = Math.abs(dx) > 4 ? (dx > 0 ? 1 : -1) : zielt.richtung;
       if (ri !== zielt.richtung) { zielt.richtung = ri; eingeben(['D', 0, ri]); }
       w.ziel = Math.atan2(dy, dx); begrenzeZiel(w, ri);
     }
-  } else if (finger.size >= 2 || !darfZielen()) {
-    // Kamera schieben: mit zwei Fingern (oder einem, wenn man gerade nicht zielt)
-    const teiler = finger.size >= 2 ? finger.size : 1;
-    kam.x -= (neu.x - alt.x) / massstab / teiler; kam.y -= (neu.y - alt.y) / massstab / teiler; kam.frei = true;
+  } else if (finger.size >= 2) {
+    // Zwei Finger: schieben und zoomen (auseinander = näher ran)
+    const [a, b] = [...finger.values()], abstand = Math.hypot(a.x - b.x, a.y - b.y);
+    finger.set(e.pointerId, neu);
+    const [c, d] = [...finger.values()], neuAbstand = Math.hypot(c.x - d.x, c.y - d.y);
+    kam.x -= (neu.x - alt.x) / massstab / 2; kam.y -= (neu.y - alt.y) / massstab / 2; kam.frei = true;
+    if (abstand > 20) zoomen(neuAbstand / abstand);
+    return;
+  } else if (!darfZielen()) {
+    kam.x -= (neu.x - alt.x) / massstab; kam.y -= (neu.y - alt.y) / massstab; kam.frei = true;
   }
   finger.set(e.pointerId, neu);
 });
@@ -783,6 +816,7 @@ function loslassen(e) {
   }
 }
 addEventListener('pointerup', loslassen);
+leinwand.addEventListener('wheel', e => { e.preventDefault(); zoomen(e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
 addEventListener('pointercancel', loslassen);
 
 function halten(id, taste) {
@@ -1005,13 +1039,16 @@ function groesse() {
   dpr = Math.min(2, devicePixelRatio || 1);
   bw = innerWidth; bh = innerHeight;
   leinwand.width = bw * dpr; leinwand.height = bh * dpr;
-  massstab = Math.min(bh / 760, bw / 1000);
+  const basis = bh < 500 ? Math.min(bh / 430, bw / 700) : Math.min(bh / 760, bw / 1000);   // Handy: näher ran
+  massstab = basis * zoom;
 }
+let zoom = 1;
+function zoomen(f) { zoom = Math.max(.6, Math.min(2.2, zoom * f)); groesse(); }
 addEventListener('resize', groesse); groesse();
 
 for (let i = 0; i < 9; i++) wolken.push({ x: rnd(0, W), y: rnd(60, 380), s: rnd(.6, 1.4) });
 const sterne = [...Array(90)].map(() => [Math.random(), Math.random() * .7, rnd(.5, 1.8), rnd(0, 7)]);
-const blaetter = [...Array(18)].map(() => ({ x: Math.random(), y: Math.random(), ph: rnd(0, 7), farbe: Math.random() < .5 ? '#7cc957' : '#e3a33b' }));
+const blaetter = [...Array(10)].map(() => ({ x: Math.random(), y: Math.random(), ph: rnd(0, 7), farbe: Math.random() < .5 ? '#7cc957' : '#e3a33b' }));
 
 // Tageszeit: Mit jeder Runde wird es später – Tag, Nachmittag, Abend, Dämmerung, Nacht
 const HIMMEL = [
@@ -1062,9 +1099,12 @@ function zeichneHimmel() {
   }
   if (tz > 3) {
     const mx = bw * .22, my = bh * .17, a = Math.min(1, (tz - 3) / .8);
-    ctx.fillStyle = `rgba(255,255,230,${a * .15})`; ctx.beginPath(); ctx.arc(mx, my, 70, 0, 7); ctx.fill();
-    ctx.fillStyle = `rgba(245,245,225,${a})`; ctx.beginPath(); ctx.arc(mx, my, 28, 0, 7); ctx.fill();
-    ctx.fillStyle = farbe('o'); ctx.beginPath(); ctx.arc(mx + 11, my - 6, 25, 0, 7); ctx.fill();
+    const schein = ctx.createRadialGradient(mx, my, 20, mx, my, 90);
+    schein.addColorStop(0, `rgba(255,255,230,${a * .25})`); schein.addColorStop(1, 'rgba(255,255,230,0)');
+    ctx.fillStyle = schein; ctx.beginPath(); ctx.arc(mx, my, 90, 0, 7); ctx.fill();
+    ctx.fillStyle = `rgba(245,245,225,${a})`; ctx.beginPath(); ctx.arc(mx, my, 26, 0, 7); ctx.fill();
+    ctx.fillStyle = `rgba(200,200,185,${a * .7})`;
+    for (const [dx, dy, r] of [[-8, -6, 6], [7, 5, 4], [-3, 10, 3], [9, -9, 3]]) { ctx.beginPath(); ctx.arc(mx + dx, my + dy, r, 0, 7); ctx.fill(); }
   }
   // Berge im Hintergrund (bewegen sich langsamer = Tiefe)
   berge(.25, 640, farbe('b1'), 140, .0025, 1);
@@ -1216,6 +1256,22 @@ function zeichneDing(o) {
   }
 }
 
+function zeichneKiste(k) {
+  ctx.save(); ctx.translate(k.x, k.y + Math.sin(zeit * 2 + k.x) * (k.luft ? 2 : 0));
+  if (k.luft) {                                       // Fallschirm
+    ctx.strokeStyle = 'rgba(80,80,80,.8)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-18, -34); ctx.moveTo(8, -6); ctx.lineTo(18, -34); ctx.moveTo(0, -6); ctx.lineTo(0, -38); ctx.stroke();
+    ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(0, -34, 20, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-7, -34); ctx.arc(0, -34, 20, Math.PI * 1.35, Math.PI * 1.65); ctx.lineTo(7, -34); ctx.fill();
+  }
+  ctx.fillStyle = '#c08a4b'; ctx.strokeStyle = '#6e4520'; ctx.lineWidth = 1.5;
+  ctx.fillRect(-10, -8, 20, 17); ctx.strokeRect(-10, -8, 20, 17);
+  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(10, 9); ctx.moveTo(10, -8); ctx.lineTo(-10, 9); ctx.stroke();
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, .5, 7, 0, 7); ctx.fill();
+  ctx.fillText(WAFFEN[k.art].icon, 0, 1);
+  ctx.restore();
+}
 function zeichneGrab(g) {
   ctx.save(); ctx.translate(g.x, g.y + 6);
   ctx.fillStyle = '#9aa3ad'; ctx.strokeStyle = '#5b636c'; ctx.lineWidth = 1.2;
@@ -1230,7 +1286,7 @@ function zeichneTeilchen(p) {
   else if (p.art === 'rauch') { ctx.fillStyle = `rgba(90,90,95,${.45 * (1 - k)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + k * 1.5), 0, 7); ctx.fill(); }
   else if (p.art === 'brocken' || p.art === 'konfetti') { ctx.fillStyle = p.farbe; ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.art === 'konfetti' ? p.r * Math.abs(Math.sin(p.t * 8)) + 1 : p.r); ctx.globalAlpha = 1; }
   else if (p.art === 'tropfen') { ctx.fillStyle = `rgba(200,235,255,${1 - k})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
-  else if (p.art === 'ring') { ctx.strokeStyle = `rgba(255,255,230,${(1 - k) * .8})`; ctx.lineWidth = 5 * (1 - k); ctx.beginPath(); ctx.arc(p.x, p.y, p.r + (p.max - p.r) * k, 0, 7); ctx.stroke(); }
+  else if (p.art === 'ring') { ctx.strokeStyle = `rgba(255,255,230,${(1 - k) * .8})`; ctx.lineWidth = 5 * (1 - k); ctx.beginPath(); ctx.arc(p.x, p.y, p.r + (p.gross - p.r) * k, 0, 7); ctx.stroke(); }
   else if (p.art === 'feuerball') {
     const r = p.r * (.45 + k * .75), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
     g.addColorStop(0, `rgba(255,255,235,${1 - k})`); g.addColorStop(.35, `rgba(255,210,70,${(1 - k) * .95})`);
@@ -1291,7 +1347,7 @@ function zeichneSchleuder() {
   ctx.strokeStyle = `hsl(${60 - zielt.staerke * 60},100%,60%)`; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(zielt.sx, zielt.sy); ctx.lineTo(zielt.x, zielt.y); ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, 9, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, ZUG_WEG, 0, 7); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, zugWeg(), 0, 7); ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 14, 0, 7); ctx.fill();
   ctx.font = 'bold 12px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#1B2A3A'; ctx.fillText(Math.round(zielt.staerke * 100), zielt.x, zielt.y);
@@ -1317,6 +1373,7 @@ function zeichne() {
   ctx.drawImage(wand, 0, 0);
   ctx.drawImage(erde, 0, 0);
   for (const g of graeber) zeichneGrab(g);
+  for (const k of kisten) zeichneKiste(k);
   for (const w of wuermer) if (!w.tot) zeichneWurm(w);
   for (const o of dinge) zeichneDing(o);
   welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
@@ -1343,10 +1400,10 @@ function zeichne() {
   // Blätter im Wind
   if (spiel && Math.abs(spiel.wind) > 15) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.globalAlpha = Math.min(.8, Math.abs(spiel.wind) / 120);
+    ctx.globalAlpha = Math.min(.35, Math.abs(spiel.wind) / 300);
     for (const b of blaetter) {
       ctx.save(); ctx.translate(b.x * bw, b.y * bh); ctx.rotate(zeit * 3 + b.ph);
-      ctx.fillStyle = b.farbe; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2.4, 0, 0, 7); ctx.fill(); ctx.restore();
+      ctx.fillStyle = b.farbe; ctx.beginPath(); ctx.ellipse(0, 0, 3.5, 1.6, 0, 0, 7); ctx.fill(); ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
@@ -1411,7 +1468,7 @@ function schleife(jetzt) {
     // Tageszeit langsam nachführen; Blätter wehen mit dem Wind
     tz += ((spiel ? Math.min(4, (rundeNr() - 1) / 2.5) : 0) - tz) * SCHRITT * .5;
     if (spiel) for (const b of blaetter) {
-      b.x += (spiel.wind * .9 / bw) * SCHRITT; b.y += (Math.sin(zeit * 2 + b.ph) * 25 + 12) / bh * SCHRITT;
+      b.x += (spiel.wind * .6 / bw) * SCHRITT; b.y += (Math.sin(zeit * 2 + b.ph) * 15 + 8) / bh * SCHRITT;
       if (b.x > 1.05) b.x = -.05; if (b.x < -.05) b.x = 1.05; if (b.y > 1.05) b.y = -.05;
     }
     wackeln *= .9;
