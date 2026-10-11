@@ -64,6 +64,10 @@
   #raus,#ton{position:fixed;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:20px}
   #raus{left:10px} #ton{right:10px}
   #uebersicht{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:62px;width:46px;height:46px;font-size:20px}
+  #pause{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:114px;width:46px;height:46px;font-size:20px}
+  #pausenbild{position:fixed;inset:0;z-index:50;background:rgba(10,20,40,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;cursor:pointer}
+  #pausenbild b{font-size:64px;font-weight:900;text-shadow:0 4px 0 rgba(0,0,0,.35)}
+  #pausenbild span{font-size:20px;font-weight:700}
   #direkt{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:62px;width:46px;height:46px;font-size:20px;background:#b8860b}
 
   /* Mitte: Ansage */
@@ -143,6 +147,8 @@
 <button class="knopf versteckt" id="direkt" aria-label="WLAN-Direkt erlauben">⚡</button>
 <button class="knopf versteckt" id="ton" aria-label="Ton an/aus">🔊</button>
 <button class="knopf versteckt" id="uebersicht" aria-label="Übersicht">🔭</button>
+<button class="knopf versteckt" id="pause" aria-label="Pause">⏸</button>
+<div id="pausenbild" class="versteckt"><b>⏸ Pause</b><span>Antippen zum Weiterspielen</span></div>
 
 <div id="unten" class="versteckt">
   <div>
@@ -180,7 +186,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.24';
+const APP_VERSION = '1.25';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -535,6 +541,12 @@ function explosion(x, y, r, dmg, nurErde) {
   }
 }
 
+// Trifft etwas (Mitte x/y, Radius r) den Wurm? Zwei Kreise: Körper unten und der große Kopf oben
+function trifftWurm(w, x, y, r) {
+  return Math.hypot(w.x - x, w.y - y) < R + r + 2 ||
+         Math.hypot(w.x + w.richtung * 4 - x, w.y - 24 - y) < 11 + r;
+}
+
 // ---------- Blitz (nur bei Unwetter) ----------
 function blitz(x) {
   let y = 0; while (y < WASSER && !fest(x, y)) y += 2;  // wo ist der Boden?
@@ -599,7 +611,7 @@ function updateDing(o, dt) {
     if (o.art === 'baenanchen' || o.art === 'erdbrecher') o.dreh = o.t * 12;
     if (bewege(o, dt, () => {})) return platzen(o);
     if (o.art === 'erdbrecher') return o.y > WASSER + 5 ? (platsch(o.x), false) : o.x > -400 && o.x < W + 400;   // fliegt durch Würmer durch
-    for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && Math.hypot(w.x - o.x, w.y - o.y) < R + o.r + 2) return platzen(o);
+    for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
   } else if (o.art === 'granate' || o.art === 'banane' || o.art === 'dynamit') {
     if (o.ruhe && !stoesst(o.x, o.y + 1, o.r)) o.ruhe = false;
     if (!o.ruhe) {
@@ -681,6 +693,7 @@ function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = 
   spiel.krater = [];
   baueHud();
   ['oben', 'unten', 'ton', 'raus', 'status', 'uebersicht'].forEach(id => $(id).classList.remove('versteckt'));
+  $('pause').classList.toggle('versteckt', modus !== 'lokal');   // Pause nur auf einem Gerät (online laufen die anderen weiter)
   $('menu').classList.add('versteckt');
   $('status').textContent = '';
 }
@@ -1071,6 +1084,8 @@ function zeigeWaffen() {
 const TASTEN = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'J', Enter: 'J', w: 'hoch', W: 'hoch', s: 'runter', S: 'runter', ' ': 'leertaste' };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'p' || e.key === 'P') { e.preventDefault(); return pausieren(!pausiert); }   // P = Pause
+  if (pausiert) return;
   const t = TASTEN[e.key]; if (!t) { const n = '123456'.indexOf(e.key); if (n >= 0) document.querySelectorAll('.waffe')[n].click(); return; }
   e.preventDefault(); ton.an();
   if (e.repeat) return;
@@ -1200,6 +1215,8 @@ function kiWaehlen(w) {
 
 $('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); eingeben(['S', 0]); $('fernbedienung').classList.add('versteckt'); });
 $('uebersicht').onclick = uebersicht;
+$('pause').onclick = () => pausieren(true);
+$('pausenbild').onclick = () => pausieren(false);
 $('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
@@ -2036,7 +2053,15 @@ function hud() {
 
 // ================= Hauptschleife =================
 let vorher = performance.now(), rest = 0, hudZeit = 0;
+// Pause: die Welt bleibt stehen, nur das Bild wird weiter gemalt
+let pausiert = false;
+function pausieren(an) {
+  pausiert = an && !!spiel && spiel.modus === 'lokal' && !spiel.fertig;
+  $('pausenbild').classList.toggle('versteckt', !pausiert);
+  if (pausiert) { zielt = null; if (spiel) spiel.ein = {}; }   // gedrückte Knöpfe loslassen
+}
 function schleife(jetzt) {
+  if (pausiert) { vorher = jetzt; zeichne(); requestAnimationFrame(schleife); return; }
   rest += Math.min(.1, (jetzt - vorher) / 1000); vorher = jetzt;
   while (rest >= SCHRITT) {
     rest -= SCHRITT; zeit += SCHRITT;
@@ -2092,7 +2117,8 @@ function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
 }
 function hintergrund() {
   spiel = null; dinge = []; zielt = null; Direkt.stop();
-  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung', 'uebersicht'].forEach(id => $(id).classList.add('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung', 'uebersicht', 'pause'].forEach(id => $(id).classList.add('versteckt'));
+  pausieren(false);
 }
 function startMenue() {
   Online.stop(); hintergrund();
