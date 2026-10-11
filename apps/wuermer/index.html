@@ -62,6 +62,7 @@
   #runde b{display:block;font-size:14px;color:#ffd84d}
   #raus,#ton{position:fixed;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:20px}
   #raus{left:10px} #ton{right:10px}
+  #direkt{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:62px;width:46px;height:46px;font-size:20px;background:#b8860b}
 
   /* Mitte: Ansage */
   #ansage{position:fixed;left:50%;top:24%;transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;
@@ -112,6 +113,7 @@
 <div id="oben" class="versteckt"></div>
 <div id="status" class="box versteckt"></div>
 <button class="knopf versteckt" id="raus" aria-label="Spiel beenden">✕</button>
+<button class="knopf versteckt" id="direkt" aria-label="WLAN-Direkt erlauben">⚡</button>
 <button class="knopf versteckt" id="ton" aria-label="Ton an/aus">🔊</button>
 
 <div id="unten" class="versteckt">
@@ -144,7 +146,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.5';
+const APP_VERSION = '0.6';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -615,6 +617,7 @@ function zugEnde() {
       const lebende = spiel.teams.map((_, t) => t).filter(lebt);
       if (lebende.length <= 1) rec.ende = lebende.length ? lebende[0] : -1;
       spiel.zuege[rec.n] = rec;
+      Direkt.senden(rec);
       zugEinreihen(rec);
     } else if (spiel.rec) {
       if (!spiel.rec.s) { spiel.endeWartet = true; return; }     // Das Ende des Zuges ist noch nicht angekommen
@@ -629,9 +632,12 @@ function zugEnde() {
 // Online: Der laufende Zug wird in Stücken verschickt (alle 2 Sekunden), damit die anderen fast live zuschauen
 function teilSenden() {
   if (spiel.modus !== 'online' || spiel.quelle !== 'live' || spiel.fertig) return;
-  if (spiel.bild - (spiel.teilBild || 0) < 120) return;
+  const direkt = Direkt.alleVerbunden();
+  if (spiel.bild - (spiel.teilBild || 0) < (direkt ? 6 : 120)) return;
   spiel.teilBild = spiel.bild;
-  zugEinreihen({ n: spiel.zug, t: spiel.dran, e: spiel.log.slice(), bis: spiel.bild, id: spiel.versuch });
+  const rec = { n: spiel.zug, t: spiel.dran, e: spiel.log.slice(), bis: spiel.bild, id: spiel.versuch };
+  Direkt.senden(rec);
+  if (!direkt || spiel.bild - (spiel.ghBild || 0) >= 600) { spiel.ghBild = spiel.bild; zugEinreihen(rec); }   // GitHub: Reserve alle 10 s
 }
 // In die Warteschlange zum Hochladen – ein neueres Stück ersetzt ein älteres vom selben Zug
 function zugEinreihen(rec) {
@@ -1452,6 +1458,7 @@ function hud() {
   z.textContent = s; z.classList.toggle('knapp', spiel.phase === 'zielen' && s <= 10 || spiel.phase === 'rueckzug');
   const wi = spiel.wind / WIND_MAX, b = $('windbar').firstElementChild;
   b.style.left = (wi < 0 ? 50 + wi * 50 : 50) + '%'; b.style.width = Math.abs(wi) * 50 + '%';
+  $('direkt').classList.toggle('versteckt', !(Direkt.an && Direkt.host && Direkt.problem && !Direkt.alleVerbunden()));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
   if ($('runde').innerHTML !== rt) $('runde').innerHTML = rt;
@@ -1460,7 +1467,8 @@ function hud() {
     if (spiel.quelle === 'fern') st = '⏳ ' + TEAMS[spiel.dran].name + (spiel.art[spiel.dran] === 'c' ? ' (Computer) wird vom Gastgeber gerechnet …' : ' spielt auf dem anderen Gerät …');
     else if (spiel.quelle === 'wiederholung') st = (spiel.rec && spiel.rec.s ? '📺 Zug von ' : '📡 Live: ') + TEAMS[spiel.dran].name;
     if (spiel.ausstehend.length) st = (st ? st + '   ' : '') + '☁ sende …';
-    if (Online.fehlerText) st = '⚠ ' + Online.fehlerText;
+    if (Direkt.an) st = (st ? st + '   ' : '') + (Direkt.alleVerbunden() ? '⚡ direkt' : Direkt.problem ? '⚡ ' + Direkt.problem : '⚡ verbinde …');
+    if (Online.fehlerText && !Direkt.alleVerbunden()) st = '⚠ ' + Online.fehlerText;
   }
   if ($('status').textContent !== st) $('status').textContent = st;
 }
@@ -1521,8 +1529,8 @@ function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
   fuellen(k.querySelector('.reihe'), unten.map(([t, fn]) => [t, fn, 'zweit']));
 }
 function hintergrund() {
-  spiel = null; dinge = []; zielt = null;
-  ['oben', 'unten', 'ton', 'raus', 'status'].forEach(id => $(id).classList.add('versteckt'));
+  spiel = null; dinge = []; zielt = null; Direkt.stop();
+  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt'].forEach(id => $(id).classList.add('versteckt'));
 }
 function startMenue() {
   Online.stop(); hintergrund();
@@ -1538,18 +1546,20 @@ function teamWahl(modus) {
     const art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
     if (modus === 'online' && !art.includes('m')) return alert('Mindestens ein Team muss ein Mensch sein.');
     speicher.schreib('wu-wahl-' + modus, wahl);
-    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe);
+    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false);
   };
   const malen = () => {
     const zeilen = TEAMS.map((t, i) => `<div class="wahl"><b style="color:${t.farbe}">${t.name}</b><span>` +
       [['m', '👤 Mensch'], ['c', '🤖 Computer'], ...(i === 2 ? [['-', 'aus']] : [])]
         .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>').join('');
     const stufen = `<div class="wahl"><b>🤖 Stärke</b><span>` + ['leicht', 'mittel', 'schwer']
-      .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>';
+      .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>' +
+      (modus === 'online' ? `<div class="wahl"><b>⚡ WLAN-Direkt</b><span>` + [['1', 'an'], ['0', 'aus']]
+        .map(([d, txt]) => `<button data-d="${d}" class="${(wahl.direkt !== false) === (d === '1') ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>' : '');
     karte('<h2>Wer spielt mit?</h2>', modus === 'online' ? 'Jedes 👤-Team spielt auf einem eigenen Gerät.\n🤖-Teams rechnet dieses Gerät mit.' : '',
       [["Los geht's!", los]], zeilen + stufen + '<br>', [['← Zurück', modus === 'online' ? onlineMenue : startMenue]]);
     $('karte').querySelectorAll('.wahl button').forEach(b => b.onclick = () => {
-      if (b.dataset.s) wahl.stufe = b.dataset.s; else wahl.art[+b.dataset.t] = b.dataset.a;
+      if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
       malen();
     });
   };
@@ -1690,7 +1700,8 @@ const Sync = {
     try { if (unb64(t[4]).length !== 32) return null; } catch { return null; }
     return { o: t[1], r: t[2], t: t[3], k: t[4] };
   },
-  speichern(cfg) { this.cfg = cfg; this.schluessel = null; this.etag = this.sha = this.stand = null; speicher.schreib('wu-sync', cfg); },
+  speichern(cfg) { this.cfg = cfg; this.schluessel = null; this.etag = this.sha = this.stand = null; speicher.schreib('wu-sync', cfg);
+    Object.assign(Signal, { schluessel: null, etag: null, sha: null, stand: null }); },
 
   url() { return `https://api.github.com/repos/${this.cfg.o}/${this.cfg.r}/contents/${this.pfad}`; },
   kopf() { return { Authorization: 'Bearer ' + this.cfg.t, Accept: 'application/vnd.github+json' }; },
@@ -1853,12 +1864,13 @@ function spielLaden(st, ich) {
     spiel.zug = letzter.n;
   }
   naechsterZug();
+  Direkt.start(st);
 }
 
-async function neuesOnlineSpiel(art, stufe, ersetzen = false) {
+async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true) {
   const st = Sync.stand;
   if (!ersetzen && st && st.status === 'laeuft' && !confirm('Es läuft noch ein Spiel. Wirklich ein neues starten?')) return;
-  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe,
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt,
                 startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
   if (menschen(neu).length === 1) neu.status = 'laeuft';        // nur ich gegen Computer: sofort los
   lobbyText = ''; lobby('Starte …', []);
@@ -1889,6 +1901,108 @@ function zuruecksetzen() {
   if (!confirm('Token und Schlüssel von diesem Gerät entfernen?')) return;
   speicher.weg('wu-sync'); Sync.cfg = null; Online.stop(); setupZeigen();
 }
+
+/* =====================================================================
+   WLAN-DIREKT (WebRTC): Geräte reden direkt miteinander – ohne Umweg über GitHub.
+   GitHub braucht man nur kurz zum „Hände schütteln“: Der Gastgeber legt ein
+   Angebot in die Datei wuermer/signal.json, die anderen Geräte legen ihre
+   Antwort dazu. Danach fließen die Züge direkt (verschlüsselt) von Gerät zu Gerät.
+   Ohne fremde Server (kein STUN/TURN) – darum klappt es nur im selben WLAN.
+   Wenn es nicht klappt, läuft das Spiel ganz normal über GitHub weiter.
+   ===================================================================== */
+const Signal = Object.assign(Object.create(Sync), { pfad: 'wuermer/signal.json', etag: null, sha: null, stand: null, schluessel: null });
+const hatKandidaten = sdp => /a=candidate/.test(sdp || '');
+const Direkt = {
+  an: false, pcs: {}, kanaele: {}, timer: null, problem: '',
+  start(st) {
+    this.stop();
+    if (!st.direkt || !window.RTCPeerConnection || st.geraete.length < 2) return;
+    Object.assign(this, { an: true, st, id: st.id, host: st.geraete[0] === Sync.geraet, problem: '', startZeit: Date.now(), letztesAngebot: null });
+    this.andere = this.host ? st.geraete.slice(1) : [st.geraete[0]];
+    if (this.host) this.anbieten(); else this.timer = setInterval(() => this.antworten(), 1500);
+  },
+  stop() {
+    clearInterval(this.timer); this.timer = null;
+    for (const pc of Object.values(this.pcs)) try { pc.close(); } catch {}
+    this.pcs = {}; this.kanaele = {}; this.an = false;
+  },
+  alleVerbunden() { return this.an && this.andere.every(g => this.kanaele[g] && this.kanaele[g].readyState === 'open'); },
+  senden(rec) {
+    if (!this.an) return;
+    const d = JSON.stringify({ id: this.id, rec });
+    for (const k of Object.values(this.kanaele)) if (k.readyState === 'open') try { k.send(d); } catch {}
+  },
+  kanal(k, von) {
+    this.kanaele[von] = k;
+    k.onopen = () => { this.problem = ''; };
+    k.onmessage = e => {
+      const m = JSON.parse(e.data);
+      if (m.id !== this.id) return;
+      zugMerken(m.rec);
+      // Der Gastgeber reicht Züge an die anderen Geräte weiter (bei 3 Spielern)
+      if (this.host) for (const [g, k2] of Object.entries(this.kanaele)) if (g !== von && k2.readyState === 'open') try { k2.send(e.data); } catch {}
+    };
+  },
+  iceFertig(pc) {
+    return new Promise(ok => {
+      if (pc.iceGatheringState === 'complete') return ok();
+      const t = setTimeout(ok, 3000);
+      pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); ok(); } });
+    });
+  },
+  async anbieten() {                                       // Gastgeber
+    try {
+      const angebote = {};
+      for (const g of this.andere) {
+        const pc = new RTCPeerConnection({ iceServers: [] }); this.pcs[g] = pc;
+        this.kanal(pc.createDataChannel('spiel'), g);
+        await pc.setLocalDescription(await pc.createOffer()); await this.iceFertig(pc);
+        angebote[g] = pc.localDescription.sdp;
+      }
+      // Safari verrät die eigene WLAN-Adresse erst nach einer Kamera-Erlaubnis
+      if (!Object.values(angebote).some(hatKandidaten)) this.problem = 'oben links ⚡ tippen';
+      const id = this.id;
+      await Signal.aendern(() => ({ id, angebote, antworten: {}, zeit: Date.now() }));
+      clearInterval(this.timer); this.timer = setInterval(() => this.antwortenHolen(), 1500);
+    } catch (e) { this.problem = 'nicht möglich'; }
+  },
+  async antwortenHolen() {
+    if (!this.an || this.alleVerbunden() || Date.now() - this.startZeit > 120000) return clearInterval(this.timer);
+    try {
+      const s = await Signal.lesen();
+      if (!s || s.id !== this.id) return;
+      for (const g of this.andere) {
+        const pc = this.pcs[g], a = s.antworten && s.antworten[g];
+        if (a && pc && !pc.remoteDescription) await pc.setRemoteDescription({ type: 'answer', sdp: a });
+      }
+    } catch {}
+  },
+  async antworten() {                                      // die anderen Geräte
+    if (!this.an || this.alleVerbunden() || Date.now() - this.startZeit > 120000 || this.beschaeftigt) { if (!this.an || this.alleVerbunden()) clearInterval(this.timer); return; }
+    this.beschaeftigt = true;
+    try {
+      const s = await Signal.lesen();
+      if (!s || s.id !== this.id || !s.angebote) return;
+      const angebot = s.angebote[Sync.geraet];
+      if (!angebot || angebot === this.letztesAngebot) return;
+      this.letztesAngebot = angebot;
+      this.problem = hatKandidaten(angebot) ? '' : 'Gastgeber muss ⚡ tippen';
+      const wirt = this.andere[0];
+      if (this.pcs[wirt]) try { this.pcs[wirt].close(); } catch {}
+      const pc = new RTCPeerConnection({ iceServers: [] }); this.pcs[wirt] = pc;
+      pc.ondatachannel = e => this.kanal(e.channel, wirt);
+      await pc.setRemoteDescription({ type: 'offer', sdp: angebot });
+      await pc.setLocalDescription(await pc.createAnswer()); await this.iceFertig(pc);
+      const sdp = pc.localDescription.sdp, id = this.id, ich = Sync.geraet;
+      await Signal.aendern(s => s && s.id === id ? (s.antworten = { ...s.antworten, [ich]: sdp }, s) : null);
+    } catch {} finally { this.beschaeftigt = false; }
+  },
+};
+// Gastgeber: Kamera einmal kurz erlauben → Safari gibt die WLAN-Adresse frei → neu verbinden
+$('direkt').onclick = async () => {
+  try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
+  if (Direkt.st) Direkt.start(Direkt.st);
+};
 
 /* ---------- Einrichten & Einladung ---------- */
 function setupZeigen(meldungText = '') {

@@ -45,3 +45,11 @@ lernt man, wie zwei Geräte miteinander reden.
   das das Spiel erstellt hat („Gastgeber“), die Computer-Züge und schickt sie wie
   einen normalen Zug. Der Computer probiert „im Kopf“ viele Schüsse mit derselben
   Physik aus und nimmt einen der besten – je nach Stufe mit zittriger Hand.
+- v0.5: Der laufende Zug wird alle 2 s als Stück hochgeladen – Zuschauer sind nur
+  noch ca. 3 s hinterher (vorher: ganzer Zug + Wiederholung).
+- v0.6 „⚡ WLAN-Direkt“ (Option beim Einrichten, Standard: an): WebRTC-Datenkanal
+  Gerät ↔ Gerät, Handschlag über `wuermer/signal.json` (verschlüsselt wie der
+  Spielstand). Kein STUN/TURN, also keine fremden Server → nur im selben WLAN.
+  Zuschauer sind ca. 0,1 s hinterher; GitHub bekommt nur noch alle 10 s ein Stück
+  und den Endstand (Reserve + Neustart). Bei 3 Geräten reicht der Gastgeber weiter.
+  Safari zeigt die eigene WLAN-Adresse evtl. erst nach Kamera-Erlaubnis → Knopf ⚡.
