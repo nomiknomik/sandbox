@@ -171,7 +171,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1550,7 +1550,7 @@ function zeichne() {
   welle(WASSER - 14, '#3b8fc9', 5, 2, links, rechts, unten);
   ctx.drawImage(wand, 0, 0);
   ctx.drawImage(erde, 0, 0);
-  const spur = spiel && spiel.phase === 'zielen' && spiel.spuren && spiel.spuren[spiel.dran];
+  const spur = spiel && spiel.phase === 'zielen' && (zielt || spiel.ladung) && spiel.spuren && spiel.spuren[spiel.dran];   // nur beim Zielen
   if (spur) spur.forEach(([x, y], i) => {
     ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.strokeStyle = 'rgba(60,60,70,.5)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(x, y, i % 3 === 0 ? 3.2 : 2, 0, 7); ctx.fill(); ctx.stroke();
@@ -1629,7 +1629,7 @@ function hud() {
   $('fernbedienung').classList.toggle('versteckt', !schaf);
   $('waffen').style.visibility = schaf ? 'hidden' : '';     // Knopf sitzt dort, wo sonst die Waffen sind
   if (schaf) $('fernbedienung').querySelector('small').textContent = Math.ceil(schaf.zuender) + ' s';
-  $('direkt').classList.toggle('versteckt', !(Direkt.an && Direkt.host && Direkt.problem && !Direkt.alleVerbunden()));
+  $('direkt').classList.toggle('versteckt', !(Direkt.an && !Direkt.alleVerbunden() && (Direkt.problem || Direkt.klapptNicht())));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
   if ($('runde').innerHTML !== rt) $('runde').innerHTML = rt;
@@ -1641,6 +1641,8 @@ function hud() {
     if (spiel.quelle === 'wiederholung' && jetzt - (spiel.fortschritt || jetzt) > 6000) st = '⏳ Verbindung ist langsam …';
     if (spiel.ausstehend.length && jetzt - spiel.sendeSeit > 8000) st = '☁ Senden dauert …';
     if (Direkt.an && Direkt.warVerbunden && Direkt.getrenntSeit && Date.now() - Direkt.getrenntSeit > 8000) st = '⚡ Direktverbindung weg – verbinde neu …';
+    if (Direkt.klapptNicht()) st = '⚡ Keine WLAN-Verbindung – oben links ⚡ tippen';
+    if (Direkt.an && Date.now() - (Direkt.verbundenSeit || 0) < 3000) st = '⚡ WLAN-Direkt verbunden';
     if (Direkt.an && Direkt.problem && !Direkt.alleVerbunden()) st = '⚡ ' + Direkt.problem;
     if (Online.fehlerText && !Direkt.alleVerbunden()) st = '⚠ ' + Online.fehlerText;
   }
@@ -2113,7 +2115,7 @@ const Direkt = {
     this.stop();
     if (!st.direkt || !window.RTCPeerConnection || st.geraete.length < 2) return;
     Object.assign(this, { an: true, st, id: st.id, host: st.geraete[0] === Sync.geraet, problem: '', letztesAngebot: null,
-                          angebote: {}, version: 0, letzterVersuch: 0, pause: 15000, warVerbunden: false, getrenntSeit: 0 });
+                          angebote: {}, version: 0, letzterVersuch: 0, pause: 15000, warVerbunden: false, getrenntSeit: 0, startZeit: Date.now() });
     this.andere = this.host ? st.geraete.slice(1) : [st.geraete[0]];
     this.timer = setInterval(() => this.wachen(), 2000);
     this.wachen();
@@ -2123,6 +2125,8 @@ const Direkt = {
     for (const pc of Object.values(this.pcs)) try { pc.close(); } catch {}
     this.pcs = {}; this.kanaele = {}; this.an = false;
   },
+  // Nach 12 s noch nie verbunden? Dann Hinweis + ⚡-Knopf (Safari braucht evtl. die Kamera-Erlaubnis)
+  klapptNicht() { return this.an && !this.warVerbunden && Date.now() - this.startZeit > 12000; },
   offen(g) { return this.kanaele[g] && this.kanaele[g].readyState === 'open'; },
   alleVerbunden() { return this.an && this.andere.every(g => this.offen(g)); },
   // Wachhund: Ist die Verbindung weg (z. B. iPhone gesperrt), wird neu verbunden
@@ -2134,7 +2138,7 @@ const Direkt = {
     // erster Neuversuch nach 3 s, danach immer seltener
     if (!this.beschaeftigt && (!this.warVerbunden || Date.now() - this.getrenntSeit > 3000) && Date.now() - this.letzterVersuch > this.pause) {
       this.letzterVersuch = Date.now();
-      this.pause = Math.min(120000, this.pause * 1.6);      // klappt es gar nicht: seltener probieren
+      this.pause = Math.max(15000, Math.min(120000, this.pause * 1.6));      // klappt es gar nicht: seltener probieren
       this.anbieten();
     } else this.antwortenHolen();
   },
@@ -2145,7 +2149,7 @@ const Direkt = {
   },
   kanal(k, von) {
     this.kanaele[von] = k;
-    k.onopen = () => { this.problem = ''; this.warVerbunden = true; this.getrenntSeit = 0; };
+    k.onopen = () => { this.problem = ''; if (this.alleVerbunden()) this.verbundenSeit = Date.now(); this.warVerbunden = true; this.getrenntSeit = 0; };
     k.onclose = () => { if (this.an) this.wachen(); };
     k.onmessage = e => {
       const m = JSON.parse(e.data);
@@ -2190,6 +2194,7 @@ const Direkt = {
     try {
       const s = await Signal.lesen();
       if (!s || s.id !== this.id) return;
+      if (s.bitte && s.bitte > (this.letzteBitte || 0)) { this.letzteBitte = s.bitte; this.letzterVersuch = 0; this.pause = 0; return; }   // ein Gerät bittet um Neustart
       for (const g of this.andere) {
         const pc = this.pcs[g], a = s.antworten && s.antworten[g], mein = this.angebote[g];
         if (a && pc && mein && a.v === mein.v && pc.signalingState === 'have-local-offer') await pc.setRemoteDescription({ type: 'answer', sdp: a.sdp });
@@ -2222,7 +2227,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && Di
 // Gastgeber: Kamera einmal kurz erlauben → Safari gibt die WLAN-Adresse frei → neu verbinden
 $('direkt').onclick = async () => {
   try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
-  if (Direkt.st) { Direkt.letzterVersuch = 0; Direkt.pause = 0; Direkt.wachen(); }
+  if (!Direkt.st) return;
+  Direkt.startZeit = Date.now();
+  if (Direkt.host) { Direkt.letzterVersuch = 0; Direkt.pause = 0; Direkt.wachen(); }
+  else {                                                     // Gastgeber um ein neues Angebot bitten
+    Direkt.letztesAngebot = null; const id = Direkt.id;
+    try { await Signal.aendern(s => s && s.id === id ? { ...s, bitte: Date.now() } : null); } catch {}
+  }
 };
 
 /* ---------- Einrichten & Einladung ---------- */
