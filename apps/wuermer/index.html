@@ -186,7 +186,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.26';
+const APP_VERSION = '1.27';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -456,7 +456,8 @@ function aktiver() { return spiel && spiel.wurm; }
 function schaden(w, n) {
   if (w.tot || n <= 0) return;
   w.hp = Math.max(0, w.hp - n); w.aua = 1; w.auaBis = zeit + 1.3;
-  if (w.hp > 0) sag(w, 'aua');
+  if (w.hp > 0) sag(w, 'aua'); else sag(w, 'tschuess', true);
+  if (spiel && aktiver() && w.team !== aktiver().team) spiel.trafGegner = true;
   const a = spiel && aktiver();
   if (a && a !== w && a.team !== w.team && !a.tot && !(spiel.gesagt === spiel.zug)) { spiel.gesagt = spiel.zug; setTimeout(() => { sag(a, 'treffer'); a.jubelBis = zeit + 2.2; }, 900); }
   texte.push({ x: w.x, y: w.y - 30, t: 0, text: '-' + n, farbe: TEAMS[w.team].farbe });
@@ -490,6 +491,7 @@ function updateWurm(w, dt) {
   if (w.y > WASSER + 8) ertrinken(w);
 }
 function ertrinken(w) {
+  sag(w, 'blubb', true);
   w.tot = true; w.hp = 0; w.ertrunken = true;
   platsch(w.x); ton.platsch();
   texte.push({ x: w.x, y: WASSER - 30, t: 0, text: 'Blubb!', farbe: '#fff' });
@@ -581,7 +583,8 @@ function feuern(staerke, zielX, zielY) {
     funkeln(w.x, w.y); w.x = zielX; w.y = zielY; w.vx = w.vy = 0; w.luft = true; funkeln(w.x, w.y);
     ton.boing(); spiel.waffe = 'bazooka'; kam.frei = false; zeigeWaffen(); return;   // Zug geht danach weiter
   }
-  spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true;
+  spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true; spiel.trafGegner = false;
+  if (Math.random() < .6) sag(w, 'lovi');
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
     for (let i = 0; i < 5; i++) dinge.push({ art: 'luftrakete', x: zielX + (i - 2) * 26 - spiel.wind * .4, y: -120 - i * 34, vx: 0, vy: 260, r: 4, t: 0, dreh: Math.PI / 2 });
     teilchen.push({ art: 'flieger', x: zielX - 900, y: -170, vx: 900, vy: 0, t: 0, max: 2 });
@@ -769,6 +772,12 @@ function zugEnde() {
     zeigeWaffen();
     return;
   }
+  // Daneben geschossen? Dann lacht ein Gegner
+  if (w && spiel.geschossen && !spiel.trafGegner) {
+    const gegner = wuermer.filter(x => !x.tot && x.team !== w.team);
+    if (gegner.length) { const g = gegner[Math.floor(Math.random() * gegner.length)]; sag(g, 'mazila', true); g.jubelBis = zeit + 2; }
+  }
+  spiel.trafGegner = false;
   // Bonus-Kiste: noch ein Schuss
   if (w && !w.tot && spiel.geschossen && spiel.bonusSchuesse > 0 && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
     spiel.bonusSchuesse--; spiel.geschossen = false; spiel.schuss++;
@@ -901,6 +910,10 @@ function simSchritt() {
 function updateSpiel(dt) {
   const w = aktiver();
   const darfLaufen = (spiel.phase === 'zielen' || spiel.phase === 'flug' || spiel.phase === 'rueckzug') && w && !w.tot;
+  if (darfLaufen && !spiel.graben && (spiel.ein.links || spiel.ein.rechts) && spiel.kudaGesagt !== spiel.zug) {
+    const g = wuermer.find(x => !x.tot && x.team !== w.team && Math.hypot(x.x - w.x, x.y - w.y) < 70);
+    if (g) { spiel.kudaGesagt = spiel.zug; sag(g, 'kuda', true); }
+  }
   if (darfLaufen && !spiel.graben) {
     const d = (spiel.ein.links ? -1 : 0) + (spiel.ein.rechts ? 1 : 0);
     if (d && !w.luft) {
@@ -936,7 +949,7 @@ function updateSpiel(dt) {
       if (k.art === 'apotheke') {                     // sofort heilen
         const vorher = w.hp; w.hp = Math.min(100, w.hp + HEILUNG);
         texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+' + (w.hp - vorher) + ' ❤️', farbe: '#2fbf4f' });
-        w.jubelBis = zeit + 1.5;
+        w.jubelBis = zeit + 1.5; sag(w, 'heil', true);
       } else if (k.art === 'bonus') {                 // ein Schuss mehr – jetzt, wenn er dran ist, sonst im nächsten Zug
         if (w.team === spiel.dran) spiel.bonusSchuesse = (spiel.bonusSchuesse || 0) + 1;
         else spiel.teams[w.team].extra = (spiel.teams[w.team].extra || 0) + 1;
@@ -1217,7 +1230,7 @@ $('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); ei
 $('uebersicht').onclick = uebersicht;
 $('pause').onclick = () => pausieren(true);
 $('pausenbild').onclick = () => pausieren(false);
-$('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
+$('ton').onclick = () => { ton.stumm = !ton.stumm; if (ton.stumm && window.speechSynthesis) speechSynthesis.cancel(); $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
   if (spiel.fertig) return spiel.modus === 'online' ? onlineMenue() : startMenue();
@@ -1242,7 +1255,8 @@ function ansage(gross, klein, farbe) {
 // ================= Töne (selbst erzeugt, keine Dateien) =================
 const ton = {
   ac: null, stumm: false,
-  an() { if (!this.ac) try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } if (this.ac && this.ac.state === 'suspended') this.ac.resume(); },
+  an() { if (!this.sprachFrei && window.speechSynthesis) { this.sprachFrei = true; try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {} }
+    if (!this.ac) try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } if (this.ac && this.ac.state === 'suspended') this.ac.resume(); },
   rauschen(dauer, f1, f2, laut) {
     if (!this.ac || this.stumm) return;
     const ac = this.ac, n = ac.sampleRate * dauer, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
@@ -1437,30 +1451,18 @@ function welle(y0, farbe, amp, phase, links, rechts, unten) {
 // Jeder Wurm hat einen eigenen Charakter: Name, Hut, Gesicht und Sprüche (wie die 12 Bilder in figuren/)
 //   hut = was er auf dem Kopf hat, extra = Besonderheit im Gesicht
 const CHARAKTERE = [
-  { name: 'Фикса',     typ: 'Soldat',     hut: 'helm',       extra: 'goldzahn',
-    dran: ['Zum Angriff!', 'Ich bin bereit!', 'Jawoll!'], aua: ['Autsch!', 'Das gibt Rache!', 'Nur ein Kratzer!'], treffer: ['Volltreffer!', 'Hab dich!', 'Mission erfüllt!'] },
-  { name: 'Кабан',     typ: 'Rambo',      hut: 'kopftuch',   extra: 'brille',
-    dran: ['Jetzt wird\'s ernst!', 'Keine Gnade!', 'Ich krieg dich!'], aua: ['Grrr!', 'Das tat nicht weh!', 'Na warte!'], treffer: ['Bumm!', 'Wer ist der Boss?', 'Zu einfach!'] },
-  { name: 'Хиппарь',   typ: 'Hippie',     hut: 'peacehelm',  extra: 'haare',
-    dran: ['Peace, Mann!', 'Make love, not Krieg … ach egal!', 'Alles easy!'], aua: ['Voll unfriedlich!', 'Bad Vibes!', 'Ey, Mann!'], treffer: ['Sorry, Mann!', 'Peace!', 'Upsi!'] },
-  { name: 'Филин',     typ: 'Nachtsicht', hut: 'nachtsicht', extra: '',
-    dran: ['Ich seh dich …', 'Ziel erfasst.', 'Im Dunkeln bin ich König!'], aua: ['Wer hat das Licht an?', 'Blind!', 'Autsch!'], treffer: ['Ziel getroffen.', 'Gesehen und erwischt!', 'Huhu!'] },
-  { name: 'Шериф',     typ: 'Cowboy',     hut: 'cowboy',     extra: 'halm',
-    dran: ['Yeehaw!', 'Zeit für ein Duell!', 'Howdy!'], aua: ['Verflixt!', 'Mein Hut!', 'Uiuiui!'], treffer: ['Yippie!', 'Schneller als mein Schatten!', 'Erwischt, Partner!'] },
-  { name: 'Лепила',    typ: 'Sanitäter',  hut: 'kreuzhelm',  extra: '',
-    dran: ['Wo tut\'s weh?', 'Nur ein kleiner Piks!', 'Der Doktor ist da!'], aua: ['Ich brauch einen Arzt!', 'Ich bin doch der Arzt!', 'Aua, Pflaster!'], treffer: ['Das braucht einen Verband!', 'Gute Besserung!', 'Spritze rein!'] },
-  { name: 'Варяг',     typ: 'Wikinger',   hut: 'wikinger',   extra: 'zoepfe',
-    dran: ['Für Walhalla!', 'Uaaargh!', 'Plündern!'], aua: ['Bei Odin!', 'Mein Helm!', 'Uff!'], treffer: ['Ha, Wikingerkraft!', 'Sieg!', 'Skål!'] },
-  { name: 'Боцман',    typ: 'Kapitän',    hut: 'kapitaen',   extra: 'zigarre',
-    dran: ['Leinen los!', 'Volle Kraft voraus!', 'Ahoi!'], aua: ['Mann über Bord!', 'Klabautermann!', 'Wir sinken!'], treffer: ['Versenkt!', 'Treffer mittschiffs!', 'Ahoi, erwischt!'] },
-  { name: 'Дембель',   typ: 'Kommando',   hut: 'barett',     extra: 'brille',
-    dran: ['Easy.', 'Schau zu und lerne!', 'Kommando los!'], aua: ['Nicht cool!', 'Uff!', 'Das gibt Ärger!'], treffer: ['Läuft bei mir!', 'Cool, oder?', 'Auftrag erledigt!'] },
-  { name: 'Слоник',    typ: 'Gasmaske',   hut: 'gasmaske',   extra: '',
-    dran: ['Mmpf mmpf!', 'Hmmpf!', 'Mmmpf … los!'], aua: ['MMPF!', 'Hmpf …', 'Mmmmh!'], treffer: ['Mmpf! Hehe!', 'Hmpf-hmpf!', 'MMPF-JA!'] },
-  { name: 'Зубастый',  typ: 'Hai',        hut: 'hai',        extra: '',
-    dran: ['Happs!', 'Ich hab Hunger!', 'Da-dam … da-dam …'], aua: ['Ich bin nur ein Fisch!', 'Blubb!', 'Aua, meine Flosse!'], treffer: ['Happs!', 'Lecker!', 'Gefressen!'] },
-  { name: 'Сибиряк',   typ: 'Polar',      hut: 'uschanka',   extra: '',
-    dran: ['Brrr, los geht\'s!', 'Schneeballschlacht!', 'Mir ist nicht kalt!'], aua: ['Eiskalt erwischt!', 'Brrr!', 'Meine Ohren!'], treffer: ['Eiskalt!', 'Schnee von gestern!', 'Ha, gefroren!'] },
+  { name: 'Фикса',     typ: 'Soldat',     hut: 'helm',       extra: 'goldzahn', ruf: 'За Родину!' },
+  { name: 'Кабан',     typ: 'Rambo',      hut: 'kopftuch',   extra: 'brille', ruf: 'Кто тут главный?' },
+  { name: 'Хиппарь',   typ: 'Hippie',     hut: 'peacehelm',  extra: 'haare', ruf: 'Мир, дружба, жвачка!' },
+  { name: 'Филин',     typ: 'Nachtsicht', hut: 'nachtsicht', extra: '', ruf: 'Я тебя вижу…' },
+  { name: 'Шериф',     typ: 'Cowboy',     hut: 'cowboy',     extra: 'halm', ruf: 'Йи-ха!' },
+  { name: 'Лепила',    typ: 'Sanitäter',  hut: 'kreuzhelm',  extra: '', ruf: 'Кому укольчик?' },
+  { name: 'Варяг',     typ: 'Wikinger',   hut: 'wikinger',   extra: 'zoepfe', ruf: 'В Вальхаллу!' },
+  { name: 'Боцман',    typ: 'Kapitän',    hut: 'kapitaen',   extra: 'zigarre', ruf: 'Полный вперёд!' },
+  { name: 'Дембель',   typ: 'Kommando',   hut: 'barett',     extra: 'brille', ruf: 'Спецназ на месте.' },
+  { name: 'Слоник',    typ: 'Gasmaske',   hut: 'gasmaske',   extra: '', ruf: 'Мммпф!' },
+  { name: 'Зубастый',  typ: 'Hai',        hut: 'hai',        extra: '', ruf: 'Ам-ням!' },
+  { name: 'Сибиряк',   typ: 'Polar',      hut: 'uschanka',   extra: '', ruf: 'Ух, холодрыга!' },
 ];
 const charakter = w => CHARAKTERE[(w.typ || 0) % CHARAKTERE.length];
 
@@ -1521,11 +1523,41 @@ function wurmIcon(typ, team, klasse = 'wurmicon') {
   if (team !== undefined) { const g = wurmBild({ typ, team }, 'normal'); if (g) try { src = g.bild.toDataURL(); } catch {} }
   return `<img class="${klasse}" src="${src}" alt="">`;
 }
-// Sprechblase über dem Wurm (nur fürs Aussehen)
-function sag(w, art) {
-  if (!w || w.tot) return;
-  const liste = charakter(w)[art];
-  w.spruch = { text: liste[Math.floor(Math.random() * liste.length)], bis: zeit + 2.6 };
+// Sprüche (russisch) – stehen in der Sprechblase und werden vorgelesen
+const SPRUECHE = {
+  dran:     ['Ну, погнали!', 'Моя очередь!', 'Сейчас всё будет!', 'Держитесь, ребята!'],
+  lovi:     ['Лови!', 'Получай!', 'Держи подарочек!', 'На, держи!', 'Привет тебе!'],
+  aua:      ['Ай!', 'Ой-ой-ой!', 'Больно же!', 'Ну всё, ты попал!', 'За что?!'],
+  treffer:  ['Попал!', 'Вот так вот!', 'Бинго!', 'Есть контакт!', 'Учись, салага!'],
+  mazila:   ['Мазила!', 'Мимо!', 'Косой!', 'Ха-ха, промазал!', 'Очки купи!', 'Даже не близко!'],
+  kuda:     ['Куда ты лезешь?!', 'Э, сюда нельзя!', 'Не подходи!', 'Чего припёрся?'],
+  tschuess: ['Прощайте, братцы…', 'Я ещё вернусь!', 'Ой, всё…'],
+  blubb:    ['Буль-буль…', 'Я не умею плавать!'],
+  heil:     ['Ой, хорошо-то как!', 'Спасибо, доктор!', 'Как новенький!'],
+};
+// Stimme: jeder Charakter klingt etwas anders (Tonhöhe). Aus mit 🔇.
+const STIMMHOEHE = [.9, .6, 1.2, .8, .9, 1.1, .5, .7, .8, 1, 1.6, 1];
+const stimme = {
+  ru: null,
+  suchen() { const v = speechSynthesis.getVoices(); this.ru = v.find(x => /^ru/i.test(x.lang)) || null; },
+  sprich(text, w, wichtig) {
+    if (!window.speechSynthesis || ton.stumm) return;
+    if (speechSynthesis.speaking) { if (!wichtig) return; speechSynthesis.cancel(); }
+    const u = new SpeechSynthesisUtterance(text.replace(/[…!?]+$/, m => m.includes('?') ? '?' : '!'));
+    u.lang = 'ru-RU'; if (this.ru) u.voice = this.ru;
+    u.pitch = STIMMHOEHE[(w.typ || 0) % STIMMHOEHE.length]; u.rate = 1.15;
+    speechSynthesis.speak(u);
+  },
+};
+if (window.speechSynthesis) { stimme.suchen(); speechSynthesis.onvoiceschanged = () => stimme.suchen(); }
+function sag(w, art, wichtig = false) {
+  if (!w || (w.tot && art !== 'blubb')) return;
+  const ch = charakter(w);
+  let liste = SPRUECHE[art]; if (art === 'dran') liste = [ch.ruf, ch.ruf, ...liste];   // Lieblingsspruch öfter
+  let text = liste[Math.floor(Math.random() * liste.length)];
+  if (ch.typ === 'Gasmaske') text = ['Ммпф!', 'Мммпф?!', 'Хмпф-хмпф!'][Math.floor(Math.random() * 3)];   // mit Maske versteht man nichts
+  w.spruch = { text, bis: zeit + 2.6 };
+  stimme.sprich(text, w, wichtig);
 }
 
 function zeichneWurm(w) {
