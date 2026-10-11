@@ -129,6 +129,7 @@
     <button class="waffe" data-w="schaf">🐑<small></small></button>
     <button class="waffe" data-w="luftschlag">✈️<small></small></button>
     <button class="waffe" data-w="dynamit">🧨<small></small></button>
+    <button class="waffe" data-w="graben">⛏️<small></small></button>
     <div id="waffeninfo" class="box"></div>
   </div>
 </div>
@@ -146,7 +147,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.6';
+const APP_VERSION = '0.7';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -194,6 +195,7 @@ const WAFFEN = {
   schaf:      { icon: '🐑', name: 'Schaf',        sterne: 3, radius: 62, schaden: 60, ab: 3, zuender: 7, start: 2, info: 'Läuft los – Tippen zündet es' },
   luftschlag: { icon: '✈️', name: 'Luftschlag',   sterne: 4, radius: 30, schaden: 26, ab: 4, start: 1, info: 'Tippe auf das Ziel!' },
   dynamit:    { icon: '🧨', name: 'Dynamit',      sterne: 5, radius: 80, schaden: 75, ab: 5, zuender: 5, start: 1, info: 'Hinlegen – und schnell weglaufen!' },
+  graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
 };
 const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
@@ -359,7 +361,7 @@ function abprallen(o, ax, ay, e, reib) {
   return -vn;
 }
 // einen Pixel zur Seite laufen (klettert kleine Stufen)
-function schritt(o, d, klettern = 7) {
+function schritt(o, d, klettern = 9) {
   const nx = o.x + d;
   if (!stoesst(nx, o.y, o.r)) {
     for (let k = 1; k <= klettern; k++) if (stoesst(nx, o.y + k, o.r)) { o.x = nx; o.y += k - 1; return true; }
@@ -403,7 +405,7 @@ function updateWurm(w, dt) {
     bewege(w, dt, (o, ax, ay) => {
       const wucht = abprallen(o, ax, ay, 0.25, 0.65);
       if (wucht > 480) schaden(o, Math.round((wucht - 480) / 9));
-      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; }
+      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; }
     });
   } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
   if (w.y > WASSER + 8) ertrinken(w);
@@ -417,9 +419,10 @@ function laufen(w, d, dt) {
   w.laufen += 55 * dt; w.schritte += dt;
   while (w.laufen >= 1) { w.laufen -= 1; if (!schritt(w, d)) { w.laufen = 0; break; } if (w.luft) break; }
 }
-function springen(w) {
-  if (w.luft) return;
-  w.vy = -290; w.vx = w.richtung * 120; w.luft = true; w.y -= 2; ton.boing();
+// Springen: höher als früher; mit ◀/▶ gedrückt weiter nach vorne; in der Luft nochmal = Doppelsprung
+function springen(w, vor) {
+  if (!w.luft) { w.vy = -330; w.vx = w.richtung * (vor ? 190 : 110); w.luft = true; w.y -= 2; w.doppel = true; ton.boing(); }
+  else if (w.doppel) { w.doppel = false; w.vy = -310; w.vx = w.richtung * 150; ton.boing(); }
 }
 
 // ---------- Explosion ----------
@@ -456,6 +459,7 @@ function feuern(staerke, zielX) {
   const w = aktiver(), art = spiel.waffe, team = spiel.teams[w.team];
   if (!WAFFEN[art] || team.munition[art] === 0 || WAFFEN[art].ab > rundeNr()) return;
   if (team.munition[art] > 0) team.munition[art]--;
+  if (art === 'graben') { spiel.graben = { t: 1.6, winkel: w.ziel, takt: 0 }; return; }   // Zug geht danach weiter
   spiel.phase = 'flug'; kam.frei = false;
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
     for (let i = 0; i < 5; i++) dinge.push({ art: 'luftrakete', x: zielX + (i - 2) * 26 - spiel.wind * .4, y: -120 - i * 34, vx: 0, vy: 260, r: 4, t: 0, dreh: Math.PI / 2 });
@@ -583,7 +587,8 @@ function naechsterZug() {
   do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
   spiel.wurm = liste[team.zeiger];
   Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0,
-                        versuch: Math.random().toString(36).slice(2, 8), teilBild: 0, endeWartet: false });
+                        versuch: Math.random().toString(36).slice(2, 8), teilBild: 0, endeWartet: false, schuss: 0, graben: null });
+  spiel.toteStart = toteGegner();
   spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
   // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
   let kiste = '';
@@ -609,7 +614,18 @@ function naechsterZug() {
 }
 
 // Der Zug ist vorbei: online abschicken oder abgleichen, dann weiter
+function toteGegner() { return wuermer.filter(x => x.tot && x.team !== spiel.dran).length; }
 function zugEnde() {
+  // Regel: Wer in seinem Zug einen Gegner besiegt, darf gleich nochmal schießen
+  const w = aktiver();
+  if (w && !w.tot && toteGegner() > spiel.toteStart && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
+    spiel.toteStart = toteGegner(); spiel.schuss++;
+    Object.assign(spiel, { phase: 'zielen', zugzeit: 20, warte: 0 });
+    kam.frei = false;
+    ansage('💀 Besiegt!', 'Bonus: noch ein Schuss!', TEAMS[spiel.dran].hell);
+    zeigeWaffen();
+    return;
+  }
   const stand = schnappschuss();
   if (spiel.modus === 'online') {
     if (spiel.quelle === 'live') {
@@ -698,7 +714,7 @@ function anwenden(e) {
     case 'J': spiel.ein.springen = true; break;
     case 'D': if (spiel.phase === 'zielen') w.richtung = e[2]; break;
     case 'Z': if (spiel.phase === 'zielen') w.ziel = e[2]; break;
-    case 'F': if (spiel.phase === 'zielen') { w.ziel = e[3]; w.richtung = e[4]; spiel.waffe = e[5]; feuern(e[2], e[6]); } break;
+    case 'F': if (spiel.phase === 'zielen' && !spiel.graben) { w.ziel = e[3]; w.richtung = e[4]; spiel.waffe = e[5]; feuern(e[2], e[6]); } break;
     case 'S': { const s = dinge.find(o => o.art === 'schaf'); if (s) s.zuender = 0; } break;
   }
 }
@@ -728,15 +744,28 @@ function simSchritt() {
 function updateSpiel(dt) {
   const w = aktiver();
   const darfLaufen = (spiel.phase === 'zielen' || spiel.phase === 'flug' || spiel.phase === 'rueckzug') && w && !w.tot;
-  if (darfLaufen && !w.luft) {
+  if (darfLaufen && !spiel.graben) {
     const d = (spiel.ein.links ? -1 : 0) + (spiel.ein.rechts ? 1 : 0);
-    if (d) {
+    if (d && !w.luft) {
       if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; }
       laufen(w, d, dt); if (spiel.quelle === 'live') kam.frei = false;
     }
-    if (spiel.ein.springen) springen(w);
+    if (spiel.ein.springen) springen(w, d !== 0);
   }
   spiel.ein.springen = false;
+  // Graben: Der Wurm buddelt sich in Zielrichtung durch die Erde
+  if (spiel.graben && w) {
+    const g = spiel.graben, c = Math.cos(g.winkel), s = Math.sin(g.winkel);
+    g.t -= dt; g.takt++;
+    w.x += c * 50 * dt; w.y += s * 50 * dt; w.vx = w.vy = 0; w.luft = false;
+    if (g.takt % 4 === 1) {
+      const x = w.x + c * 6, y = w.y + s * 6 - 2;
+      loch(x, y, 13); spiel.krater.push([x, y, 13]);
+      for (let i = 0; i < 3; i++) teilchen.push({ art: 'brocken', x: x + c * 10, y: y + s * 10, vx: rnd(-120, 120), vy: rnd(-200, -60), t: 0, max: .8, r: rnd(1.5, 3), farbe: i % 2 ? '#7b4c2a' : '#a8713f' });
+      if (g.takt % 12 === 1) ton.klack();
+    }
+    if (g.t <= 0 || w.tot) { spiel.graben = null; freiMachen(w); }
+  }
   for (const x of wuermer) updateWurm(x, dt);
   dinge = dinge.filter(o => updateDing(o, dt) !== false);
   for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(g); g.vy = 0; } } }
@@ -790,7 +819,7 @@ const leinwand = $('bild'), ctx = leinwand.getContext('2d');
 let zielt = null;                 // Steinschleuder: {id, sx, sy, x, y, staerke, richtung}
 const finger = new Map();         // alle Finger auf dem Bildschirm (für zwei-Finger-Schieben)
 
-function darfZielen() { return spiel && spiel.quelle === 'live' && spiel.phase === 'zielen' && aktiver() && !aktiver().tot && !spiel.fertig && !kiDran(); }
+function darfZielen() { return spiel && spiel.quelle === 'live' && spiel.phase === 'zielen' && aktiver() && !aktiver().tot && !spiel.fertig && !kiDran() && !spiel.graben; }
 const inWelt = (sx, sy) => ({ x: (sx - bw / 2) / massstab + kam.x, y: (sy - bh / 2) / massstab + kam.y });
 
 leinwand.addEventListener('pointerdown', e => {
@@ -834,7 +863,7 @@ function loslassen(e) {
   if (zielt && zielt.id === e.pointerId) {
     const w = aktiver(), weg = Math.hypot(zielt.x - zielt.sx, zielt.y - zielt.sy);
     if (darfZielen() && spiel.waffe === 'luftschlag') eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'luftschlag', Math.round(inWelt(zielt.x, zielt.y).x)]);
-    else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && (spiel.waffe === 'schaf' || spiel.waffe === 'dynamit'))))
+    else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && (spiel.waffe === 'schaf' || spiel.waffe === 'dynamit' || spiel.waffe === 'graben'))))
       eingeben(['F', 0, runde(Math.max(.2, zielt.staerke)), runde(w.ziel), zielt.richtung, spiel.waffe]);
     zielt = null;
   }
@@ -914,7 +943,8 @@ const KI = {
   plan: null,
   update(dt) {
     const w = aktiver(); if (!w || w.tot) return;
-    if (!this.plan || this.plan.zug !== spiel.zug) this.plan = { zug: spiel.zug, t: 0 };
+    const nr = spiel.zug * 100 + spiel.schuss;               // jeder Bonus-Schuss braucht einen neuen Plan
+    if (!this.plan || this.plan.zug !== nr) this.plan = { zug: nr, t: 0 };
     const p = this.plan;
     if (spiel.phase === 'flug') {
       if (p.flucht && !p.geflohen) { p.geflohen = true; eingeben([p.flucht > 0 ? 'R' : 'L', 0, 1], true); eingeben(['J', 0], true); }
@@ -1534,7 +1564,7 @@ function hintergrund() {
 }
 function startMenue() {
   Online.stop(); hintergrund();
-  karte('<h1>🪱 Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Kamera:</b> mit zwei Fingern schieben.',
+  karte('<h1>🪱 Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Springen:</b> ⤴ zweimal = Doppelsprung, ▶ + ⤴ = weiter Sprung.\n<b>Kamera:</b> mit zwei Fingern schieben und zoomen.\n💀 Gegner besiegt? Du darfst nochmal schießen!',
     [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]]);
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
