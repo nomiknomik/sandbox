@@ -170,6 +170,10 @@
 
   /* ---------- Schlacht ---------- */
   #s-battle{gap:6px}
+  .kopf .mitte{flex:1;display:flex;flex-direction:column;align-items:center}
+  #verbindung{font:700 11.5px var(--mono);letter-spacing:.04em;color:var(--g-dim);min-height:13px;cursor:pointer}
+  #verbindung.direkt{color:#8dffb8}
+  #verbindung.problem{color:#ffb238;text-decoration:underline}
   #banner{font:800 clamp(15px,3.8vw,22px) var(--mono);letter-spacing:.04em;text-align:center;flex:1;transition:color .3s}
   #banner.gegner{color:#ff8a6e;text-shadow:0 2px 0 #4a0d06,0 0 14px rgba(255,60,40,.6)}
   .bwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:8px;width:100%}
@@ -362,7 +366,7 @@
 <section id="s-battle" class="screen">
   <div class="kopf">
     <button class="rund" id="b-menu" aria-label="Menü">☰</button>
-    <div id="banner" class="glow"></div>
+    <div class="mitte"><div id="banner" class="glow"></div><div id="verbindung"></div></div>
     <button class="rund ton" aria-label="Ton an/aus">🔊</button>
   </div>
   <div class="bwrap">
@@ -476,7 +480,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -1107,7 +1111,7 @@ $('#b-regeln').onclick = () => {
 };
 $('#b-weiter').onclick = () => { Ton.klick(); spiel = speicher.lies('mb-spiel'); FLOTTE = spiel.flotte || [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]; weiterSpielen(); };
 function menue() {
-  spiel = null; beschaeftigt = false; Online.stop();
+  spiel = null; beschaeftigt = false; Online.stop(); Direkt.stop();
   $('#b-weiter').hidden = !(speicher.lies('mb-spiel') || {}).spieler;
   akteKnopf();
   zeige('s-menu');
@@ -1812,7 +1816,8 @@ const Sync = {
       const alt = await this.lesen(true);
       const neu = fn(alt ? JSON.parse(JSON.stringify(alt)) : null);
       if (!neu) return alt;
-      if (await this.schreiben(neu)) return neu;
+      if (this === Sync) neu.rev = (alt && alt.id === neu.id ? alt.rev || 0 : 0) + 1;   // Zugnummer: neuere Stände erkennen
+      if (await this.schreiben(neu)) { if (this === Sync) Direkt.senden(neu); return neu; }
       await warte(300 + Math.random() * 700);
     }
     throw new Error('Das andere Gerät schreibt gerade – bitte nochmal.');
@@ -1827,7 +1832,18 @@ const Sync = {
    und schreibt die Antwort e = miss/hit/sunk (bei sunk auch die Felder f).
    ===================================================================== */
 const Online = {
-  timer: null, tickt: false, zuletzt: null,
+  timer: null, tickt: false, zuletzt: null, letzter: null, kette: Promise.resolve(),
+  // Neuer Stand (von GitHub oder ⚡ direkt): nur verarbeiten, wenn er nicht älter ist als der bekannte
+  async uebernehmen(st) {
+    while (spiel && spiel.schiesst) await warte(100);
+    const a = this.letzter;
+    if (st && a && st.id === a.id && (st.rev || 0) < (a.rev || 0)) return;
+    const json = JSON.stringify(st);
+    if (json === this.zuletzt) return;
+    this.zuletzt = json; this.letzter = st;
+    await onlineSteuern(st);
+  },
+  direktEmpfang(st) { if (this.timer) this.kette = this.kette.then(() => this.uebernehmen(st)).catch(() => {}); },
   start() { this.stop(); this.zuletzt = null; this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
@@ -1835,8 +1851,7 @@ const Online = {
     this.tickt = true;
     try {
       const st = await Sync.lesen();
-      const json = JSON.stringify(st);
-      if (json !== this.zuletzt) { this.zuletzt = json; await onlineSteuern(st); }
+      await (this.kette = this.kette.then(() => this.uebernehmen(st)));
       this.fehler(null);
     } catch (e) { this.zuletzt = null; this.fehler(e.message, e); }
     finally { this.tickt = false; }
@@ -1891,6 +1906,7 @@ async function onlineSteuern(st) {
     return lobby('Auf anderen Geräten läuft gerade ein Spiel.', [['NEUES SPIEL (ALTES BEENDEN)', neuesOnlineSpiel]]);
   }
   if (!spiel || spiel.modus !== 'online' || spiel.id !== st.id) onlineSpielLaden(st, idx);
+  if (st.geraete.length === 2 && (st.status === 'aufstellen' || st.status === 'laeuft')) Direkt.start(st);
   if (st.status === 'wartet') {
     if (!$('#s-online').classList.contains('on')) zeige('s-online');
     return lobby('Warte auf das zweite Gerät …\nDort: Морской бой → Online → Beitreten', [['ABBRECHEN', abbrechen]]);
@@ -1974,7 +1990,7 @@ async function zuegeVerarbeiten(st) {
       zeichneFlotte();
     }
   }
-  const akt = Sync.stand || st;
+  const s2 = Sync.stand, akt = s2 && s2.id === st.id && (s2.rev || 0) > (st.rev || 0) ? s2 : st;
   if (akt.status === 'ende') {
     if (akt.aufgegeben != null) spiel.aufgabe = akt.aufgegeben === spiel.idx ? 'ich' : 'gegner';
     return ende(akt.sieger === spiel.idx ? 0 : 1);
@@ -2034,19 +2050,28 @@ async function schnellFeuer() {
   const sieg = alleVersenkt(gegner), zug = { s: idx, r, c, e: erg.art };
   if (erg.art === 'sunk') zug.f = erg.felder;
   spiel.verarbeitet = k + 1; zaehlen(0, erg); (spiel.verlauf = spiel.verlauf || []).push(erg.art);
-  // Funkspruch an das andere Gerät – läuft, während die Rakete fliegt
+  const eintragen2 = s => { s.zuege.push(zug); if (erg.art === 'miss') s.dran = 1 - idx; if (sieg) { s.status = 'ende'; s.sieger = idx; } };
+  // ⚡ Sofort direkt ans andere Gerät (falls per WLAN verbunden)
+  const basis = Online.letzter;
+  if (basis && basis.id === id && basis.zuege.length === k) {
+    const vorab = JSON.parse(JSON.stringify(basis)); eintragen2(vorab); vorab.rev = (basis.rev || 0) + 1;
+    Online.letzter = vorab; Online.zuletzt = JSON.stringify(vorab);
+    Direkt.senden(vorab);
+  }
+  // ☁ Und auf GitHub (Reserve, Neustart) – läuft, während die Rakete fliegt
   const senden = (async () => {
-    for (let versuch = 0; ; versuch++) {
+    for (let versuch = 0; versuch < 60; versuch++) {
+      let zuFrueh = false;
       try {
         await Sync.aendern(s => {
-          if (!s || s.id !== id || s.zuege.length > k || s.status !== 'laeuft' || s.dran !== idx) return null;   // schon gespeichert
-          s.zuege.push(zug);
-          if (erg.art === 'miss') s.dran = 1 - idx;
-          if (sieg) { s.status = 'ende'; s.sieger = idx; }
-          return s;
+          if (!s || s.id !== id || s.zuege.length > k) return null;                 // schon gespeichert
+          if (s.zuege.length < k) { zuFrueh = true; return null; }                  // GitHub hängt noch hinterher
+          if (s.status !== 'laeuft' || s.dran !== idx) return null;
+          eintragen2(s); return s;
         });
-        return;
-      } catch (e) { if (versuch) banner('⚠ FUNK GESTÖRT – VERSUCHE ES WEITER …', true); await warte(1500); }
+        if (!zuFrueh) return;
+      } catch (e) { if (versuch && !Direkt.verbunden()) banner('⚠ FUNK GESTÖRT – VERSUCHE ES WEITER …', true); }
+      await warte(1200);
     }
   })();
   await schussAnimation(tFeld, r, c, erg, true);
@@ -2067,7 +2092,7 @@ async function neuesOnlineSpiel() {
   const id = b64(crypto.getRandomValues(new Uint8Array(6)));
   lobby('Starte …', []);
   try {
-    await Sync.aendern(() => ({ id, status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: STANDARD_FLOTTE, zeit: Date.now() }));
+    await Sync.aendern(() => ({ id, status: 'wartet', geraete: [Sync.geraet], bereit: [false, false], dran: 0, zuege: [], flotte: STANDARD_FLOTTE, direkt: true, zeit: Date.now() }));
     Online.tick();
   } catch (e) { lobby('⚠ ' + e.message, [['NOCHMAL', neuesOnlineSpiel]]); }
 }
@@ -2117,6 +2142,106 @@ async function onlineFlotteFertig(schiffe) {
   } catch (e) { lobby('⚠ ' + e.message, []); }
   Online.zuletzt = null; Online.tick();
 }
+
+
+/* =====================================================================
+   WLAN-DIREKT (WebRTC): Die zwei Geräte reden direkt miteinander.
+   GitHub braucht man nur kurz zum „Hände schütteln“: Der Gastgeber legt ein
+   Angebot in morskoj-boj/signal.json (verschlüsselt), das andere Gerät die
+   Antwort. Danach fliegt jeder Zug in ~0,1 s von Gerät zu Gerät.
+   Ohne fremde Server (kein STUN/TURN) – darum nur im selben WLAN.
+   Klappt es nicht, läuft alles wie bisher über GitHub. (Wie in Würmer.)
+   ===================================================================== */
+const Signal = Object.assign(Object.create(Sync), { pfad: 'morskoj-boj/signal.json', etag: null, sha: null, stand: null, schluessel: null });
+const hatKandidaten = sdp => /a=candidate/.test(sdp || '');
+const Direkt = {
+  an: false, pc: null, kanalObj: null, timer: null, problem: '', id: null,
+  start(st) {
+    if (this.an && this.id === st.id) return;
+    this.stop();
+    if (st.direkt === false || !window.RTCPeerConnection || st.geraete.length < 2) return;
+    Object.assign(this, { an: true, st, id: st.id, host: st.geraete[0] === Sync.geraet, problem: '', startZeit: Date.now(), letztesAngebot: null });
+    if (this.host) this.anbieten(); else this.timer = setInterval(() => this.antworten(), 1500);
+    verbindungAnzeigen();
+  },
+  stop() {
+    clearInterval(this.timer); this.timer = null;
+    try { this.pc && this.pc.close(); } catch {}
+    this.pc = this.kanalObj = null; this.an = false; this.id = null;
+    verbindungAnzeigen();
+  },
+  verbunden() { return this.an && this.kanalObj && this.kanalObj.readyState === 'open'; },
+  senden(stand) {
+    if (!this.verbunden() || !stand || stand.id !== this.id) return;
+    try { this.kanalObj.send(JSON.stringify({ id: this.id, stand })); } catch {}
+  },
+  kanal(k) {
+    this.kanalObj = k;
+    k.onopen = () => { this.problem = ''; verbindungAnzeigen(); };
+    k.onclose = () => verbindungAnzeigen();
+    k.onmessage = e => { try { const m = JSON.parse(e.data); if (m.id === this.id) Online.direktEmpfang(m.stand); } catch {} };
+  },
+  iceFertig(pc) {
+    return new Promise(ok => {
+      if (pc.iceGatheringState === 'complete') return ok();
+      const t = setTimeout(ok, 3000);
+      pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); ok(); } });
+    });
+  },
+  async anbieten() {                                       // Gastgeber (hat das Spiel gestartet)
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] }); this.pc = pc;
+      this.kanal(pc.createDataChannel('spiel'));
+      await pc.setLocalDescription(await pc.createOffer()); await this.iceFertig(pc);
+      const angebot = pc.localDescription.sdp, id = this.id;
+      // Safari verrät die eigene WLAN-Adresse erst nach einer Kamera-Erlaubnis
+      if (!hatKandidaten(angebot)) this.problem = 'antippen zum Erlauben';
+      await Signal.aendern(() => ({ id, angebot, antwort: null, zeit: Date.now() }));
+      clearInterval(this.timer); this.timer = setInterval(() => this.antwortHolen(), 1500);
+    } catch { this.problem = 'nicht möglich'; }
+    verbindungAnzeigen();
+  },
+  async antwortHolen() {
+    if (!this.an || this.verbunden() || Date.now() - this.startZeit > 120000) return clearInterval(this.timer);
+    try {
+      const s = await Signal.lesen();
+      if (s && s.id === this.id && s.antwort && this.pc && !this.pc.remoteDescription) await this.pc.setRemoteDescription({ type: 'answer', sdp: s.antwort });
+    } catch {}
+  },
+  async antworten() {                                      // das andere Gerät
+    if (!this.an || this.verbunden() || Date.now() - this.startZeit > 120000) return clearInterval(this.timer);
+    if (this.beschaeftigt) return;
+    this.beschaeftigt = true;
+    try {
+      const s = await Signal.lesen();
+      if (!s || s.id !== this.id || !s.angebot || s.angebot === this.letztesAngebot) return;
+      this.letztesAngebot = s.angebot;
+      this.problem = hatKandidaten(s.angebot) ? '' : 'anderes Gerät muss ⚡ antippen';
+      try { this.pc && this.pc.close(); } catch {}
+      const pc = new RTCPeerConnection({ iceServers: [] }); this.pc = pc;
+      pc.ondatachannel = e => this.kanal(e.channel);
+      await pc.setRemoteDescription({ type: 'offer', sdp: s.angebot });
+      await pc.setLocalDescription(await pc.createAnswer()); await this.iceFertig(pc);
+      const sdp = pc.localDescription.sdp, id = this.id;
+      await Signal.aendern(x => x && x.id === id ? (x.antwort = sdp, x) : null);
+    } catch {} finally { this.beschaeftigt = false; verbindungAnzeigen(); }
+  },
+};
+
+// Anzeige oben im Spiel: ⚡ direkt oder ☁ über GitHub. Bei Problemen antippen = Kamera kurz erlauben.
+function verbindungAnzeigen() {
+  const el = $('#verbindung'); if (!el) return;
+  const online = spiel && spiel.modus === 'online';
+  el.className = !online ? '' : Direkt.verbunden() ? 'direkt' : Direkt.problem ? 'problem' : '';
+  el.textContent = !online ? '' : Direkt.verbunden() ? '⚡ WLAN-Direkt' : Direkt.problem ? '⚡ ' + Direkt.problem
+    : Direkt.an ? '⚡ verbinde … (sonst ☁ über GitHub)' : '☁ über GitHub';
+}
+$('#verbindung').onclick = async () => {
+  if (!Direkt.problem) return;
+  try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
+  const st = Direkt.st; Direkt.stop(); if (st) Direkt.start(st);
+};
+setInterval(verbindungAnzeigen, 2000);
 
 /* ---------- Einrichten & Einladung ---------- */
 function setupZeigen(meldung = '') {
