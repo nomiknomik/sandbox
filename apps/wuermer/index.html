@@ -175,7 +175,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.19';
+const APP_VERSION = '1.20';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -234,12 +234,11 @@ const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.lufts
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
 function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 + .1 * r), r: Math.min(1.25, 1 + .04 * r) }; }
 
-// Teams – Namen der Würmer: lustige Spitznamen (Armee & Ganoven), passend zum Charakter
-//   Reihenfolge = Charakter: Soldat, Sportler, Kämpfer, Cowboy, Gentleman, Coole
+// Teams (die Namen der Würmer stehen jetzt bei CHARAKTERE)
 const TEAMS = [
-  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Фикса', 'Шустрый', 'Кабан', 'Усатый', 'Профессор', 'Пижон'] },
-  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Прапор', 'Салага', 'Гвоздь', 'Дед', 'Граф', 'Чёткий'] },
-  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Сержант', 'Кузнечик', 'Кирпич', 'Батя', 'Интеллигент', 'Дембель'] },
+  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5' },
+  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff' },
+  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a' },
 ];
 // Teamfarben zum Aussuchen (hell = Schrift auf dunklem Grund, balken = Lebensbalken)
 const FARBEN = [
@@ -422,7 +421,8 @@ function schritt(o, d, klettern = 9) {
 function freiMachen(o) { if (stoesst(o.x, o.y, o.r)) for (let k = 1; k < 30; k++) if (!stoesst(o.x, o.y - k, o.r)) { o.y -= k; break; } }
 
 // ---------- Würmer ----------
-function neuerWurm(team, name) {
+function neuerWurm(team) {
+  const nr = wuermer.length, name = CHARAKTERE[nr % CHARAKTERE.length].name + (nr >= CHARAKTERE.length ? ' II' : '');
   let x, y, ok = false;
   for (let v = 0; v < 400 && !ok; v++) {
     x = Math.round(zr(120, W - 120));
@@ -432,7 +432,7 @@ function neuerWurm(team, name) {
   }
   return { team, name, x, y, vx: 0, vy: 0, r: R, hp: 100, luft: true, tot: false, richtung: zr(0, 1) < .5 ? 1 : -1,
            ziel: -0.6, laufen: 0, schritte: 0, dreh: 0, blinzeln: rnd(1, 4), samen: rnd(0, 9), aua: 0,
-           typ: wuermer.filter(w => w.team === team).length };   // welcher Charakter (Platz im Team)
+           typ: wuermer.length % CHARAKTERE.length };   // welcher Charakter: der Reihe nach, bei mehr als 12 von vorn
 }
 
 function aktiver() { return spiel && spiel.wurm; }
@@ -651,7 +651,7 @@ function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = 
             rueckzug: 0, warte: 0, wind: 0, waffe: 'bazooka', erster: true, bild: 0, ein: {}, eingaben: [], log: [],
             krater: [], quelle: 'live', zuege: [], ausstehend: [],
             teams: TEAMS.slice(0, n).map(() => ({ zeiger: -1, munition: Object.fromEntries(Object.entries(WAFFEN).map(([k, v]) => [k, v.start ?? -1])) })) };
-  for (let i = 0; i < Math.max(...spiel.anzahl); i++) for (let t = 0; t < n; t++) if (i < spiel.anzahl[t]) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+  for (let i = 0; i < Math.max(...spiel.anzahl); i++) for (let t = 0; t < n; t++) if (i < spiel.anzahl[t]) wuermer.push(neuerWurm(t));
   // Würmer erst einmal fallen lassen
   for (let i = 0; i < 240; i++) for (const w of wuermer) updateWurm(w, SCHRITT);
   for (const w of wuermer) if (!w.tot) w.hp = 100;      // Fallschaden beim Start zählt nicht
@@ -1356,20 +1356,33 @@ function welle(y0, farbe, amp, phase, links, rechts, unten) {
   ctx.lineTo(rechts, unten); ctx.fill();
 }
 
-// Jeder Wurm hat einen eigenen Charakter: Hut, Gesicht und Sprüche (Nr. = Platz im Team)
+// Jeder Wurm hat einen eigenen Charakter: Name, Hut, Gesicht und Sprüche (wie die 12 Bilder in figuren/)
+//   hut = was er auf dem Kopf hat, extra = Besonderheit im Gesicht
 const CHARAKTERE = [
-  { typ: 'Soldat',    hut: 'helm',     extra: 'goldzahn',
+  { name: 'Фикса',     typ: 'Soldat',     hut: 'helm',       extra: 'goldzahn',
     dran: ['Zum Angriff!', 'Ich bin bereit!', 'Jawoll!'], aua: ['Autsch!', 'Das gibt Rache!', 'Nur ein Kratzer!'], treffer: ['Volltreffer!', 'Hab dich!', 'Mission erfüllt!'] },
-  { typ: 'Sportler',  hut: 'kappe',    extra: 'luecke',
-    dran: ['Los geht\'s!', 'Ich bin fit!', 'Tor-Chance!'], aua: ['Foul!', 'Schiri!', 'Aua, mein Knie!'], treffer: ['Toooor!', 'Treffer versenkt!', 'Ja, Mann!'] },
-  { typ: 'Kämpfer',   hut: 'stirnband', extra: 'brauen',
+  { name: 'Кабан',     typ: 'Rambo',      hut: 'kopftuch',   extra: 'brille',
     dran: ['Jetzt wird\'s ernst!', 'Keine Gnade!', 'Ich krieg dich!'], aua: ['Grrr!', 'Das tat nicht weh!', 'Na warte!'], treffer: ['Bumm!', 'Wer ist der Boss?', 'Zu einfach!'] },
-  { typ: 'Cowboy',    hut: 'cowboy',   extra: 'bart',
+  { name: 'Хиппарь',   typ: 'Hippie',     hut: 'peacehelm',  extra: 'haare',
+    dran: ['Peace, Mann!', 'Make love, not Krieg … ach egal!', 'Alles easy!'], aua: ['Voll unfriedlich!', 'Bad Vibes!', 'Ey, Mann!'], treffer: ['Sorry, Mann!', 'Peace!', 'Upsi!'] },
+  { name: 'Филин',     typ: 'Nachtsicht', hut: 'nachtsicht', extra: '',
+    dran: ['Ich seh dich …', 'Ziel erfasst.', 'Im Dunkeln bin ich König!'], aua: ['Wer hat das Licht an?', 'Blind!', 'Autsch!'], treffer: ['Ziel getroffen.', 'Gesehen und erwischt!', 'Huhu!'] },
+  { name: 'Шериф',     typ: 'Cowboy',     hut: 'cowboy',     extra: 'halm',
     dran: ['Yeehaw!', 'Zeit für ein Duell!', 'Howdy!'], aua: ['Verflixt!', 'Mein Hut!', 'Uiuiui!'], treffer: ['Yippie!', 'Schneller als mein Schatten!', 'Erwischt, Partner!'] },
-  { typ: 'Gentleman', hut: 'zylinder', extra: 'monokel',
-    dran: ['Wenn ich bitten darf …', 'Sehr wohl!', 'Wie vornehm!'], aua: ['Wie unhöflich!', 'Mein Anzug!', 'Ungeheuerlich!'], treffer: ['Formidabel!', 'Ganz vorzüglich!', 'Pardon!'] },
-  { typ: 'Coole',     hut: 'irokese',  extra: 'brille',
-    dran: ['Easy.', 'Chill mal.', 'Schau zu und lerne!'], aua: ['Nicht cool!', 'Hey, die Frisur!', 'Uff!'], treffer: ['Läuft bei mir!', 'Cool, oder?', 'Zu cool für dich!'] },
+  { name: 'Лепила',    typ: 'Sanitäter',  hut: 'kreuzhelm',  extra: '',
+    dran: ['Wo tut\'s weh?', 'Nur ein kleiner Piks!', 'Der Doktor ist da!'], aua: ['Ich brauch einen Arzt!', 'Ich bin doch der Arzt!', 'Aua, Pflaster!'], treffer: ['Das braucht einen Verband!', 'Gute Besserung!', 'Spritze rein!'] },
+  { name: 'Варяг',     typ: 'Wikinger',   hut: 'wikinger',   extra: 'zoepfe',
+    dran: ['Für Walhalla!', 'Uaaargh!', 'Plündern!'], aua: ['Bei Odin!', 'Mein Helm!', 'Uff!'], treffer: ['Ha, Wikingerkraft!', 'Sieg!', 'Skål!'] },
+  { name: 'Боцман',    typ: 'Kapitän',    hut: 'kapitaen',   extra: 'zigarre',
+    dran: ['Leinen los!', 'Volle Kraft voraus!', 'Ahoi!'], aua: ['Mann über Bord!', 'Klabautermann!', 'Wir sinken!'], treffer: ['Versenkt!', 'Treffer mittschiffs!', 'Ahoi, erwischt!'] },
+  { name: 'Дембель',   typ: 'Kommando',   hut: 'barett',     extra: 'brille',
+    dran: ['Easy.', 'Schau zu und lerne!', 'Kommando los!'], aua: ['Nicht cool!', 'Uff!', 'Das gibt Ärger!'], treffer: ['Läuft bei mir!', 'Cool, oder?', 'Auftrag erledigt!'] },
+  { name: 'Слоник',    typ: 'Gasmaske',   hut: 'gasmaske',   extra: '',
+    dran: ['Mmpf mmpf!', 'Hmmpf!', 'Mmmpf … los!'], aua: ['MMPF!', 'Hmpf …', 'Mmmmh!'], treffer: ['Mmpf! Hehe!', 'Hmpf-hmpf!', 'MMPF-JA!'] },
+  { name: 'Зубастый',  typ: 'Hai',        hut: 'hai',        extra: '',
+    dran: ['Happs!', 'Ich hab Hunger!', 'Da-dam … da-dam …'], aua: ['Ich bin nur ein Fisch!', 'Blubb!', 'Aua, meine Flosse!'], treffer: ['Happs!', 'Lecker!', 'Gefressen!'] },
+  { name: 'Сибиряк',   typ: 'Polar',      hut: 'uschanka',   extra: '',
+    dran: ['Brrr, los geht\'s!', 'Schneeballschlacht!', 'Mir ist nicht kalt!'], aua: ['Eiskalt erwischt!', 'Brrr!', 'Meine Ohren!'], treffer: ['Eiskalt!', 'Schnee von gestern!', 'Ha, gefroren!'] },
 ];
 const charakter = w => CHARAKTERE[(w.typ || 0) % CHARAKTERE.length];
 // Sprechblase über dem Wurm (nur fürs Aussehen)
@@ -1397,77 +1410,132 @@ function zeichneWurm(w) {
   ctx.strokeStyle = HELL; ctx.lineWidth = 2.5; ctx.save(); ctx.translate(f * 2, -1); linie(); ctx.stroke(); ctx.restore();
   ctx.strokeStyle = 'rgba(120,40,40,.35)'; ctx.lineWidth = 1.2;   // Ringe
   for (const [x, y] of [[-6 * f, 7.5], [-2.5 * f, 6.5]]) { ctx.beginPath(); ctx.moveTo(x - 1, y - 4); ctx.lineTo(x + 1, y + 4); ctx.stroke(); }
+  // Halstuch in Teamfarbe – daran erkennt man das Team
+  ctx.fillStyle = team.farbe; ctx.strokeStyle = RAND; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(2.2 * f, 0, 6.6, 2.6, 0, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2 * f, 0); ctx.lineTo(-6.5 * f, 4.5 + Math.sin(zeit * 6 + w.samen)); ctx.lineTo(-3 * f, 2.5); ctx.closePath(); ctx.fill(); ctx.stroke();
 
   // Kopf – ab hier zeichnen wir so, als ob der Wurm nach rechts schaut (scale dreht es um)
   ctx.save(); ctx.translate(kx, ky); ctx.scale(f, 1);
+  const hut = ch.hut, ex = ch.extra;
+  if (hut === 'hai') {                                // Hai-Kostüm: Kapuze hinter dem Kopf
+    ctx.fillStyle = '#3d7fc4'; ctx.strokeStyle = RAND; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(0, -1, 12, 12.5, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6, -11); ctx.lineTo(-4, -19); ctx.lineTo(2, -12); ctx.closePath(); ctx.fill(); ctx.stroke();   // Flosse
+  }
+  if (ex === 'zoepfe' || ex === 'haare') {            // Haare hinter dem Kopf
+    ctx.fillStyle = '#e8c35a'; ctx.strokeStyle = '#9a7420'; ctx.lineWidth = .8;
+    if (ex === 'zoepfe') for (const x of [-7, 8]) { ctx.beginPath(); ctx.ellipse(x, 4, 2, 6, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(-8, -5); ctx.quadraticCurveTo(-11, 4, -8, 9); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  }
   ctx.fillStyle = HAUT; ctx.strokeStyle = RAND; ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.ellipse(1, 0, 8.5, 9, 0, 0, 7); ctx.fill(); ctx.stroke();
   ctx.fillStyle = 'rgba(255,110,120,.4)'; ctx.beginPath(); ctx.arc(7.5, 2, 1.8, 0, 7); ctx.fill();   // Bäckchen
   // Großes Grinsen mit Zähnen (bei wenig Leben: ängstlicher Mund)
-  if (w.hp < 30) {
+  if (hut === 'gasmaske') { /* Mund ist unter der Maske */ }
+  else if (w.hp < 30) {
     ctx.fillStyle = '#6b1f1f'; ctx.beginPath(); ctx.ellipse(4.5, 4.5, 2, 2.6, 0, 0, 7); ctx.fill();
   } else {
     ctx.save(); ctx.beginPath(); ctx.moveTo(-.5, 2.2); ctx.lineTo(8.8, 1.2); ctx.quadraticCurveTo(5, 9.5, -.5, 2.2); ctx.closePath();
     ctx.fillStyle = '#6b1f1f'; ctx.fill(); ctx.clip();
     ctx.fillStyle = '#fff'; ctx.fillRect(-1, 1, 11, 2.6);
     ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = .5; ctx.beginPath(); for (const x of [2, 4.3, 6.6]) { ctx.moveTo(x, 1); ctx.lineTo(x, 3.6); } ctx.stroke();
-    if (ch.extra === 'goldzahn') { ctx.fillStyle = '#f2c230'; ctx.fillRect(4.4, 1.2, 2.1, 2.4); }
-    if (ch.extra === 'luecke') { ctx.fillStyle = '#6b1f1f'; ctx.fillRect(4.4, 1, 1.9, 2.8); }
+    if (ex === 'goldzahn') { ctx.fillStyle = '#f2c230'; ctx.fillRect(4.4, 1.2, 2.1, 2.4); }
     ctx.restore();
     ctx.strokeStyle = RAND; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-.5, 2.2); ctx.lineTo(8.8, 1.2); ctx.quadraticCurveTo(5, 9.5, -.5, 2.2); ctx.stroke();
   }
-  if (ch.extra === 'bart') {                          // Schnurrbart
-    ctx.fillStyle = '#6b3d1c'; ctx.beginPath(); ctx.ellipse(2.8, .6, 3, 1.3, -.15, 0, 7); ctx.ellipse(7, .2, 3, 1.3, .15, 0, 7); ctx.fill();
+  if (ex === 'zigarre') {                             // Zigarre im Mundwinkel
+    ctx.save(); ctx.translate(8, 2.5); ctx.rotate(.25);
+    ctx.fillStyle = '#7a4a22'; ctx.fillRect(0, -1, 6, 2); ctx.fillStyle = Math.random() < .5 ? '#ff8a2a' : '#ffd84d'; ctx.fillRect(6, -1, 1.2, 2); ctx.restore();
   }
+  if (ex === 'halm') { ctx.strokeStyle = '#e6c25a'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(7.5, 2.5); ctx.lineTo(14, 5.5); ctx.stroke(); }
   // Glupschaugen
   const zu = w.blinzeln < 0 ? .15 : 1, bx = Math.cos(w.ziel) * 1.1 * f, by = Math.sin(w.ziel) * 1.1;
   const augen = [[1.2, -4.2], [5.8, -4]];
   for (const [ax, ay] of augen) {
     ctx.fillStyle = '#fff'; ctx.strokeStyle = RAND; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.ellipse(ax, ay, 3, 3.9, 0, 0, 7); ctx.fill(); ctx.stroke();
-    if (ch.extra !== 'brille') {
-      if (zu > .5) { ctx.fillStyle = '#1b1b2b'; ctx.beginPath(); ctx.arc(ax + bx + .4, ay + .4 + by, 1.3, 0, 7); ctx.fill(); }
-      // Halb geschlossene Lider – wie bei frechen Comic-Würmern
-      ctx.fillStyle = HAUT; ctx.beginPath(); ctx.ellipse(ax, ay, 3.1, 4, 0, Math.PI, 0); ctx.lineTo(ax + 3.1, ay - 4 + 4.5 * (1 - zu * .7)); ctx.lineTo(ax - 3.1, ay - 4 + 4.5 * (1 - zu * .7)); ctx.fill();
-      ctx.strokeStyle = RAND; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(ax - 3, ay - 4 + 4.5 * (1 - zu * .7)); ctx.lineTo(ax + 3, ay - 4 + 4.5 * (1 - zu * .7)); ctx.stroke();
-    }
+    if (zu > .5) { ctx.fillStyle = '#1b1b2b'; ctx.beginPath(); ctx.arc(ax + bx + .4, ay + .4 + by, 1.3, 0, 7); ctx.fill(); }
+    // Halb geschlossene Lider – wie bei frechen Comic-Würmern
+    const lid = ay - 4 + 4.5 * (1 - zu * .7);
+    ctx.fillStyle = HAUT; ctx.beginPath(); ctx.ellipse(ax, ay, 3.1, 4, 0, Math.PI, 0); ctx.lineTo(ax + 3.1, lid); ctx.lineTo(ax - 3.1, lid); ctx.fill();
+    ctx.strokeStyle = RAND; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(ax - 3, lid); ctx.lineTo(ax + 3, lid); ctx.stroke();
   }
-  if (ch.extra === 'brauen') { ctx.strokeStyle = '#3a1a10'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-1.8, -8.5); ctx.lineTo(3.5, -7.2); ctx.moveTo(3.4, -7.4); ctx.lineTo(8.6, -8.6); ctx.stroke(); }
-  if (ch.extra === 'monokel') { ctx.strokeStyle = '#d9b23a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5.8, -4, 3.6, 0, 7); ctx.moveTo(5.8, -.4); ctx.quadraticCurveTo(6.5, 4, 4, 7); ctx.stroke(); }
-  if (ch.extra === 'brille') {                        // Sonnenbrille
+  if (ex === 'brille') {                              // Sonnenbrille
     ctx.fillStyle = '#16161c'; for (const [ax, ay] of augen) { ctx.beginPath(); ctx.ellipse(ax, ay - .2, 3.3, 2.6, 0, 0, 7); ctx.fill(); }
     ctx.strokeStyle = '#16161c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2.2, -4.6); ctx.lineTo(8.8, -4.4); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.55)'; for (const [ax, ay] of augen) { ctx.beginPath(); ctx.ellipse(ax - 1, ay - 1.2, 1, .6, -.4, 0, 7); ctx.fill(); }
   }
-  // Hut in Teamfarbe
-  const tf = team.farbe;
-  ctx.strokeStyle = RAND; ctx.lineWidth = 1.2;
-  if (ch.hut === 'helm') {
-    ctx.fillStyle = tf; ctx.beginPath(); ctx.ellipse(1.5, -6.5, 9.2, 7.5, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(1.5, -6.3, 10.8, 1.8, 0, 0, 7); ctx.fill(); ctx.stroke();
+  // Hüte
+  const helm = (farbe, dunkel) => {
+    ctx.fillStyle = farbe; ctx.strokeStyle = RAND; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(1.5, -6.5, 9.2, 7.5, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = dunkel; ctx.beginPath(); ctx.ellipse(1.5, -6.3, 10.8, 1.8, 0, 0, 7); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.ellipse(-1.5, -10.5, 3, 1.8, -.4, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4.5, -9.5, 1.8, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-6.5, -6); ctx.quadraticCurveTo(-5, 3, 1, 8); ctx.stroke();   // Kinnriemen
-  } else if (ch.hut === 'kappe') {
-    ctx.fillStyle = tf; ctx.beginPath(); ctx.ellipse(.5, -6.2, 8.4, 6.8, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(6, -7); ctx.quadraticCurveTo(13, -7.5, 15, -5.2); ctx.lineTo(6.5, -5.4); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(.5, -13, 1.2, 0, 7); ctx.fill();
-  } else if (ch.hut === 'stirnband') {
-    ctx.save(); ctx.beginPath(); ctx.ellipse(1, 0, 8.5, 9, 0, 0, 7); ctx.clip(); ctx.fillStyle = tf; ctx.fillRect(-9, -10.5, 20, 3.4); ctx.restore();
+  };
+  const riemen = () => { ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-6.5, -6); ctx.quadraticCurveTo(-5, 3, 1, 8); ctx.stroke(); };
+  ctx.strokeStyle = RAND; ctx.lineWidth = 1.2;
+  if (hut === 'helm') {
+    helm('#5f7a34', '#465c24'); riemen();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4.5, -9.5, 1.9, 0, 7); ctx.fill(); ctx.fillStyle = '#d33'; ctx.beginPath(); ctx.arc(4.5, -9.5, 1, 0, 7); ctx.fill();
+  } else if (hut === 'peacehelm') {
+    helm('#3b62b8', '#2c4a8c');
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = .7; ctx.beginPath(); ctx.arc(3.5, -10, 2.2, 0, 7);
+    ctx.moveTo(3.5, -12.2); ctx.lineTo(3.5, -7.8); ctx.moveTo(3.5, -10); ctx.lineTo(2, -8.3); ctx.moveTo(3.5, -10); ctx.lineTo(5, -8.3); ctx.stroke();
+  } else if (hut === 'kreuzhelm') {
+    helm('#f2f2f2', '#c9c9c9'); riemen();
+    ctx.fillStyle = '#e23'; ctx.fillRect(3, -12.5, 2.2, 6); ctx.fillRect(1.1, -10.6, 6, 2.2);
+  } else if (hut === 'nachtsicht') {
+    helm('#3f4d2c', '#2c3620'); riemen();
+    const glimm = .7 + Math.sin(zeit * 4) * .2;
+    for (const [ax, ay] of augen) {                   // grün leuchtende Nachtsichtbrille
+      ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(ax, ay - .3, 3.4, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(110,255,90,${glimm})`; ctx.beginPath(); ctx.arc(ax, ay - .3, 2.4, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(ax - .8, ay - 1.1, .7, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = '#222'; ctx.fillRect(2.4, -7, 2.2, 3);
+  } else if (hut === 'kopftuch') {                    // rotes Rambo-Kopftuch mit flatternden Enden
+    ctx.save(); ctx.beginPath(); ctx.ellipse(1, 0, 8.5, 9, 0, 0, 7); ctx.clip(); ctx.fillStyle = '#d8262b'; ctx.fillRect(-9, -11, 20, 4.2); ctx.restore();
     const fl = Math.sin(zeit * 8 + w.samen) * 1.5;
-    ctx.fillStyle = tf; ctx.beginPath(); ctx.moveTo(-6.5, -9.5); ctx.lineTo(-14, -12 + fl); ctx.lineTo(-13, -6.5 + fl); ctx.closePath(); ctx.fill();
-  } else if (ch.hut === 'cowboy') {
+    ctx.fillStyle = '#d8262b'; ctx.beginPath(); ctx.moveTo(-6.5, -9.5); ctx.lineTo(-15, -12 + fl); ctx.lineTo(-13, -6 + fl); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-6.5, -8.5); ctx.lineTo(-13, -4 + fl); ctx.lineTo(-10, -3 + fl); ctx.closePath(); ctx.fill();
+  } else if (hut === 'cowboy') {
     ctx.fillStyle = '#9a6633'; ctx.beginPath(); ctx.moveTo(-4.5, -7.5); ctx.lineTo(-3.5, -15); ctx.quadraticCurveTo(1.5, -12.5, 6.5, -15); ctx.lineTo(7.5, -7.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = tf; ctx.fillRect(-4.3, -10, 11.6, 2);
+    ctx.fillStyle = '#5a3818'; ctx.fillRect(-4.3, -10, 11.6, 2);
+    ctx.fillStyle = '#f2c230'; ctx.font = '6px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', 1.5, -12.3);
     ctx.fillStyle = '#9a6633'; ctx.beginPath(); ctx.moveTo(-11, -9.5); ctx.quadraticCurveTo(1.5, -5, 14, -9.5); ctx.quadraticCurveTo(1.5, -6.8, -11, -9.5); ctx.fill(); ctx.stroke();
-  } else if (ch.hut === 'zylinder') {
-    ctx.fillStyle = '#1d1d24'; ctx.fillRect(-3, -20, 9.5, 12); ctx.strokeRect(-3, -20, 9.5, 12);
-    ctx.fillStyle = tf; ctx.fillRect(-3, -11, 9.5, 2.2);
-    ctx.fillStyle = '#1d1d24'; ctx.beginPath(); ctx.ellipse(1.75, -8, 8.5, 1.7, 0, 0, 7); ctx.fill(); ctx.stroke();
-  } else if (ch.hut === 'irokese') {
-    ctx.fillStyle = tf; ctx.beginPath(); ctx.moveTo(-6, -5);
-    for (let i = 0; i < 5; i++) { const x = -5 + i * 2.6; ctx.lineTo(x + 1, -15 - (i % 2) * 2 + Math.sin(zeit * 5 + i) * .4); ctx.lineTo(x + 2.4, -8); }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if (hut === 'wikinger') {
+    ctx.fillStyle = '#efe4c8';                        // Hörner
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(1.5 + s * 7, -9); ctx.quadraticCurveTo(1.5 + s * 14, -11, 1.5 + s * 12, -19); ctx.quadraticCurveTo(1.5 + s * 10, -13, 1.5 + s * 4, -11.5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    helm('#7d8796', '#5c6573');
+    ctx.fillStyle = '#c9d0da'; for (const x of [-4, 0, 4, 8]) { ctx.beginPath(); ctx.arc(x, -7.2, .7, 0, 7); ctx.fill(); }
+  } else if (hut === 'kapitaen') {
+    ctx.fillStyle = '#1f2f6b'; ctx.beginPath(); ctx.moveTo(-7, -8); ctx.quadraticCurveTo(-8, -16, 2, -16); ctx.quadraticCurveTo(12, -16, 11, -8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e0b52a'; ctx.fillRect(-7, -9.8, 18, 1.8);
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(4, -8.2); ctx.quadraticCurveTo(11, -8.5, 13, -6); ctx.lineTo(4, -7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e0b52a'; ctx.font = '5px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⚓', 2.5, -12.5);
+  } else if (hut === 'barett') {
+    ctx.fillStyle = '#3e6b2e'; ctx.beginPath(); ctx.ellipse(-.5, -9, 9.5, 4.2, -.2, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e0b52a'; ctx.beginPath(); ctx.arc(5.5, -9.5, 1.3, 0, 7); ctx.fill();
+  } else if (hut === 'gasmaske') {
+    helm('#55663a', '#3f4d2a'); riemen();
+    ctx.fillStyle = '#3a3a3e'; ctx.beginPath(); ctx.ellipse(4, 1, 7, 6.5, 0, 0, 7); ctx.fill(); ctx.stroke();   // Maske
+    for (const [ax, ay] of augen) { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(ax, ay, 3.4, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(200,230,255,.35)'; ctx.beginPath(); ctx.arc(ax, ay, 2.6, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ax, ay, 1.9, 0, 7); ctx.fill(); ctx.fillStyle = '#1b1b2b'; ctx.beginPath(); ctx.arc(ax + bx * .6, ay + by * .6, 1, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#6e6e74'; ctx.beginPath(); ctx.arc(5, 5.5, 3, 0, 7); ctx.fill(); ctx.stroke();   // Filter
+    ctx.strokeStyle = '#333'; ctx.lineWidth = .5; ctx.beginPath(); for (const x of [3.8, 5, 6.2]) { ctx.moveTo(x, 3.5); ctx.lineTo(x, 7.5); } ctx.stroke();
+  } else if (hut === 'hai') {                         // Zähne am Kapuzenrand
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#999'; ctx.lineWidth = .5;
+    for (let i = 0; i < 6; i++) { const a = Math.PI * (1.1 + i * .16), x = 1 + Math.cos(a) * 9.5, y = Math.sin(a) * 10;
+      ctx.beginPath(); ctx.moveTo(x - 1.4, y); ctx.lineTo(x + 1.4, y); ctx.lineTo(x * .85, y * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-6, -12, 1.4, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-6, -12, .7, 0, 7); ctx.fill();   // Hai-Auge
+  } else if (hut === 'uschanka') {
+    ctx.fillStyle = '#f1ead8'; ctx.strokeStyle = '#a89c80'; ctx.lineWidth = .9;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(1 + s * 8.5, -1, 3, 6, 0, 0, 7); ctx.fill(); ctx.stroke(); }   // Ohrenklappen
+    ctx.fillStyle = '#c0392b'; ctx.strokeStyle = RAND; ctx.beginPath(); ctx.ellipse(1.5, -9, 9, 6, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f1ead8'; ctx.strokeStyle = '#a89c80'; ctx.beginPath(); ctx.ellipse(1.5, -8.2, 10.5, 2.8, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#444'; ctx.fillRect(-2.5, -11.5, 9, 2.2);                 // Schneebrille auf der Stirn
+    ctx.fillStyle = '#e8553a'; for (const x of [-.5, 4.5]) { ctx.beginPath(); ctx.arc(x, -12.8, 2, 0, 7); ctx.fill(); }
   }
   ctx.restore();
   ctx.restore();
@@ -2517,7 +2585,7 @@ function einladungAusLink() {
 teamsSetzen(speicher.lies('wu-farben'));              // zuletzt gewählte Farben
 // Hintergrund-Welt fürs Menü
 baueLandschaft((Math.random() * 2 ** 31) >>> 0);
-for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
+for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t));
 kam.x = W / 2; kam.y = H * .55;
 if (!einladungAusLink()) startMenue();
 requestAnimationFrame(schleife);
