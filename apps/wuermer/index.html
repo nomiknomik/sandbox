@@ -175,7 +175,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -225,7 +225,7 @@ const WAFFEN = {
   dynamit:    { icon: '🧨', name: 'Dynamit',      sterne: 5, radius: 80, schaden: 75, ab: 5, zuender: 5, start: 1, info: 'Hinlegen – und schnell weglaufen!' },
   graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
   erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
-  trampolin:  { icon: '🤸', name: 'Trampolin',    sterne: 0, ab: 1, info: 'Zielen wie mit der Bazooka – du fliegst selbst! Keine Landeschmerzen' },
+  trampolin:  { icon: '🤸', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
 const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag };
@@ -450,10 +450,19 @@ function updateWurm(w, dt) {
     freiMachen(w);
     w.vy += G * dt;
     w.dreh += w.vx * dt * 0.05;
+    w.flugZeit = (w.flugZeit || 0) + dt;
+    if (w.weich) for (const o of wuermer) {                // Trampolin-Flug: andere Würmer umwerfen
+      if (o === w || o.tot || (w.umgeworfen || []).includes(o) || Math.hypot(o.x - w.x, o.y - w.y) > R * 2 + 2) continue;
+      (w.umgeworfen = w.umgeworfen || []).push(o);
+      o.vx += w.vx * .7; o.vy = Math.min(o.vy, -220) + w.vy * .3; o.luft = true; o.y -= 2;
+      schaden(o, WAFFEN.trampolin.schaden); w.vx *= .5;
+      teilchen.push({ art: 'ring', x: o.x, y: o.y, r: 4, gross: 24, t: 0, max: .3 }); ton.klack();
+    }
     bewege(w, dt, (o, ax, ay) => {
       const wucht = abprallen(o, ax, ay, 0.25, 0.65);
       if (wucht > 480 && !o.weich) schaden(o, Math.round((wucht - 480) / 9));   // weich = Trampolin-Flug, tut nicht weh
-      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.weich = false; o.quetsch = Math.min(1, .3 + wucht / 300); }
+      if (o.weich && o.flugZeit < .15) return;           // Trampolin: kurz nach dem Abheben noch nicht landen
+      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.weich = false; o.umgeworfen = null; o.quetsch = Math.min(1, .3 + wucht / 300); }
     });
   } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
   if (w.y > WASSER + 8) ertrinken(w);
@@ -524,7 +533,7 @@ function feuern(staerke, zielX, zielY) {
   if (art === 'graben') { spiel.graben = { t: 1.6, winkel: w.ziel, takt: 0 }; return; }   // Zug geht danach weiter
   if (art === 'trampolin') {                          // Trampolin: Der Wurm fliegt selbst wie eine Rakete
     const v = staerke * MAX_V * .8;
-    w.vx = Math.cos(w.ziel) * v; w.vy = Math.sin(w.ziel) * v; w.luft = true; w.weich = true; w.doppel = false; w.y -= 2;
+    w.vx = Math.cos(w.ziel) * v; w.vy = Math.sin(w.ziel) * v; w.luft = true; w.weich = true; w.flugZeit = 0; w.doppel = false; w.y -= 2;
     teilchen.push({ art: 'ring', x: w.x, y: w.y + 8, r: 4, gross: 26, t: 0, max: .35 });
     ton.boing(); zeigeWaffen(); return;               // Zug geht danach weiter
   }
@@ -1537,10 +1546,12 @@ function zeichneZielhilfe(w) {
   if (staerke <= 0) return;
   // Flugbahn-Vorschau (ohne Wind)
   if (spiel.waffe !== 'schaf') {
-    let x = cx, y = cy, vx = Math.cos(w.ziel) * staerke * MAX_V, vy = Math.sin(w.ziel) * staerke * MAX_V;
-    for (let i = 0; i < 26; i++) {
+    const v = staerke * MAX_V * (spiel.waffe === 'trampolin' ? .8 : 1);     // Trampolin fliegt etwas langsamer
+    let x = cx, y = cy, vx = Math.cos(w.ziel) * v, vy = Math.sin(w.ziel) * v;
+    const PUNKTE = 45;                                   // mehr Punkte = längere Vorschau
+    for (let i = 0; i < PUNKTE; i++) {
       for (let j = 0; j < 2; j++) { vy += G / 60; x += vx / 60; y += vy / 60; }
-      ctx.fillStyle = `rgba(255,255,255,${.9 - i / 30})`; ctx.beginPath(); ctx.arc(x, y, 3 - i / 13, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(255,255,255,${.9 - i / PUNKTE * .6})`; ctx.beginPath(); ctx.arc(x, y, 3 - i / PUNKTE * 1.5, 0, 7); ctx.fill();
     }
   }
   // Kraft-Balken als bunter Fächer
