@@ -147,7 +147,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.7';
+const APP_VERSION = '0.8';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -587,7 +587,7 @@ function naechsterZug() {
   do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
   spiel.wurm = liste[team.zeiger];
   Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0,
-                        versuch: Math.random().toString(36).slice(2, 8), teilBild: 0, endeWartet: false, schuss: 0, graben: null });
+                        versuch: Math.random().toString(36).slice(2, 8), zugBeginn: performance.now(), fortschritt: 0, teilBild: 0, endeWartet: false, schuss: 0, graben: null });
   spiel.toteStart = toteGegner();
   spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
   // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
@@ -657,6 +657,7 @@ function teilSenden() {
 }
 // In die Warteschlange zum Hochladen – ein neueres Stück ersetzt ein älteres vom selben Zug
 function zugEinreihen(rec) {
+  if (!spiel.ausstehend.length) spiel.sendeSeit = performance.now();
   const i = spiel.ausstehend.findIndex(r => r.n === rec.n);
   if (i >= 0) spiel.ausstehend[i] = rec; else spiel.ausstehend.push(rec);
   Online.senden();
@@ -1493,11 +1494,13 @@ function hud() {
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
   if ($('runde').innerHTML !== rt) $('runde').innerHTML = rt;
   let st = '';
+  // Verbindungs-Hinweise nur, wenn etwas hakt
   if (spiel.modus === 'online' && !spiel.fertig) {
-    if (spiel.quelle === 'fern') st = '⏳ ' + TEAMS[spiel.dran].name + (spiel.art[spiel.dran] === 'c' ? ' (Computer) wird vom Gastgeber gerechnet …' : ' spielt auf dem anderen Gerät …');
-    else if (spiel.quelle === 'wiederholung') st = (spiel.rec && spiel.rec.s ? '📺 Zug von ' : '📡 Live: ') + TEAMS[spiel.dran].name;
-    if (spiel.ausstehend.length) st = (st ? st + '   ' : '') + '☁ sende …';
-    if (Direkt.an) st = (st ? st + '   ' : '') + (Direkt.alleVerbunden() ? '⚡ direkt' : Direkt.problem ? '⚡ ' + Direkt.problem : '⚡ verbinde …');
+    const jetzt = performance.now();
+    if (spiel.quelle === 'fern' && jetzt - spiel.zugBeginn > 15000) st = '⏳ Warte auf ' + TEAMS[spiel.dran].name + ' …';
+    if (spiel.quelle === 'wiederholung' && jetzt - (spiel.fortschritt || jetzt) > 6000) st = '⏳ Verbindung ist langsam …';
+    if (spiel.ausstehend.length && jetzt - spiel.sendeSeit > 8000) st = '☁ Senden dauert …';
+    if (Direkt.an && Direkt.problem && !Direkt.alleVerbunden()) st = '⚡ ' + Direkt.problem;
     if (Online.fehlerText && !Direkt.alleVerbunden()) st = '⚠ ' + Online.fehlerText;
   }
   if ($('status').textContent !== st) $('status').textContent = st;
@@ -1523,7 +1526,7 @@ function schleife(jetzt) {
           const mal = spiel.zuege.length > spiel.zug + 1 ? 6 : spiel.rec.s ? (spiel.phase === 'zielen' ? 2 : 1) : vorne > 200 ? 2 : 1;
           for (let i = 0; i < mal && spiel.quelle === 'wiederholung' && !spiel.fertig && !spiel.endeWartet; i++) {
             if (!spiel.rec.s && spiel.bild >= spiel.rec.bis) break;    // auf das nächste Stück warten
-            simSchritt();
+            simSchritt(); spiel.fortschritt = performance.now();
           }
         }
       }
@@ -1994,7 +1997,7 @@ const Direkt = {
       const id = this.id;
       await Signal.aendern(() => ({ id, angebote, antworten: {}, zeit: Date.now() }));
       clearInterval(this.timer); this.timer = setInterval(() => this.antwortenHolen(), 1500);
-    } catch (e) { this.problem = 'nicht möglich'; }
+    } catch (e) { this.problem = ''; }                      // klappt nicht → still über GitHub weiter
   },
   async antwortenHolen() {
     if (!this.an || this.alleVerbunden() || Date.now() - this.startZeit > 120000) return clearInterval(this.timer);
