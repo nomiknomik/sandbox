@@ -186,7 +186,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.28';
+const APP_VERSION = '1.29';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1522,7 +1522,7 @@ function wurmIcon(typ, team, klasse = 'wurmicon') {
   if (team !== undefined) { const g = wurmBild({ typ, team }, 'normal'); if (g) try { src = g.bild.toDataURL(); } catch {} }
   return `<img class="${klasse}" src="${src}" alt="">`;
 }
-// Sprüche (russisch) – stehen in der Sprechblase und werden vorgelesen
+// Sprüche (russisch) – stehen in der Sprechblase (ohne Ton)
 const SPRUECHE = {
   dran:     ['Ну, погнали!', 'Моя очередь!', 'Сейчас всё будет!', 'Держитесь, ребята!'],
   lovi:     ['Лови!', 'Получай!', 'Держи подарочек!', 'На, держи!', 'Привет тебе!'],
@@ -1534,48 +1534,6 @@ const SPRUECHE = {
   blubb:    ['Буль-буль…', 'Я не умею плавать!'],
   heil:     ['Ой, хорошо-то как!', 'Спасибо, доктор!', 'Как новенький!'],
 };
-// Würmersprache („Lepet“): Die Sprechblase zeigt den Satz, zu hören ist lustiges Gebrabbel –
-//   jede Silbe (Vokal) wird ein kurzer Ton. Jeder Charakter hat seine eigene Stimmlage.
-//   [Grundton in Hz, Tempo (Sekunden pro Silbe), dumpf (Gasmaske)]
-const STIMMEN = [[170, .075], [115, .085], [240, .07], [150, .075], [135, .085], [215, .07],
-                 [85, .1], [105, .09], [150, .075], [125, .08, true], [430, .055], [190, .075]];
-// Vokale → Klangfarbe (zwei Resonanzen wie im Mund)
-const VOKALE = { а: [800, 1250], я: [800, 1250], о: [500, 850], ё: [500, 850], у: [330, 700], ю: [330, 700],
-                 ы: [350, 1500], э: [550, 1750], е: [450, 2000], и: [300, 2250],
-                 a: [800, 1250], o: [500, 850], u: [330, 700], e: [450, 2000], i: [300, 2250] };
-const stimme = {
-  bis: 0,
-  sprich(text, w, wichtig) {
-    const ac = ton.ac; if (!ac || ton.stumm) return;
-    const jetzt = ac.currentTime;
-    if (jetzt < this.bis && !wichtig) return;           // nicht alle durcheinander
-    const [grund, tempo, dumpf] = STIMMEN[(w.typ || 0) % STIMMEN.length];
-    const silben = [...text.toLowerCase()].filter(z => VOKALE[z]).slice(0, 14);
-    if (!silben.length) silben.push('у');                // „Ммпф“ ohne Vokal = gesummt
-    const frage = text.includes('?'), ruf = text.includes('!');
-    const ziel = ac.createGain(); ziel.gain.value = dumpf ? 1.4 : .8;   // Lautstärke
-    let ende = ziel;
-    if (dumpf) { const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650; ziel.connect(lp); ende = lp; }   // wie durch eine Maske
-    ende.connect(ac.destination);
-    silben.forEach((v, i) => {
-      const t0 = jetzt + .02 + i * tempo, dauer = tempo * (i === silben.length - 1 ? 1.8 : .9);
-      let f = grund * (1 + (Math.random() - .5) * .16) * (ruf ? 1.12 : 1);
-      if (i === silben.length - 1) f *= frage ? 1.35 : ruf ? .85 : .92;   // Frage geht hoch, Ausruf runter
-      const osc = ac.createOscillator(); osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(f, t0); osc.frequency.linearRampToValueAtTime(f * (frage && i === silben.length - 1 ? 1.25 : .97), t0 + dauer);
-      const huelle = ac.createGain();
-      huelle.gain.setValueAtTime(0, t0); huelle.gain.linearRampToValueAtTime(1, t0 + .012); huelle.gain.exponentialRampToValueAtTime(.001, t0 + dauer);
-      for (const [fr, q, g] of [[VOKALE[v][0], 6, 1], [VOKALE[v][1], 8, .6]]) {   // zwei Resonanzen = Vokalklang
-        const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fr; bp.Q.value = q;
-        const gg = ac.createGain(); gg.gain.value = g;
-        osc.connect(bp); bp.connect(gg); gg.connect(huelle);
-      }
-      huelle.connect(ziel);
-      osc.start(t0); osc.stop(t0 + dauer + .02);
-    });
-    this.bis = jetzt + silben.length * tempo + .15;
-  },
-};
 function sag(w, art, wichtig = false) {
   if (!w || (w.tot && art !== 'blubb')) return;
   const ch = charakter(w);
@@ -1583,7 +1541,6 @@ function sag(w, art, wichtig = false) {
   let text = liste[Math.floor(Math.random() * liste.length)];
   if (ch.typ === 'Gasmaske') text = ['Ммпф!', 'Мммпф?!', 'Хмпф-хмпф!'][Math.floor(Math.random() * 3)];   // mit Maske versteht man nichts
   w.spruch = { text, bis: zeit + 2.6 };
-  stimme.sprich(text, w, wichtig);
 }
 
 function zeichneWurm(w) {
