@@ -144,7 +144,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.4';
+const APP_VERSION = '0.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -580,7 +580,8 @@ function naechsterZug() {
   const team = spiel.teams[spiel.dran], liste = wuermer.filter(w => w.team === spiel.dran);
   do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
   spiel.wurm = liste[team.zeiger];
-  Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0 });
+  Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0,
+                        versuch: Math.random().toString(36).slice(2, 8), teilBild: 0, endeWartet: false });
   spiel.wind = Math.round(zr(-1, 1) * 10) / 10 * WIND_MAX;
   // Nachschub: Ab und zu schwebt eine Kiste mit einer Waffe herunter
   let kiste = '';
@@ -610,13 +611,13 @@ function zugEnde() {
   const stand = schnappschuss();
   if (spiel.modus === 'online') {
     if (spiel.quelle === 'live') {
-      const rec = { n: spiel.zug, t: spiel.dran, e: spiel.log, k: spiel.krater, s: stand, fe: spiel.bild };
+      const rec = { n: spiel.zug, t: spiel.dran, e: spiel.log, k: spiel.krater, s: stand, fe: spiel.bild, bis: spiel.bild, id: spiel.versuch };
       const lebende = spiel.teams.map((_, t) => t).filter(lebt);
       if (lebende.length <= 1) rec.ende = lebende.length ? lebende[0] : -1;
       spiel.zuege[rec.n] = rec;
-      spiel.ausstehend.push(rec);
-      Online.senden();
+      zugEinreihen(rec);
     } else if (spiel.rec) {
+      if (!spiel.rec.s) { spiel.endeWartet = true; return; }     // Das Ende des Zuges ist noch nicht angekommen
       // Wiederholung fertig: Stimmt alles mit dem anderen Gerät überein?
       if (JSON.stringify(spiel.krater) !== JSON.stringify(spiel.rec.k)) neuAufbauen(spiel.zug);
       standSetzen(spiel.rec.s);
@@ -624,6 +625,23 @@ function zugEnde() {
   }
   naechsterZug();
 }
+
+// Online: Der laufende Zug wird in Stücken verschickt (alle 2 Sekunden), damit die anderen fast live zuschauen
+function teilSenden() {
+  if (spiel.modus !== 'online' || spiel.quelle !== 'live' || spiel.fertig) return;
+  if (spiel.bild - (spiel.teilBild || 0) < 120) return;
+  spiel.teilBild = spiel.bild;
+  zugEinreihen({ n: spiel.zug, t: spiel.dran, e: spiel.log.slice(), bis: spiel.bild, id: spiel.versuch });
+}
+// In die Warteschlange zum Hochladen – ein neueres Stück ersetzt ein älteres vom selben Zug
+function zugEinreihen(rec) {
+  const i = spiel.ausstehend.findIndex(r => r.n === rec.n);
+  if (i >= 0) spiel.ausstehend[i] = rec; else spiel.ausstehend.push(rec);
+  Online.senden();
+}
+// Ist dieser Zug neuer als der, den wir schon kennen?
+function neuerAls(rec, alt) { return !alt || (!alt.s && (rec.s || rec.id !== alt.id || rec.bis >= alt.bis)); }
+function zugMerken(rec) { if (spiel && rec && neuerAls(rec, spiel.zuege[rec.n])) spiel.zuege[rec.n] = rec; }
 
 function schnappschuss() {
   return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
@@ -645,7 +663,7 @@ function standSetzen(s) {
 // Landschaft neu bauen und alle Krater bis Zug „bis“ (einschließlich) einsetzen
 function neuAufbauen(bis) {
   baueLandschaft(spiel.startzahl);
-  for (let i = 0; i <= bis; i++) if (spiel.zuege[i]) for (const [x, y, r] of spiel.zuege[i].k) loch(x, y, r);
+  for (let i = 0; i <= bis; i++) if (spiel.zuege[i] && spiel.zuege[i].k) for (const [x, y, r] of spiel.zuege[i].k) loch(x, y, r);
 }
 
 function ende(sieger) {
@@ -692,7 +710,7 @@ function simSchritt() {
   } else {
     const ev = spiel.rec.e;
     while (spiel.ri < ev.length && ev[spiel.ri][1] <= spiel.bild) anwenden(ev[spiel.ri++]);
-    if (spiel.bild > spiel.rec.fe + 300) {          // Notbremse, falls etwas auseinanderläuft
+    if (spiel.rec.s && spiel.bild > spiel.rec.fe + 300) {          // Notbremse, falls etwas auseinanderläuft
       dinge = []; wuermer.forEach(w => { w.luft = false; w.vx = w.vy = 0; if (w.hp <= 0) w.tot = true; });
       neuAufbauen(spiel.zug); standSetzen(spiel.rec.s); spiel.krater = spiel.rec.k; return zugEnde();
     }
@@ -1440,7 +1458,7 @@ function hud() {
   let st = '';
   if (spiel.modus === 'online' && !spiel.fertig) {
     if (spiel.quelle === 'fern') st = '⏳ ' + TEAMS[spiel.dran].name + (spiel.art[spiel.dran] === 'c' ? ' (Computer) wird vom Gastgeber gerechnet …' : ' spielt auf dem anderen Gerät …');
-    else if (spiel.quelle === 'wiederholung') st = '📺 Zug von ' + TEAMS[spiel.dran].name;
+    else if (spiel.quelle === 'wiederholung') st = (spiel.rec && spiel.rec.s ? '📺 Zug von ' : '📡 Live: ') + TEAMS[spiel.dran].name;
     if (spiel.ausstehend.length) st = (st ? st + '   ' : '') + '☁ sende …';
     if (Online.fehlerText) st = '⚠ ' + Online.fehlerText;
   }
@@ -1457,11 +1475,19 @@ function schleife(jetzt) {
     if (spiel && !spiel.fertig) {
       // Wartet dieses Gerät auf einen Zug von einem anderen? Sobald er da ist: abspielen
       if (spiel.quelle === 'fern' && spiel.zuege[spiel.zug]) { spiel.quelle = 'wiederholung'; spiel.rec = spiel.zuege[spiel.zug]; spiel.ri = 0; }
-      if (spiel.quelle === 'live') { kiDran() ? KI.update(SCHRITT) : liveEingaben(SCHRITT); zielSenden(); simSchritt(); }
+      if (spiel.quelle === 'live') { kiDran() ? KI.update(SCHRITT) : liveEingaben(SCHRITT); zielSenden(); simSchritt(); if (spiel.quelle === 'live') teilSenden(); }
       else if (spiel.quelle === 'wiederholung') {
-        // schneller abspielen, wenn noch mehr Züge warten oder vor dem Schuss nur gelaufen wird
-        const mal = spiel.zuege.length > spiel.zug + 1 ? 6 : spiel.phase === 'zielen' ? 2 : 1;
-        for (let i = 0; i < mal && spiel.quelle === 'wiederholung' && !spiel.fertig; i++) simSchritt();
+        spiel.rec = spiel.zuege[spiel.zug] || spiel.rec;            // neuestes Stück nehmen
+        if (spiel.endeWartet) { if (spiel.rec.s) { spiel.endeWartet = false; zugEnde(); } }
+        else {
+          // Fertige Züge schneller abspielen; beim Live-Zuschauen nur aufholen, wenn wir weit hinten sind
+          const vorne = spiel.rec.s ? 1e9 : spiel.rec.bis - spiel.bild;
+          const mal = spiel.zuege.length > spiel.zug + 1 ? 6 : spiel.rec.s ? (spiel.phase === 'zielen' ? 2 : 1) : vorne > 200 ? 2 : 1;
+          for (let i = 0; i < mal && spiel.quelle === 'wiederholung' && !spiel.fertig && !spiel.endeWartet; i++) {
+            if (!spiel.rec.s && spiel.bild >= spiel.rec.bis) break;    // auf das nächste Stück warten
+            simSchritt();
+          }
+        }
       }
     } else for (const w of wuermer) updateWurm(w, SCHRITT);
     updateTeilchen(SCHRITT);
@@ -1731,7 +1757,7 @@ const Sync = {
    ===================================================================== */
 const Online = {
   timer: null, tickt: false, fehlerText: '', sendet: false,
-  start() { this.stop(); this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
+  start() { this.stop(); this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
     if (this.tickt || document.hidden || !this.timer || !Sync.cfg) return;
@@ -1754,12 +1780,14 @@ const Online = {
       while (spiel && spiel.ausstehend.length) {
         const rec = spiel.ausstehend[0], id = spiel.id;
         const neu = await Sync.aendern(s => {
-          if (!s || s.id !== id || s.status !== 'laeuft' || s.zuege.length !== rec.n) return null;
-          s.zuege.push(rec);
+          if (!s || s.id !== id || s.status !== 'laeuft') return null;
+          if (s.zuege.length === rec.n) s.zuege.push(rec);
+          else if (s.zuege.length === rec.n + 1 && neuerAls(rec, s.zuege[rec.n])) s.zuege[rec.n] = rec;
+          else return null;
           if (rec.ende !== undefined) { s.status = 'ende'; s.sieger = rec.ende; }
           return s;
         });
-        if (spiel) spiel.ausstehend.shift();             // geschickt – oder das Spiel gibt es nicht mehr
+        if (spiel) { const i = spiel.ausstehend.indexOf(rec); if (i >= 0) spiel.ausstehend.splice(i, 1); }   // geschickt (oder überholt)
         if (!neu || neu.id !== id) break;
       }
       this.fehlerText = '';
@@ -1791,7 +1819,7 @@ function steuern(st) {
       hintergrund(); lobbyText = '';
       return lobby('Das Spiel wurde beendet.', NEU_KNOEPFE());
     }
-    for (let i = 0; i < st.zuege.length; i++) if (!spiel.zuege[i]) spiel.zuege[i] = st.zuege[i];
+    for (const rec of st.zuege) zugMerken(rec);
     return;
   }
   if (spiel) return;                                          // lokales Spiel läuft
@@ -1816,8 +1844,9 @@ function steuern(st) {
 function spielLaden(st, ich) {
   neuesSpiel({ n: st.teams, art: st.art, stufe: st.stufe, startzahl: st.startzahl, modus: 'online', ich: menschen(st)[ich], host: ich === 0, id: st.id });
   spiel.zuege = st.zuege.slice();
-  if (st.zuege.length) {
-    const letzter = st.zuege[st.zuege.length - 1];
+  const fertige = st.zuege.filter(z => z.s);
+  if (fertige.length) {
+    const letzter = fertige[fertige.length - 1];
     neuAufbauen(letzter.n);
     standSetzen(letzter.s);
     graeber = wuermer.filter(w => w.tot).map(w => ({ x: w.x, y: w.y, vy: 0, r: 6, farbe: TEAMS[w.team].farbe }));
