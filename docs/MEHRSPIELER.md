@@ -29,7 +29,7 @@ lernt man, wie zwei Geräte miteinander reden.
   rechnet Treffer/Wasser sofort selbst aus, das andere Gerät wird nur informiert
   (1 Schreibzugriff pro Schuss). Bewusste Abwägung: Tempo vor Schummel-Schutz –
   die App zeigt fremde Schiffe nie an.
-- Geräte fragen alle 2 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
+- Geräte fragen alle 1,5 s nach (ETag → kaum Last). Spiel überlebt Neustart der App.
 
 ## Umgesetzt in Würmer (v0.2)
 - 2–3 Spieler: auf einem Gerät abwechselnd **oder** online, ein Gerät pro Team.
