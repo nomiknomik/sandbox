@@ -171,7 +171,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1711,7 +1711,7 @@ function startMenue() {
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
-function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = w.farben || [0, 1, 2]; w.anzahl = w.anzahl || [4, 4, 4]; return w; }
+function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = speicher.lies('wu-farben') || w.farben || [0, 1, 2]; w.anzahl = w.anzahl || [4, 4, 4]; return w; }
 function teamWahl(modus) {
   const wahl = wahlLesen(modus);
   const los = () => {
@@ -1743,6 +1743,9 @@ function teamWahl(modus) {
         wahl.farben[i] = f;
       } else if (b.dataset.w) wahl.wind = b.dataset.w === '1';
       else if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
+      speicher.schreib('wu-wahl-' + modus, wahl);          // sofort merken
+      speicher.schreib('wu-farben', wahl.farben);           // Farben gelten lokal und online
+      teamsSetzen(wahl.farben);
       malen();
     });
   };
@@ -2304,6 +2307,7 @@ function einladungAusLink() {
 }
 
 // ================= Start =================
+teamsSetzen(speicher.lies('wu-farben'));              // zuletzt gewählte Farben
 // Hintergrund-Welt fürs Menü
 baueLandschaft((Math.random() * 2 ** 31) >>> 0);
 for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t, TEAMS[t].wuermer[i]));
