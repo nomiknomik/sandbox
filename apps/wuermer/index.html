@@ -95,6 +95,15 @@
   #karte .wahl button{font-size:14px;padding:8px 10px;background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8}
   #karte .wahl button.farbknopf{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8;vertical-align:middle;margin-right:4px}
   #karte .wahl button.an{background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 3px 0 #1f6427}
+  #fernbedienung{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translateX(-50%);
+                 width:112px;height:112px;border-radius:50%;border:6px solid #fff;background:radial-gradient(circle at 35% 30%,#ff7b7b,#d81f26 60%,#8e0f14);
+                 color:#fff;font:800 15px -apple-system,system-ui,sans-serif;box-shadow:0 6px 0 #6b0b0f,0 10px 24px #0006;
+                 display:flex;flex-direction:column;align-items:center;justify-content:center;animation:puls 1s infinite}
+  #fernbedienung b{font-size:34px;line-height:1}
+  #fernbedienung small{font-size:12px;opacity:.9}
+  #fernbedienung:active{transform:translateX(-50%) translateY(4px);box-shadow:0 2px 0 #6b0b0f}
+  @keyframes puls{50%{box-shadow:0 6px 0 #6b0b0f,0 0 0 10px #ff3b3b55}}
+  @media (max-height:500px){#fernbedienung{width:86px;height:86px;bottom:calc(env(safe-area-inset-bottom) + 64px);font-size:12px}#fernbedienung b{font-size:26px}}
   .versteckt{display:none!important}
 
   /* Kamera für den Einladungs-QR */
@@ -136,6 +145,8 @@
 </div>
 
 <div id="ansage"><b></b><span></span></div>
+<!-- Fernbedienung fürs Schaf -->
+<button id="fernbedienung" class="versteckt"><b>💥</b>ZÜNDEN<small></small></button>
 
 <div id="menu"><div id="karte"></div></div>
 
@@ -148,7 +159,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -193,7 +204,7 @@ const WAFFEN = {
   bazooka:    { icon: '🚀', name: 'Bazooka',      sterne: 2, radius: 38, schaden: 40, ab: 1, info: 'Der Wind lenkt sie ab' },
   granate:    { icon: '💣', name: 'Granate',      sterne: 2, radius: 42, schaden: 45, ab: 1, zuender: 3, info: 'Hüpft – explodiert nach 3 Sekunden' },
   banane:     { icon: '🍌', name: 'Bananenbombe', sterne: 4, radius: 50, schaden: 40, ab: 2, zuender: 3, start: 1, info: 'Zerplatzt in 5 Mini-Bananen' },
-  schaf:      { icon: '🐑', name: 'Schaf',        sterne: 3, radius: 62, schaden: 60, ab: 3, zuender: 7, start: 2, info: 'Läuft los – Tippen zündet es' },
+  schaf:      { icon: '🐑', name: 'Schaf',        sterne: 3, radius: 62, schaden: 60, ab: 3, zuender: 10, start: 2, info: 'Läuft los – mit 💥 ZÜNDEN sprengst du es' },
   luftschlag: { icon: '✈️', name: 'Luftschlag',   sterne: 4, radius: 30, schaden: 26, ab: 4, start: 1, info: 'Tippe auf das Ziel!' },
   dynamit:    { icon: '🧨', name: 'Dynamit',      sterne: 5, radius: 80, schaden: 75, ab: 5, zuender: 5, start: 1, info: 'Hinlegen – und schnell weglaufen!' },
   graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
@@ -844,7 +855,6 @@ leinwand.addEventListener('pointerdown', e => {
   finger.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!spiel || spiel.fertig) return;
   if (finger.size >= 2) { zielt = null; return; }      // zwei Finger = Kamera schieben
-  if (spiel.quelle === 'live' && spiel.phase === 'flug' && dinge.some(o => o.art === 'schaf')) { eingeben(['S', 0]); return; }
   if (darfZielen()) zielt = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, staerke: 0, richtung: aktiver().richtung };
 });
 addEventListener('pointermove', e => {
@@ -1048,6 +1058,7 @@ function kiWaehlen(w) {
   return wahl;
 }
 
+$('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); eingeben(['S', 0]); $('fernbedienung').classList.add('versteckt'); });
 $('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
@@ -1537,6 +1548,10 @@ function hud() {
   z.textContent = s; z.classList.toggle('knapp', spiel.phase === 'zielen' && s <= 10 || spiel.phase === 'rueckzug');
   const wi = spiel.wind / WIND_MAX, b = $('windbar').firstElementChild;
   b.style.left = (wi < 0 ? 50 + wi * 50 : 50) + '%'; b.style.width = Math.abs(wi) * 50 + '%';
+  // Fernbedienung zeigen, solange das eigene Schaf läuft
+  const schaf = spiel.quelle === 'live' && !kiDran() && !spiel.fertig && dinge.find(o => o.art === 'schaf');
+  $('fernbedienung').classList.toggle('versteckt', !schaf);
+  if (schaf) $('fernbedienung').querySelector('small').textContent = Math.ceil(schaf.zuender) + ' s';
   $('direkt').classList.toggle('versteckt', !(Direkt.an && Direkt.host && Direkt.problem && !Direkt.alleVerbunden()));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
@@ -1611,7 +1626,7 @@ function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
 }
 function hintergrund() {
   spiel = null; dinge = []; zielt = null; Direkt.stop();
-  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt'].forEach(id => $(id).classList.add('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung'].forEach(id => $(id).classList.add('versteckt'));
 }
 function startMenue() {
   Online.stop(); hintergrund();
