@@ -186,7 +186,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.25';
+const APP_VERSION = '1.26';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -741,7 +741,7 @@ function naechsterZug() {
   if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
   spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich || (spiel.art[spiel.dran] === 'c' && spiel.host) ? 'live' : 'fern';
-  kam.frei = false;
+  kam.frei = false; zoom = 1;                          // neuer Zug: wieder alle Würmer zeigen
   const t = TEAMS[spiel.dran], nr = rundeNr();
   let neu = '';
   if (spiel.zug % spiel.n === 0 && nr > 1) {
@@ -1283,15 +1283,12 @@ function groesse() {
   basisMassstab = bh < 500 ? Math.min(bh / 430, bw / 700) : Math.min(bh / 760, bw / 1000);   // Handy: näher ran
   massstab = basisMassstab * zoom * autoZoom;
 }
-let zoom = 1, autoZoom = 1, basisMassstab = 1, flugZoom = 1;   // zoom: mit Fingern, autoZoom: beim Zielen
+let zoom = 1, autoZoom = 1, basisMassstab = 1;   // zoom: selbst mit Fingern, autoZoom: alle Würmer passen aufs Bild
 function zoomen(f) { zoom = Math.max(.3, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
-let pinch = null, zoomVorher = 1;
+let pinch = null;
 // 🔭 Übersicht: ganze Insel zeigen – nochmal tippen = zurück
 function uebersicht() {
-  const ganz = Math.min(bw / (W + 80), bh / (H * .9)) / basisMassstab;
-  if (zoom > ganz * 1.05) { zoomVorher = zoom; zoom = Math.max(.25, ganz); kam.frei = true; kam.x = W / 2; kam.y = H / 2; }
-  else { zoom = zoomVorher || 1; kam.frei = false; }
-  massstab = basisMassstab * zoom * autoZoom;
+  ueberblick = !ueberblick; zoom = 1; kam.frei = false;
 }
 
 // Ungefähre Flugbahn vorausrechnen (mit Wind, ohne Abprallen) → Rechteck, das auf den Bildschirm soll
@@ -1330,38 +1327,50 @@ let tz = 0;                         // aktuelle Tageszeit 0 … 4
 const mischen = (a, b, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.substr(i, 2), 16) * (1 - k) + parseInt(b.substr(i, 2), 16) * k).toString(16).padStart(2, '0')).join('');
 function farbe(name) { const i = Math.min(3, Math.floor(tz)), k = tz - i; return mischen(HIMMEL[i][name], HIMMEL[Math.min(4, i + 1)][name], k); }
 
+// Bildschirmbereich zwischen oberer und unterer Leiste (dort sollen die Würmer zu sehen sein)
+const sicht = { t: -1, oben: 0, unten: 0 };
+function sichtbereich() {
+  if (zeit - sicht.t > .5 || sicht.unten === 0) {
+    sicht.t = zeit; const o = $('oben'), u = $('unten');
+    sicht.oben = o.classList.contains('versteckt') ? 0 : o.getBoundingClientRect().bottom + 6;
+    sicht.unten = u.classList.contains('versteckt') ? bh : u.getBoundingClientRect().top - 6;
+    if (sicht.unten - sicht.oben < bh * .4) { sicht.oben = 0; sicht.unten = bh; }
+  }
+  return sicht;
+}
+// Kamera: Ruhig! Sie zeigt immer ALLE lebenden Würmer auf einmal (und was gerade fliegt).
+//   Mit zwei Fingern kann man selbst zoomen/schieben – das gilt bis zum nächsten Zug.
+let ueberblick = false;
 function kamera(dt) {
-  let ziel = null, autoZiel = 1;
-  // Beim Zielen automatisch so weit herauszoomen, dass Wurm und ungefährer Einschlag zu sehen sind
-  const w0 = aktiver(), staerke = zielt ? zielt.staerke : spiel && spiel.ladung || 0;
-  const ballistisch = spiel && !['schaf', 'dynamit', 'graben', 'luftschlag', 'teleport'].includes(spiel.waffe);
-  if (darfZielen() && staerke > .1 && ballistisch) {
-    const b = flugbahnBox(w0, staerke), breite = b.x2 - b.x1 + 220, hoehe = b.y2 - b.y1 + 200;
-    autoZiel = Math.max(.3, Math.min(1, bw / breite / (basisMassstab * zoom), bh * .8 / hoehe / (basisMassstab * zoom)));
-    flugZoom = autoZiel;
-    ziel = { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 + 80 };
-  } else if (spiel && spiel.phase === 'flug' && spiel.quelle === 'live' && !kiDran()) autoZiel = flugZoom;   // im Flug so bleiben
-  else {
-    // Nach dem Schuss NICHT von selbst wieder heranzoomen – die weite Ansicht bleibt, bis man selbst zoomt
-    if (flugZoom < 1) { zoom = Math.max(.25, zoom * autoZoom); autoZoom = 1; }
-    flugZoom = 1;
-  }
-  autoZoom += (autoZiel - autoZoom) * Math.min(1, dt * 3);
-  massstab = basisMassstab * zoom * autoZoom;
-  if (ziel) {}
-  else if (dinge.length) ziel = dinge[dinge.length - 1];
-  else if (spiel) {
-    const fliegt = wuermer.find(w => !w.tot && w.luft && Math.hypot(w.vx, w.vy) > 60);
-    if (fliegt) ziel = fliegt;
-    else if (!kam.frei && spiel.wurm) ziel = spiel.wurm;
-  }
-  if (ziel) {
-    const k = Math.min(1, dt * 4);
-    kam.x += (ziel.x - kam.x) * k; kam.y += (ziel.y - 80 - kam.y) * k;
+  if (spiel) {
+    let x1 = 1e9, x2 = -1e9, y1 = 1e9, y2 = -1e9;
+    const dazu = (x, y, links, oben, rechts, unten) => { x1 = Math.min(x1, x - links); x2 = Math.max(x2, x + rechts); y1 = Math.min(y1, y - oben); y2 = Math.max(y2, y + unten); };
+    if (ueberblick) dazu(W / 2, H / 2, W / 2 + 40, H / 2, W / 2 + 40, H / 2 - 60);
+    else {
+      for (const w of wuermer) if (!w.tot) dazu(w.x, w.y, 45, 80, 45, 22);           // mit Namensschild
+      for (const o of dinge) if (o.y > -500 && o.x > -100 && o.x < W + 100) dazu(o.x, o.y, 40, 40, 40, 40);
+      if (x1 > x2) dazu(W / 2, H / 2, 300, 200, 300, 200);
+    }
+    const sb = sichtbereich(), hoch = sb.unten - sb.oben;
+    let ziel = Math.min(bw / (x2 - x1), hoch / (y2 - y1)) / basisMassstab;
+    ziel = Math.max(.3, Math.min(1.3, ziel));                     // nicht zu nah, nicht zu fern
+    if (spiel.phase === 'flug' && ziel > autoZoom) ziel = autoZoom;   // im Flug nur heraus-, nie hineinzoomen
+    autoZoom += (ziel - autoZoom) * Math.min(1, dt * 1.5);
+    massstab = basisMassstab * zoom * autoZoom;
+    if (!kam.frei) {
+      let zx = (x1 + x2) / 2, zy = (y1 + y2) / 2;
+      if (zoom > 1.05) {                                        // selbst herangezoomt: dem Geschehen folgen
+        const z = dinge.length ? dinge[dinge.length - 1] : wuermer.find(w => !w.tot && w.luft && Math.hypot(w.vx, w.vy) > 60) || spiel.wurm;
+        if (z) { zx = z.x; zy = z.y - 30; }
+      }
+      zy -= ((sb.oben + sb.unten) / 2 - bh / 2) / massstab;     // Mitte des freien Bereichs, nicht des Bildschirms
+      const k = Math.min(1, dt * 2.5);
+      kam.x += (zx - kam.x) * k; kam.y += (zy - kam.y) * k;
+    }
   }
   const vw = bw / massstab, vh = bh / massstab;
   kam.x = vw >= W ? W / 2 : Math.max(vw / 2, Math.min(W - vw / 2, kam.x));
-  kam.y = vh >= H ? H - vh / 2 : Math.max(vh / 2 - 300, Math.min(H - vh / 2, kam.y));
+  if (vh < H) kam.y = Math.max(vh / 2 - 300, Math.min(H - vh / 2, kam.y));   // (passt die ganze Welt hinein, darf sie verschoben sein)
 }
 
 function zeichneHimmel() {
