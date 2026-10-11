@@ -97,7 +97,7 @@
   #karte .fehler{color:#c62828}
   #karte canvas{width:min(70vw,46vh);max-width:300px;image-rendering:pixelated;border-radius:12px;border:4px solid #2f8f3a}
   #karte .wahl{display:flex;align-items:center;gap:6px;margin:8px 0;justify-content:space-between;flex-wrap:wrap}
-  #karte .wahl b{min-width:86px;text-align:left}
+  #karte .wahl b{min-width:80px;text-align:left}
   #karte .wahl span{display:flex;gap:6px}
   #karte .wahl button{font-size:14px;padding:8px 10px;background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8}
   #karte .wahl button{text-shadow:none}
@@ -105,7 +105,12 @@
   #karte .wahl .zaehler{display:inline-flex;align-items:center;gap:2px;border:3px solid;border-radius:16px;padding:1px;background:#fff}
   #karte .wahl .zaehler button{padding:3px 9px;font-size:16px;box-shadow:none;border-radius:12px}
   #karte .wahl .zaehler b{min-width:18px;text-align:center}
-  #karte .wahl button.farbknopf{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8;vertical-align:middle;margin-right:4px}
+  #karte .wahl button.farbknopf{width:44px;height:44px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8,0 3px 6px rgba(0,0,0,.2);vertical-align:middle;margin-right:6px;overflow:hidden;position:relative;flex:none}
+  #karte .wahl button.farbknopf img{position:absolute;left:50%;bottom:1px;height:36px;transform:translateX(-50%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+  #karte .wahl b{display:flex;align-items:center}
+  .wurmicon{height:1.6em;vertical-align:middle;margin:-.3em .25em -.2em 0}
+  #karte .wahl .zaehler{gap:4px}
+  #karte .wahl .zaehler img{height:30px;margin:-4px 0 -2px}
   #karte .wahl button.an{background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 3px 0 #1f6427}
   #fernbedienung{position:fixed;right:70px;bottom:calc(env(safe-area-inset-bottom) + 8px);
                  width:76px;height:76px;border-radius:50%;border:5px solid #fff;font-size:12px;background:radial-gradient(circle at 35% 30%,#ff7b7b,#d81f26 60%,#8e0f14);
@@ -175,7 +180,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.22';
+const APP_VERSION = '1.23';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1436,6 +1441,13 @@ function wurmBild(w, variante) {
   }
   return { ...b.farbig[farbe], variante };
 }
+// Kleines Wurm-Bild fürs Menü: <img> mit Halstuch in Teamfarbe (typ = welche Figur, team = welche Farbe)
+function wurmIcon(typ, team, klasse = 'wurmicon') {
+  let src = 'wurm/' + ['01-soldat', '02-rambo', '03-hippie', '04-nachtsicht', '05-cowboy', '06-sanitaeter', '07-wikinger', '08-kapitaen',
+                       '09-kommando', '10-gasmaske', '11-hai', '12-polar'][typ % 12] + '.webp';
+  if (team !== undefined) { const g = wurmBild({ typ, team }, 'normal'); if (g) try { src = g.bild.toDataURL(); } catch {} }
+  return `<img class="${klasse}" src="${src}" alt="">`;
+}
 // Sprechblase über dem Wurm (nur fürs Aussehen)
 function sag(w, art) {
   if (!w || w.tot) return;
@@ -2017,11 +2029,11 @@ function teamWahl(modus) {
   };
   const malen = () => {
     const zeilen = TEAMS.map((_, i) => { const F = FARBEN[wahl.farben[i]]; return `<div class="wahl"><b style="color:${F.farbe}">` +
-      `<button class="farbknopf" data-f="${i}" style="background:${F.farbe}" aria-label="Farbe wechseln"></button> ${F.name}</b><span>` +
+      `<button class="farbknopf" data-f="${i}" style="background:radial-gradient(circle at 50% 35%, #fff 0, ${F.farbe} 75%)" aria-label="Farbe wechseln">${wurmIcon(i, i, '')}</button> ${F.name}</b><span>` +
       [['m', '👤 Mensch'], ['c', '🤖 Computer'], ...(i === 2 ? [['-', 'aus']] : [])]
         .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>'; }).join('');
-    const wurmZeile = `<div class="wahl"><b>🪱 Würmer</b><span>` + TEAMS.map((_, i) => wahl.art[i] === '-' ? '' :
-      `<span class="zaehler" style="border-color:${FARBEN[wahl.farben[i]].farbe}"><button data-z="${i}" data-n="-1">−</button><b>${wahl.anzahl[i]}</b><button data-z="${i}" data-n="1">+</button></span>`).join('') + '</span></div>';
+    const wurmZeile = `<div class="wahl"><b>${wurmIcon(0)}Würmer</b><span>` + TEAMS.map((_, i) => wahl.art[i] === '-' ? '' :
+      `<span class="zaehler" style="border-color:${FARBEN[wahl.farben[i]].farbe}"><button data-z="${i}" data-n="-1">−</button>${wurmIcon(i, i, '')}<b>${wahl.anzahl[i]}</b><button data-z="${i}" data-n="1">+</button></span>`).join('') + '</span></div>';
     const stufen = wurmZeile + `<div class="wahl"><b>🤖 Stärke</b><span>` + ['leicht', 'mittel', 'schwer']
       .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>' +
       `<div class="wahl"><b>💨 Wind</b><span>` + [['1', 'an'], ['0', 'aus']]
@@ -2043,6 +2055,8 @@ function teamWahl(modus) {
       teamsSetzen(wahl.farben);
       malen();
     });
+    // Wurm-Bilder noch nicht geladen? Dann gleich nochmal malen (für das Halstuch in Teamfarbe)
+    if ([0, 1, 2].some(i => !WURM_BILDER[i].normal.img.complete)) setTimeout(() => { if ($('karte').querySelector('.farbknopf')) malen(); }, 400);
   };
   malen();
 }
@@ -2304,7 +2318,7 @@ function onlineMenue() {
 function lobby(text, knoepfe) {
   karte('<h2>🌐 Online</h2>', text, knoepfe, '', [['📱 Einladung zeigen', einladungZeigen], ['⚙ Gerät zurücksetzen', zuruecksetzen], ['← Zurück', startMenue]]);
 }
-const NEU_KNOEPFE = () => [['🪱 Neues Spiel einrichten', () => teamWahl('online')]];
+const NEU_KNOEPFE = () => [[wurmIcon(0) + 'Neues Spiel einrichten', () => teamWahl('online')]];
 const menschen = st => (st.art || Array(st.teams).fill('m')).map((a, i) => a === 'm' ? i : -1).filter(i => i >= 0);
 
 // Entscheidet anhand des gemeinsamen Stands, was dieses Gerät zeigt
@@ -2330,7 +2344,7 @@ function steuern(st) {
   if (st.status === 'wartet') {
     const wer = st.geraete.map((_, i) => TEAMS[mensch[i]].name).join(', ');
     if (ich >= 0) return zeige(`Warte auf Mitspieler … (${st.geraete.length} von ${mensch.length} Geräten)\nSchon da: ${wer}${mitCpu}\nDu bist ${TEAMS[mensch[ich]].name}.\n\nAuf dem anderen Gerät: Würmer → Online → Beitreten`, [['Abbrechen', abbrechen]]);
-    return zeige(`Ein Spiel wartet auf dich! (${st.geraete.length} von ${mensch.length} Geräten da)${mitCpu}\nDu wirst ${TEAMS[mensch[st.geraete.length]].name}.`, [['🪱 Beitreten', beitreten], ['Neues Spiel (altes beenden)', () => teamWahl('online')]]);
+    return zeige(`Ein Spiel wartet auf dich! (${st.geraete.length} von ${mensch.length} Geräten da)${mitCpu}\nDu wirst ${TEAMS[mensch[st.geraete.length]].name}.`, [[wurmIcon(1) + 'Beitreten', beitreten], ['Neues Spiel (altes beenden)', () => teamWahl('online')]]);
   }
   if (st.status === 'laeuft') {
     if (ich >= 0) { lobbyText = ''; return spielLaden(st, ich); }
