@@ -186,7 +186,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.27';
+const APP_VERSION = '1.28';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1230,7 +1230,7 @@ $('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); ei
 $('uebersicht').onclick = uebersicht;
 $('pause').onclick = () => pausieren(true);
 $('pausenbild').onclick = () => pausieren(false);
-$('ton').onclick = () => { ton.stumm = !ton.stumm; if (ton.stumm && window.speechSynthesis) speechSynthesis.cancel(); $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
+$('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
   if (spiel.fertig) return spiel.modus === 'online' ? onlineMenue() : startMenue();
@@ -1255,8 +1255,7 @@ function ansage(gross, klein, farbe) {
 // ================= Töne (selbst erzeugt, keine Dateien) =================
 const ton = {
   ac: null, stumm: false,
-  an() { if (!this.sprachFrei && window.speechSynthesis) { this.sprachFrei = true; try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {} }
-    if (!this.ac) try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } if (this.ac && this.ac.state === 'suspended') this.ac.resume(); },
+  an() { if (!this.ac) try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } if (this.ac && this.ac.state === 'suspended') this.ac.resume(); },
   rauschen(dauer, f1, f2, laut) {
     if (!this.ac || this.stumm) return;
     const ac = this.ac, n = ac.sampleRate * dauer, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
@@ -1535,21 +1534,48 @@ const SPRUECHE = {
   blubb:    ['Буль-буль…', 'Я не умею плавать!'],
   heil:     ['Ой, хорошо-то как!', 'Спасибо, доктор!', 'Как новенький!'],
 };
-// Stimme: jeder Charakter klingt etwas anders (Tonhöhe). Aus mit 🔇.
-const STIMMHOEHE = [.9, .6, 1.2, .8, .9, 1.1, .5, .7, .8, 1, 1.6, 1];
+// Würmersprache („Lepet“): Die Sprechblase zeigt den Satz, zu hören ist lustiges Gebrabbel –
+//   jede Silbe (Vokal) wird ein kurzer Ton. Jeder Charakter hat seine eigene Stimmlage.
+//   [Grundton in Hz, Tempo (Sekunden pro Silbe), dumpf (Gasmaske)]
+const STIMMEN = [[170, .075], [115, .085], [240, .07], [150, .075], [135, .085], [215, .07],
+                 [85, .1], [105, .09], [150, .075], [125, .08, true], [430, .055], [190, .075]];
+// Vokale → Klangfarbe (zwei Resonanzen wie im Mund)
+const VOKALE = { а: [800, 1250], я: [800, 1250], о: [500, 850], ё: [500, 850], у: [330, 700], ю: [330, 700],
+                 ы: [350, 1500], э: [550, 1750], е: [450, 2000], и: [300, 2250],
+                 a: [800, 1250], o: [500, 850], u: [330, 700], e: [450, 2000], i: [300, 2250] };
 const stimme = {
-  ru: null,
-  suchen() { const v = speechSynthesis.getVoices(); this.ru = v.find(x => /^ru/i.test(x.lang)) || null; },
+  bis: 0,
   sprich(text, w, wichtig) {
-    if (!window.speechSynthesis || ton.stumm) return;
-    if (speechSynthesis.speaking) { if (!wichtig) return; speechSynthesis.cancel(); }
-    const u = new SpeechSynthesisUtterance(text.replace(/[…!?]+$/, m => m.includes('?') ? '?' : '!'));
-    u.lang = 'ru-RU'; if (this.ru) u.voice = this.ru;
-    u.pitch = STIMMHOEHE[(w.typ || 0) % STIMMHOEHE.length]; u.rate = 1.15;
-    speechSynthesis.speak(u);
+    const ac = ton.ac; if (!ac || ton.stumm) return;
+    const jetzt = ac.currentTime;
+    if (jetzt < this.bis && !wichtig) return;           // nicht alle durcheinander
+    const [grund, tempo, dumpf] = STIMMEN[(w.typ || 0) % STIMMEN.length];
+    const silben = [...text.toLowerCase()].filter(z => VOKALE[z]).slice(0, 14);
+    if (!silben.length) silben.push('у');                // „Ммпф“ ohne Vokal = gesummt
+    const frage = text.includes('?'), ruf = text.includes('!');
+    const ziel = ac.createGain(); ziel.gain.value = dumpf ? 1.4 : .8;   // Lautstärke
+    let ende = ziel;
+    if (dumpf) { const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650; ziel.connect(lp); ende = lp; }   // wie durch eine Maske
+    ende.connect(ac.destination);
+    silben.forEach((v, i) => {
+      const t0 = jetzt + .02 + i * tempo, dauer = tempo * (i === silben.length - 1 ? 1.8 : .9);
+      let f = grund * (1 + (Math.random() - .5) * .16) * (ruf ? 1.12 : 1);
+      if (i === silben.length - 1) f *= frage ? 1.35 : ruf ? .85 : .92;   // Frage geht hoch, Ausruf runter
+      const osc = ac.createOscillator(); osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, t0); osc.frequency.linearRampToValueAtTime(f * (frage && i === silben.length - 1 ? 1.25 : .97), t0 + dauer);
+      const huelle = ac.createGain();
+      huelle.gain.setValueAtTime(0, t0); huelle.gain.linearRampToValueAtTime(1, t0 + .012); huelle.gain.exponentialRampToValueAtTime(.001, t0 + dauer);
+      for (const [fr, q, g] of [[VOKALE[v][0], 6, 1], [VOKALE[v][1], 8, .6]]) {   // zwei Resonanzen = Vokalklang
+        const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fr; bp.Q.value = q;
+        const gg = ac.createGain(); gg.gain.value = g;
+        osc.connect(bp); bp.connect(gg); gg.connect(huelle);
+      }
+      huelle.connect(ziel);
+      osc.start(t0); osc.stop(t0 + dauer + .02);
+    });
+    this.bis = jetzt + silben.length * tempo + .15;
   },
 };
-if (window.speechSynthesis) { stimme.suchen(); speechSynthesis.onvoiceschanged = () => stimme.suchen(); }
 function sag(w, art, wichtig = false) {
   if (!w || (w.tot && art !== 'blubb')) return;
   const ch = charakter(w);
