@@ -175,7 +175,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.20';
+const APP_VERSION = '1.21';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1385,6 +1385,36 @@ const CHARAKTERE = [
     dran: ['Brrr, los geht\'s!', 'Schneeballschlacht!', 'Mir ist nicht kalt!'], aua: ['Eiskalt erwischt!', 'Brrr!', 'Meine Ohren!'], treffer: ['Eiskalt!', 'Schnee von gestern!', 'Ha, gefroren!'] },
 ];
 const charakter = w => CHARAKTERE[(w.typ || 0) % CHARAKTERE.length];
+
+// Gemalte Wurm-Bilder (Ordner wurm/), gleiche Reihenfolge wie CHARAKTERE.
+//   [Datei, Körpermitte in Bild-Pixeln von links] – unten im Bild = Boden unter dem Wurm
+const WURM_BILDER = [['01-soldat', 82.7], ['02-rambo', 111.7], ['03-hippie', 77.4], ['04-nachtsicht', 81.4], ['05-cowboy', 81], ['06-sanitaeter', 78.8],
+                     ['07-wikinger', 84.3], ['08-kapitaen', 79.7], ['09-kommando', 85.3], ['10-gasmaske', 90], ['11-hai', 83.4], ['12-polar', 84.1]]
+  .map(([datei, ax]) => { const img = new Image(); img.src = 'wurm/' + datei + '.png'; return { img, ax, farbig: {} }; });
+const WURM_GROESSE = .19;          // 1 Bild-Pixel = so viele Welt-Punkte (größer = dickere Würmer)
+// Das Halstuch ist im Bild magenta – hier wird es in die Teamfarbe umgefärbt (einmal pro Farbe, dann gemerkt)
+function wurmBild(w) {
+  const b = WURM_BILDER[(w.typ || 0) % WURM_BILDER.length], farbe = TEAMS[w.team].farbe;
+  if (!b.img.complete || !b.img.naturalWidth) return null;
+  if (!b.farbig[farbe]) {
+    const c = document.createElement('canvas'); c.width = b.img.naturalWidth; c.height = b.img.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(b.img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+    const tr = parseInt(farbe.slice(1, 3), 16), tg = parseInt(farbe.slice(3, 5), 16), tb = parseInt(farbe.slice(5, 7), 16);
+    for (let i = 0; i < p.length; i += 4) {
+      const rr = p[i], gg = p[i + 1], bb = p[i + 2], max = Math.max(rr, gg, bb), min = Math.min(rr, gg, bb);
+      if (max < 60 || max - min < max * .4) continue;                    // zu dunkel oder zu grau
+      let h = 0; const dd = max - min;                                    // Farbton ausrechnen
+      if (max === rr) h = ((gg - bb) / dd) % 6; else if (max === gg) h = (bb - rr) / dd + 2; else h = (rr - gg) / dd + 4;
+      h = (h * 60 + 360) % 360;
+      if (h < 275 || h > 330) continue;                                   // nur Magenta/Pink umfärben
+      const hell = max / 230;
+      p[i] = Math.min(255, tr * hell); p[i + 1] = Math.min(255, tg * hell); p[i + 2] = Math.min(255, tb * hell);
+    }
+    g.putImageData(d, 0, 0); b.farbig[farbe] = c;
+  }
+  return { bild: b.farbig[farbe], ax: b.ax };
+}
 // Sprechblase über dem Wurm (nur fürs Aussehen)
 function sag(w, art) {
   if (!w || w.tot) return;
@@ -1396,6 +1426,18 @@ function zeichneWurm(w) {
   const f = w.richtung, wipp = Math.sin(zeit * 3 + w.samen) * 1.2, team = TEAMS[w.team], ch = charakter(w);
   const lauf = !w.luft && spiel && (spiel.ein.links || spiel.ein.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
   if (!w.luft) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(w.x, w.y + 9, 11, 3, 0, 0, 7); ctx.fill(); }   // Schatten
+  const gemalt = wurmBild(w);
+  if (gemalt) {                                       // gemaltes Bild (wenn geladen)
+    ctx.save(); ctx.translate(w.x, w.y);
+    if (w.quetsch > 0) { const q = Math.sin(w.quetsch * Math.PI) * .3; ctx.translate(0, 9); ctx.scale(1 + q, 1 - q); ctx.translate(0, -9); }   // Gummi-Effekt
+    if (w.luft) ctx.rotate(w.dreh);
+    if (w.aua > 0) ctx.translate(Math.sin(zeit * 60) * w.aua * 2, 0);
+    ctx.translate(0, 9); ctx.scale(f * WURM_GROESSE, WURM_GROESSE * (1 + wipp * .012));   // atmen
+    ctx.drawImage(gemalt.bild, -gemalt.ax, -gemalt.bild.height);
+    ctx.restore();
+    if (spiel && w === aktiver() && spiel.phase === 'zielen' && !w.luft && spiel.quelle !== 'fern') zeichneWaffe(w);
+    return;
+  }
   ctx.save(); ctx.translate(w.x, w.y);
   if (w.quetsch > 0) { const q = Math.sin(w.quetsch * Math.PI) * .3; ctx.translate(0, 9); ctx.scale(1 + q, 1 - q); ctx.translate(0, -9); }   // Gummi-Effekt
   if (w.luft) ctx.rotate(w.dreh);
@@ -1545,7 +1587,7 @@ function zeichneWurm(w) {
 // Sprechblase zeichnen
 function sprechblase(w) {
   if (!w.spruch || w.spruch.bis < zeit) return;
-  const y = w.y - (spiel && w === aktiver() ? 86 : 62), a = Math.min(1, (w.spruch.bis - zeit) * 2);   // über dem Pfeil
+  const y = w.y - (spiel && w === aktiver() ? 98 : 72), a = Math.min(1, (w.spruch.bis - zeit) * 2);   // über dem Pfeil
   ctx.globalAlpha = a; ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const b = ctx.measureText(w.spruch.text).width + 14;
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
@@ -1749,7 +1791,7 @@ function zeichneSchleuder() {
 }
 
 function namensschild(w) {
-  const t = TEAMS[w.team], y = w.y - 30;
+  const t = TEAMS[w.team], y = w.y - 38;
   ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)';
   ctx.strokeText(w.name, w.x, y - 12); ctx.fillStyle = t.hell; ctx.fillText(w.name, w.x, y - 12);
   const txt = String(w.hp), bb = ctx.measureText(txt).width + 10;
@@ -1788,7 +1830,7 @@ function zeichne() {
   const w = aktiver();
   if (spiel && w && !w.tot && spiel.phase === 'zielen' && spiel.quelle !== 'fern') {
     if (spiel.quelle === 'live') zeichneZielhilfe(w);
-    const hy = w.y - 62 + Math.sin(zeit * 6) * 4;              // Pfeil über dem aktiven Wurm
+    const hy = w.y - 76 + Math.sin(zeit * 6) * 4;              // Pfeil über dem aktiven Wurm
     ctx.fillStyle = TEAMS[w.team].farbe; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(w.x - 8, hy); ctx.lineTo(w.x + 8, hy); ctx.lineTo(w.x, hy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
   }

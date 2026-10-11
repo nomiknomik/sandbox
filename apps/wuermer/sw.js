@@ -1,7 +1,8 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'wuermer-v30';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js'];
+const CACHE = 'wuermer-v31';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js',
+               './wurm/01-soldat.png', './wurm/02-rambo.png', './wurm/03-hippie.png', './wurm/04-nachtsicht.png', './wurm/05-cowboy.png', './wurm/06-sanitaeter.png', './wurm/07-wikinger.png', './wurm/08-kapitaen.png', './wurm/09-kommando.png', './wurm/10-gasmaske.png', './wurm/11-hai.png', './wurm/12-polar.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
