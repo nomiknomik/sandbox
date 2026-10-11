@@ -175,7 +175,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.16';
+const APP_VERSION = '1.17';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -234,11 +234,12 @@ const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.lufts
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
 function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 + .1 * r), r: Math.min(1.25, 1 + .04 * r) }; }
 
-// Teams – Namen der Würmer sind Fantasienamen
+// Teams – Namen der Würmer: lustige Spitznamen (Armee & Ganoven), passend zum Charakter
+//   Reihenfolge = Charakter: Soldat, Sportler, Kämpfer, Cowboy, Gentleman, Coole
 const TEAMS = [
-  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Blitz', 'Krümel', 'Socke', 'Pixel', 'Flummi', 'Zappel'] },
-  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Kiwi', 'Bommel', 'Rakete', 'Nudel', 'Wusel', 'Kringel'] },
-  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Keks', 'Flitzer', 'Tiger', 'Zwerg', 'Pfeffer', 'Möhre'] },
+  { name: 'Team Rot',  farbe: '#E5484D', hell: '#ffb3b5', wuermer: ['Фикса', 'Шустрый', 'Кабан', 'Усатый', 'Профессор', 'Пижон'] },
+  { name: 'Team Blau', farbe: '#3B82F6', hell: '#b3d0ff', wuermer: ['Прапор', 'Салага', 'Гвоздь', 'Дед', 'Граф', 'Чёткий'] },
+  { name: 'Team Gelb', farbe: '#E8A317', hell: '#ffe08a', wuermer: ['Сержант', 'Кузнечик', 'Кирпич', 'Батя', 'Интеллигент', 'Дембель'] },
 ];
 // Teamfarben zum Aussuchen (hell = Schrift auf dunklem Grund, balken = Lebensbalken)
 const FARBEN = [
