@@ -24,7 +24,7 @@
   /* Oben: Teams, Zeit, Wind */
   #oben{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:flex;
         justify-content:center;gap:8px;pointer-events:none;padding:0 60px}
-  .box{background:var(--panel);border-radius:14px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .box{background:var(--panel);border-radius:14px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:2px solid rgba(255,255,255,.35);box-shadow:0 3px 0 rgba(0,0,0,.25)}
   .team{min-width:112px;border:2px solid transparent}
   .team.dran{border-color:#ffd84d}
   .team b{font-size:13px;display:block;white-space:nowrap}
@@ -45,12 +45,13 @@
          justify-content:space-between;align-items:flex-end;padding:0 10px;pointer-events:none;gap:8px;transition:opacity .3s}
   #unten > div{display:flex;gap:8px;pointer-events:auto}
   #unten.aus{opacity:.3} #unten.aus > div{pointer-events:none}
-  .knopf{width:62px;height:62px;border-radius:18px;border:0;background:var(--panel);color:#fff;font-size:28px;
-         backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 3px 0 #0003}
-  .knopf:active{transform:translateY(2px);box-shadow:none}
-  .waffe{position:relative;width:62px;height:62px;border-radius:18px;border:3px solid transparent;background:var(--panel);
-         color:#fff;font-size:30px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  .waffe.an{border-color:#ffd84d;background:rgba(60,50,10,.7)}
+  .knopf{width:62px;height:62px;border-radius:20px;border:3px solid rgba(255,255,255,.85);background:linear-gradient(rgba(70,95,125,.88),rgba(25,38,58,.9));color:#fff;font-size:28px;
+         backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 5px 0 rgba(0,0,0,.35);text-shadow:0 2px 0 #0006}
+  .knopf:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  .waffe{position:relative;width:62px;height:62px;border-radius:20px;border:3px solid rgba(255,255,255,.55);background:linear-gradient(rgba(70,95,125,.85),rgba(25,38,58,.88));
+         color:#fff;font-size:30px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 5px 0 rgba(0,0,0,.35)}
+  .waffe:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  .waffe.an{border-color:#ffd84d;background:linear-gradient(#a8801a,#5e430a);box-shadow:0 5px 0 #3d2b05,0 0 14px #ffd84d88}
   .waffe.leer{opacity:.35}
   .waffe small{position:absolute;right:4px;bottom:2px;font-size:12px;font-weight:700}
   #waffen{margin-right:56px;position:relative}
@@ -68,22 +69,26 @@
   #ansage{position:fixed;left:50%;top:24%;transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;
           text-align:center;transition:opacity .35s,transform .35s;text-shadow:0 3px 0 #0005;width:90%}
   #ansage.zeigen{opacity:1;transform:translate(-50%,-50%) scale(1)}
-  #ansage b{display:block;font-size:40px;font-weight:900}
-  #ansage span{font-size:17px}
+  #ansage b{display:block;font-size:46px;font-weight:900;letter-spacing:1px;
+             text-shadow:3px 3px 0 #2b1a10,-3px 3px 0 #2b1a10,3px -3px 0 #2b1a10,-3px -3px 0 #2b1a10,0 4px 0 #2b1a10,0 8px 10px #0006}
+  #ansage.zeigen b{animation:plopp .5s cubic-bezier(.3,1.7,.5,1)}
+  #ansage span{font-size:17px;font-weight:700;text-shadow:2px 2px 0 #2b1a10,-2px 2px 0 #2b1a10,2px -2px 0 #2b1a10,-2px -2px 0 #2b1a10}
+  @keyframes plopp{0%{transform:scale(.3)}100%{transform:scale(1)}}
 
   /* Menü-Karte (Start, Online, Ende) */
   #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0003;overflow:auto;padding:16px}
-  #karte{background:rgba(255,255,255,.95);color:#1B2A3A;border-radius:28px;padding:24px 28px;text-align:center;
-         width:100%;max-width:440px;box-shadow:0 12px 40px #0004;max-height:100%;overflow:auto;-webkit-user-select:text;user-select:text}
-  #karte h1{margin:0;font-size:46px;color:#2f7a2c}
+  #karte{background:linear-gradient(#fffdf3,#eaf6dc);color:#1B2A3A;border-radius:30px;padding:24px 28px;text-align:center;border:5px solid #fff;
+         width:100%;max-width:440px;box-shadow:0 8px 0 rgba(0,0,0,.18),0 18px 44px #0005;animation:plopp .35s cubic-bezier(.3,1.5,.5,1);max-height:100%;overflow:auto;-webkit-user-select:text;user-select:text}
+  #karte h1{margin:0 0 4px;font-size:54px;font-weight:900;color:#ffd84d;letter-spacing:1px;
+            text-shadow:3px 3px 0 #6b3d1e,-3px 3px 0 #6b3d1e,3px -3px 0 #6b3d1e,-3px -3px 0 #6b3d1e,0 6px 0 #6b3d1e,0 10px 12px #0004}
   #karte h2{margin:0 0 6px;color:#2f7a2c}
   #karte h3{margin:18px 0 6px;font-size:14px;color:#5b6b7c;text-align:left}
   #karte p{margin:8px 0 14px;color:#4a5a6a;white-space:pre-line}
   #karte .knoepfe{display:flex;flex-direction:column;gap:10px}
   #karte .reihe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
-  #karte button{font:inherit;font-size:19px;font-weight:800;padding:13px 20px;border:0;border-radius:16px;
-                background:linear-gradient(#5cc85a,#2f8f3a);color:#fff;box-shadow:0 4px 0 #1f6427}
-  #karte button.zweit{background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8;font-size:15px;padding:10px 14px}
+  #karte button{font:inherit;font-size:19px;font-weight:800;padding:13px 20px;border:3px solid #fff;border-radius:20px;
+                background:linear-gradient(#7ad85a,#2f8f3a);color:#fff;box-shadow:0 5px 0 #1f6427,0 8px 14px #0003;text-shadow:0 2px 0 #1f6427}
+  #karte button.zweit{background:#e7edf3;color:#1B2A3A;box-shadow:0 4px 0 #b5c0cc;font-size:15px;padding:10px 14px;text-shadow:none}
   #karte button:active{transform:translateY(3px);box-shadow:none}
   #karte input,#karte textarea{width:100%;font:15px/1.3 ui-monospace,monospace;padding:10px;border:2px solid #cfd8e2;border-radius:12px;margin-bottom:8px}
   #karte textarea{height:60px;resize:none}
@@ -159,7 +164,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -321,6 +326,7 @@ function baueLandschaft(startzahl) {
       tiefe++;
       let f = 1.15 - Math.min(tiefe, 180) / 180 * .35;
       if (unten[y] < 10) f *= .6 + unten[y] * .04;
+      if (unten[y] < 3 || (x > 2 && x < W - 3 && (!maske[i - 1] || !maske[i + 1] || !maske[i - 3] || !maske[i + 3]))) f *= .5;   // dunkler Rand
       px[i * 4] *= f; px[i * 4 + 1] *= f; px[i * 4 + 2] *= f;
     }
   }
@@ -424,6 +430,7 @@ function schaden(w, n) {
 function updateWurm(w, dt) {
   if (w.tot) return;
   w.aua = Math.max(0, w.aua - dt * 2);
+  w.quetsch = Math.max(0, (w.quetsch || 0) - dt * 3.5);   // nur fürs Aussehen
   w.blinzeln -= dt; if (w.blinzeln < -0.15) w.blinzeln = rnd(2, 5);
   if (w.luft) {
     freiMachen(w);
@@ -432,7 +439,7 @@ function updateWurm(w, dt) {
     bewege(w, dt, (o, ax, ay) => {
       const wucht = abprallen(o, ax, ay, 0.25, 0.65);
       if (wucht > 480) schaden(o, Math.round((wucht - 480) / 9));
-      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; }
+      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.quetsch = Math.min(1, .3 + wucht / 300); }
     });
   } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
   if (w.y > WASSER + 8) ertrinken(w);
@@ -461,6 +468,8 @@ function explosion(x, y, r, dmg) {
   teilchen.push({ art: 'ring', x, y, r: r * 0.4, gross: r * 1.5, t: 0, max: .5 });
   teilchen.push({ art: 'blitz', x, y, r: r * 1.6, t: 0 });
   teilchen.push({ art: 'feuerball', x, y, r: r * 1.15, t: 0, max: .5 });
+  for (let i = 0; i < 7; i++) { const a = rnd(0, 7), d = r * rnd(.3, .8); teilchen.push({ art: 'puff', x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40 - 30, t: 0, max: rnd(.7, 1.1), r: r * rnd(.25, .4) }); }
+  for (let i = 0; i < 6; i++) { const a = rnd(0, 7), s = rnd(150, 320); teilchen.push({ art: 'stern', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 140, t: 0, max: 1, r: rnd(4, 7), dreh: rnd(0, 6) }); }
   for (let i = 0; i < 16; i++) { const a = rnd(0, 7), s = rnd(250, 600); teilchen.push({ art: 'funke', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 100, t: 0, max: rnd(.3, .6) }); }
   for (let i = 0; i < 22; i++) { const a = rnd(0, 7), s = rnd(40, 260); teilchen.push({ art: 'feuer', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, t: 0, max: rnd(.3, .7), r: rnd(5, 11) }); }
   for (let i = 0; i < 14; i++) { const a = rnd(0, 7), s = rnd(10, 90); teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0, max: rnd(1, 2), r: rnd(8, 16) }); }
@@ -567,7 +576,7 @@ function updateTeilchen(dt) {
   for (const p of teilchen) {
     p.t += dt;
     if (p.vx !== undefined) { p.x += p.vx * dt; p.y += p.vy * dt; }
-  if (p.art === 'brocken' || p.art === 'tropfen' || p.art === 'konfetti' || p.art === 'funke') p.vy += G * dt;
+  if (p.art === 'brocken' || p.art === 'tropfen' || p.art === 'konfetti' || p.art === 'funke' || p.art === 'stern') p.vy += G * dt;
     if (p.art === 'rauch') { p.vx *= .97; p.vy -= 20 * dt; p.x += (spiel ? spiel.wind : 0) * dt * .15; }
     if (p.art === 'feuer') { p.vx *= .93; p.vy *= .93; }
   }
@@ -604,7 +613,15 @@ function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = 
 
 function lebt(t) { return wuermer.some(w => w.team === t && !w.tot); }
 
+// Spur des letzten Schusses merken (wie bei Angry Birds) – nur fürs Aussehen
+function spurMerken() {
+  if (!spiel || spiel.fertig || spiel.phase !== 'flug' || !dinge.length) return;
+  const o = dinge[0], s = spiel.aktSpur || (spiel.aktSpur = []), l = s[s.length - 1];
+  if (!l || Math.hypot(l[0] - o.x, l[1] - o.y) > 14) s.push([o.x, o.y]);
+}
 function naechsterZug() {
+  if (spiel.aktSpur && spiel.aktSpur.length > 3) (spiel.spuren || (spiel.spuren = {}))[spiel.dran] = spiel.aktSpur;
+  spiel.aktSpur = null;
   const lebende = spiel.teams.map((_, t) => t).filter(lebt);
   if (lebende.length <= 1) return ende(lebende.length ? lebende[0] : -1);
   do spiel.dran = (spiel.dran + 1) % spiel.n; while (!lebt(spiel.dran));
@@ -925,7 +942,7 @@ function zeigeWaffen() {
     const s = b.querySelector('small'); if (s) s.textContent = zu ? 'R' + WAFFEN[b.dataset.w].ab : n < 0 ? '' : '×' + n;
   });
   const a = WAFFEN[spiel.waffe];
-  $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${a.info}` : '';
+  $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : a.info}` : '';
 }
 
 // Tastatur (am Computer): Pfeile laufen/zielen, Enter springen, Leertaste gedrückt halten = Kraft
@@ -1241,8 +1258,11 @@ function wolkenZeichnen() {
     const x = ((w.x - kam.x) * massstab * p % (W * massstab * p) + W * massstab * p * 1.5) % (W * massstab * p) - W * massstab * p * .25;
     const y = (w.y - kam.y) * massstab * p + bh / 2;
     const s = w.s * massstab * 1.2;
-    ctx.fillStyle = tz < 2 ? 'rgba(255,255,255,.88)' : mischen('#ffffff', '#5a4a7a', Math.min(1, (tz - 2) / 2)) + 'cc';
-    for (const [dx, dy, r] of [[0, 0, 26], [28, -10, 30], [58, 2, 24], [26, 8, 26], [-22, 6, 18]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, 7); ctx.fill(); }
+    const nacht = Math.max(0, Math.min(1, (tz - 2) / 2)), teile = [[0, 0, 26], [28, -10, 30], [58, 2, 24], [26, 8, 26], [-22, 6, 18]];
+    ctx.fillStyle = mischen('#b4cde0', '#3a3060', nacht) + 'e6';                   // Schatten unten
+    for (const [dx, dy, r] of teile) { ctx.beginPath(); ctx.arc(x + dx * s, y + (dy + 6) * s, r * s, 0, 7); ctx.fill(); }
+    ctx.fillStyle = mischen('#ffffff', '#5a4a7a', nacht) + (nacht ? 'cc' : 'f2');
+    for (const [dx, dy, r] of teile) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, 7); ctx.fill(); }
   }
 }
 
@@ -1257,6 +1277,7 @@ function zeichneWurm(w) {
   const lauf = !w.luft && spiel && (spiel.ein.links || spiel.ein.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
   if (!w.luft) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(w.x, w.y + 9, 11, 3, 0, 0, 7); ctx.fill(); }   // Schatten
   ctx.save(); ctx.translate(w.x, w.y);
+  if (w.quetsch > 0) { const q = Math.sin(w.quetsch * Math.PI) * .3; ctx.translate(0, 9); ctx.scale(1 + q, 1 - q); ctx.translate(0, -9); }   // Gummi-Effekt
   if (w.luft) ctx.rotate(w.dreh);
   if (w.aua > 0) ctx.translate(Math.sin(zeit * 60) * w.aua * 2, 0);
   // Körper als Kurve vom Schwanz zum Kopf
@@ -1402,6 +1423,16 @@ function zeichneTeilchen(p) {
   else if (p.art === 'brocken' || p.art === 'konfetti') { ctx.fillStyle = p.farbe; ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.art === 'konfetti' ? p.r * Math.abs(Math.sin(p.t * 8)) + 1 : p.r); ctx.globalAlpha = 1; }
   else if (p.art === 'tropfen') { ctx.fillStyle = `rgba(200,235,255,${1 - k})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
   else if (p.art === 'ring') { ctx.strokeStyle = `rgba(255,255,230,${(1 - k) * .8})`; ctx.lineWidth = 5 * (1 - k); ctx.beginPath(); ctx.arc(p.x, p.y, p.r + (p.gross - p.r) * k, 0, 7); ctx.stroke(); }
+  else if (p.art === 'puff') {
+    ctx.fillStyle = `rgba(255,255,255,${(1 - k) * .9})`; ctx.strokeStyle = `rgba(110,110,125,${(1 - k) * .7})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (.6 + k * .7), 0, 7); ctx.fill(); ctx.stroke();
+  }
+  else if (p.art === 'stern') {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.dreh + p.t * 6); ctx.globalAlpha = Math.min(1, (1 - k) * 2);
+    ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? p.r * .45 : p.r, a = i * Math.PI / 5; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    ctx.closePath(); ctx.fillStyle = '#ffd84d'; ctx.strokeStyle = '#b07800'; ctx.lineWidth = 1.5; ctx.fill(); ctx.stroke();
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
   else if (p.art === 'feuerball') {
     const r = p.r * (.45 + k * .75), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
     g.addColorStop(0, `rgba(255,255,235,${1 - k})`); g.addColorStop(.35, `rgba(255,210,70,${(1 - k) * .95})`);
@@ -1456,16 +1487,22 @@ function zeichneSchleuder() {
     ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✈️', zielt.x, zielt.y - 40);
     return;
   }
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 9;
-  ctx.beginPath(); ctx.moveTo(zielt.sx, zielt.sy); ctx.lineTo(zielt.x, zielt.y); ctx.stroke();
-  ctx.strokeStyle = `hsl(${60 - zielt.staerke * 60},100%,60%)`; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(zielt.sx, zielt.sy); ctx.lineTo(zielt.x, zielt.y); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, 9, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zielt.sx, zielt.sy, zugWeg(), 0, 7); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 14, 0, 7); ctx.fill();
-  ctx.font = 'bold 12px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#1B2A3A'; ctx.fillText(Math.round(zielt.staerke * 100), zielt.x, zielt.y);
+  const sx = zielt.sx, sy = zielt.sy, fx = zielt.x, fy = zielt.y;
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.setLineDash([6, 8]);
+  ctx.beginPath(); ctx.arc(sx, sy, zugWeg(), 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  const band = (bx, by) => { ctx.strokeStyle = '#3a1408'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
+                             ctx.strokeStyle = '#8a2e14'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke(); };
+  const gabel = (b, f) => { ctx.strokeStyle = f; ctx.lineWidth = b; ctx.beginPath(); ctx.moveTo(sx, sy + 52); ctx.lineTo(sx, sy + 14);
+                            ctx.quadraticCurveTo(sx - 4, sy + 2, sx - 16, sy - 12); ctx.moveTo(sx, sy + 14); ctx.quadraticCurveTo(sx + 4, sy + 2, sx + 16, sy - 12); ctx.stroke(); };
+  band(sx + 16, sy - 10);                                       // hinteres Gummiband
+  gabel(14, '#3b2210'); gabel(9, '#a0612b'); gabel(3, '#d79a5a'); // Holzgabel
+  band(sx - 16, sy - 10);                                       // vorderes Gummiband
+  ctx.fillStyle = '#6b3d1e'; ctx.strokeStyle = '#2b1608'; ctx.lineWidth = 2.5;   // Lederschlaufe
+  ctx.beginPath(); ctx.ellipse(fx, fy, 13, 10, Math.atan2(fy - sy, fx - sx), 0, 7); ctx.fill(); ctx.stroke();
+  ctx.font = '900 13px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 4; ctx.strokeStyle = '#2b1a10'; ctx.strokeText(Math.round(zielt.staerke * 100) + '%', fx, fy - 24);
+  ctx.fillStyle = '#fff'; ctx.fillText(Math.round(zielt.staerke * 100) + '%', fx, fy - 24);
 }
 
 function namensschild(w) {
@@ -1487,6 +1524,11 @@ function zeichne() {
   welle(WASSER - 14, '#3b8fc9', 5, 2, links, rechts, unten);
   ctx.drawImage(wand, 0, 0);
   ctx.drawImage(erde, 0, 0);
+  const spur = spiel && spiel.phase === 'zielen' && spiel.spuren && spiel.spuren[spiel.dran];
+  if (spur) spur.forEach(([x, y], i) => {
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.strokeStyle = 'rgba(60,60,70,.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, i % 3 === 0 ? 3.2 : 2, 0, 7); ctx.fill(); ctx.stroke();
+  });
   for (const g of graeber) zeichneGrab(g);
   for (const k of kisten) zeichneKiste(k);
   for (const w of wuermer) if (!w.tot) zeichneWurm(w);
@@ -1507,9 +1549,14 @@ function zeichne() {
     ctx.beginPath(); ctx.moveTo(w.x - 8, hy); ctx.lineTo(w.x + 8, hy); ctx.lineTo(w.x, hy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
   }
   for (const t of texte) {
+    const k = t.t, s = k < .12 ? .4 + k / .12 * .9 : k < .25 ? 1.3 - (k - .12) / .13 * .3 : 1;
     ctx.globalAlpha = Math.min(1, 1.6 - t.t);
-    ctx.font = 'bold 18px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#fff';
-    ctx.strokeText(t.text, t.x, t.y); ctx.fillStyle = t.farbe; ctx.fillText(t.text, t.x, t.y);
+    ctx.save(); ctx.translate(t.x, t.y); ctx.scale(s, s);
+    ctx.font = '900 22px -apple-system,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 8; ctx.strokeStyle = '#2b1a10'; ctx.strokeText(t.text, 0, 0);
+    ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.strokeText(t.text, 0, 0);
+    ctx.fillStyle = t.farbe; ctx.fillText(t.text, 0, 0);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
   // Blätter im Wind
@@ -1598,6 +1645,7 @@ function schleife(jetzt) {
       }
     } else for (const w of wuermer) updateWurm(w, SCHRITT);
     updateTeilchen(SCHRITT);
+    spurMerken();
     // Tageszeit langsam nachführen; Blätter wehen mit dem Wind
     tz += ((spiel ? Math.min(4, (rundeNr() - 1) / 2.5) : 0) - tz) * SCHRITT * .5;
     if (spiel) for (const b of blaetter) {
