@@ -175,7 +175,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.17';
+const APP_VERSION = '1.18';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1642,7 +1642,7 @@ function zeichneZielhilfe(w) {
   if (spiel.waffe !== 'schaf') {
     const v = staerke * (spiel.waffe === 'trampolin' ? TRAMPOLIN_V : MAX_V);
     let x = cx, y = cy, vx = Math.cos(w.ziel) * v, vy = Math.sin(w.ziel) * v;
-    const PUNKTE = 45;                                   // mehr Punkte = längere Vorschau
+    const PUNKTE = 35;                                   // mehr Punkte = längere Vorschau (früher 26, dann 45)
     for (let i = 0; i < PUNKTE; i++) {
       for (let j = 0; j < 2; j++) { vy += G / 60; x += vx / 60; y += vy / 60; }
       ctx.fillStyle = `rgba(255,255,255,${.9 - i / PUNKTE * .6})`; ctx.beginPath(); ctx.arc(x, y, 3 - i / PUNKTE * 1.5, 0, 7); ctx.fill();
