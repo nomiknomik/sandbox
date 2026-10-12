@@ -204,7 +204,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.39';
+const APP_VERSION = '1.40';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -913,7 +913,7 @@ function naechsterZug() {
   if (spiel.zug > 0 && wurf < K.apotheke) { kisten.push({ x: kx, y: -60, art: 'apotheke', r: 9, luft: true }); kiste = '  ❤️ Apotheke!'; }
   else if (spiel.zug > 0 && wurf < K.apotheke + K.bonus) { kisten.push({ x: kx, y: -60, art: 'bonus', r: 9, luft: true }); kiste = '  🎁 Bonus-Kiste!'; }
   else if (spiel.zug > 0 && wurf < K.apotheke + K.bonus + K.waffe) {
-    const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1 && (a !== 'trampolin' || regel().trampolin));
+    const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1 && a !== 'trampolin');   // Trampolin kommt nie aus Kisten
     let art = arten.length && arten[Math.floor(zr(0, arten.length))];
     if (art === 'panzer' && zr(0, 1) < .6) art = arten[Math.floor(zr(0, arten.length))];   // Wunderwaffe: noch seltener
     if (art) { kisten.push({ x: kx, y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
