@@ -198,7 +198,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.36';
+const APP_VERSION = '1.37';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -251,7 +251,7 @@ const WAFFEN = {
   erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
   trampolin:  { icon: '', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
   flinte:     { icon: '🔫', name: 'Schrotflinte',  sterne: 2, schaden: 25, ab: 1, info: '2 Schüsse geradeaus – kein Wind, keine Kurve' },
-  zielsuch:   { icon: '🎯', name: 'Zielsuchrakete', sterne: 4, radius: 38, schaden: 42, ab: 3, start: 1, info: 'Fliegt los und sucht sich den Gegner in Zielrichtung' },
+  zielsuch:   { icon: '🎯', name: 'Zielsuchrakete', sterne: 4, radius: 38, schaden: 42, ab: 3, start: 1, info: 'Erst kurz auf das Ziel tippen 🎯, dann wie die Bazooka abschießen' },
   molotow:    { icon: '🔥', name: 'Molotow',       sterne: 3, schaden: 4, ab: 2, start: 2, info: 'Zerplatzt und setzt den Boden in Brand' },
   mine:       { icon: '💥', name: 'Landmine',      sterne: 3, radius: 40, schaden: 40, ab: 2, start: 2, info: 'Hinlegen – wer drauftritt, fliegt in die Luft' },
   seil:       { icon: '🪢', name: 'Ninja-Seil',    sterne: 0, ab: 1, info: 'Seil schießen, mit ◀ ▶ schaukeln, ⤴ = loslassen. Der Zug geht weiter' },
@@ -723,7 +723,8 @@ function feuern(staerke, zielX, zielY) {
   if (art === 'banane') Object.assign(o, { r: 6, zuender: WAFFEN.banane.zuender });
   if (art === 'schaf') Object.assign(o, { r: 8, x: w.x + w.richtung * 12, y: w.y - 4, vx: w.richtung * 60, vy: -150, luft: true,
                                           richtung: w.richtung, zuender: WAFFEN.schaf.zuender, laufen: 0, spruenge: 0 });
-  if (art === 'zielsuch') {                          // Ziel: der Gegner, der am genauesten in Zielrichtung liegt
+  if (art === 'zielsuch' && zielX != null) o.zielPunkt = { x: zielX, y: zielY };   // angetipptes Ziel
+  else if (art === 'zielsuch') {                     // kein Ziel getippt: der Gegner, der am genauesten in Zielrichtung liegt
     let best = null, bw = 9;
     for (const g of wuermer) if (!g.tot && g.team !== w.team) {
       const d = Math.abs(Math.atan2(Math.sin(Math.atan2(g.y - w.y, g.x - w.x) - a), Math.cos(Math.atan2(g.y - w.y, g.x - w.x) - a)));
@@ -751,9 +752,9 @@ function updateDing(o, dt) {
     if (o.art === 'erdbrecher') return o.y > WASSER + 5 ? (platsch(o.x), false) : o.x > -400 && o.x < W + 400;   // fliegt durch Würmer durch
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
   } else if (o.art === 'zielsuch') {
-    const z = o.ziel && !o.ziel.tot ? o.ziel : null;
+    const z = o.zielPunkt || (o.ziel && !o.ziel.tot ? { x: o.ziel.x, y: o.ziel.y - 10 } : null);
     if (z && o.t > .35 && o.t < 4) {                 // lenkt zum Ziel (ohne Schwerkraft)
-      const soll = Math.atan2(z.y - 10 - o.y, z.x - o.x), ist = Math.atan2(o.vy, o.vx);
+      const soll = Math.atan2(z.y - o.y, z.x - o.x), ist = Math.atan2(o.vy, o.vx);
       const diff = Math.atan2(Math.sin(soll - ist), Math.cos(soll - ist)), neu = ist + Math.max(-3.5 * dt, Math.min(3.5 * dt, diff));
       const v = Math.max(380, Math.hypot(o.vx, o.vy)); o.vx = Math.cos(neu) * v; o.vy = Math.sin(neu) * v;
     } else o.vy += G * dt;
@@ -912,7 +913,7 @@ function naechsterZug() {
   spiel.regen = zufallsFolge((spiel.startzahl ^ Math.imul(Math.floor(spiel.zug / 3) + 7, 40503)) >>> 0)() < UNWETTER.chance;
   spiel.blitze = [];
   if (spiel.regen) { const n = 1 + Math.floor(zr(0, UNWETTER.blitze)); for (let i = 0; i < n; i++) spiel.blitze.push({ bild: Math.round(zr(4, ZUGZEIT - 5) * 60), x: Math.round(zr(60, W - 60)) }); }
-  spiel.flinte = 0;
+  spiel.flinte = 0; spiel.zielPunkt = null;
   spiel.bonusSchuesse = spiel.teams[spiel.dran].extra || 0; spiel.teams[spiel.dran].extra = 0; spiel.geschossen = false;
   if (spiel.regen) kiste += '  ⛈️ Unwetter!';
   if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
@@ -1277,7 +1278,9 @@ function loslassen(e) {
       else $('waffeninfo').textContent = '🌀 Da passt kein Wurm hin!';
     }
     else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && ['schaf', 'dynamit', 'graben', 'mine', 'flinte', 'seil'].includes(spiel.waffe))))
-      eingeben(['F', 0, runde(Math.max(.2, zielt.staerke)), runde(w.ziel), zielt.richtung, spiel.waffe]);
+      eingeben(['F', 0, runde(Math.max(.2, zielt.staerke)), runde(w.ziel), zielt.richtung, spiel.waffe,
+                ...(spiel.waffe === 'zielsuch' && spiel.zielPunkt ? [Math.round(spiel.zielPunkt.x), Math.round(spiel.zielPunkt.y)] : [])]);
+    else if (darfZielen() && spiel.waffe === 'zielsuch' && weg < 10) { spiel.zielPunkt = inWelt(zielt.x, zielt.y); ton.klack(); zeigeWaffen(); }   // kurz tippen = Ziel setzen
     zielt = null;
   }
 }
@@ -1311,6 +1314,7 @@ function zeigeWaffen() {
     const s = b.querySelector('small'); if (s) s.textContent = zu ? 'R' + WAFFEN[b.dataset.w].ab : n < 0 ? '' : '×' + n;
   });
   const a = WAFFEN[spiel.waffe];
+  if (spiel.waffe === 'zielsuch' && darfZielen()) { $('waffeninfo').textContent = spiel.zielPunkt ? '🎯 Ziel gesetzt – jetzt ziehen und loslassen' : '🎯 Erst kurz auf das Ziel tippen'; return; }
   const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · noch ${pw.panzer.schuss} Schüsse · ◀ ▶ fahren`; return; }
   $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : spiel.waffe === 'schaf' && !regel().schafKnopf ? 'Läuft los und explodiert von selbst!' : a.info}` : '';
 }
@@ -2041,7 +2045,8 @@ function zeichneDing(o) {
     ctx.fillStyle = 'rgba(255,170,40,.9)'; ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-15 - Math.random() * 5, 0); ctx.lineTo(-8, 2); ctx.fill();
     ctx.fillStyle = '#eee'; ctx.fillRect(-8, -3, 12, 6); ctx.fillStyle = '#d22'; ctx.fillRect(-4, -3, 3, 6);
     ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(10, 0); ctx.lineTo(4, 3); ctx.fill(); ctx.restore();
-    if (o.ziel && !o.ziel.tot) { ctx.strokeStyle = '#e33'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(o.ziel.x, o.ziel.y - 10, 14, 0, 7); ctx.moveTo(o.ziel.x - 18, o.ziel.y - 10); ctx.lineTo(o.ziel.x + 18, o.ziel.y - 10); ctx.moveTo(o.ziel.x, o.ziel.y - 28); ctx.lineTo(o.ziel.x, o.ziel.y + 8); ctx.stroke(); }
+    const z = o.zielPunkt || (o.ziel && !o.ziel.tot ? { x: o.ziel.x, y: o.ziel.y - 10 } : null);
+    if (z) fadenkreuz(z.x, z.y);
     return;
   }
   if (o.art === 'panzergranate') {                    // dunkle Granate
@@ -2142,6 +2147,15 @@ function panzerMalen(w) {
   ctx.fillStyle = '#6d8f40'; ctx.beginPath(); ctx.ellipse(0, -15, 8, 3, 0, 0, 7); ctx.fill(); ctx.stroke();   // Luke
   ctx.fillStyle = '#fff'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★', -8, -8);
   ctx.restore();
+}
+// Rotes Fadenkreuz (Ziel der Zielsuchrakete)
+function fadenkreuz(x, y) {
+  const p = 14 + Math.sin(zeit * 8) * 2;
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y, p, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#e33'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, p, 0, 7);
+  ctx.moveTo(x - p - 6, y); ctx.lineTo(x - p + 6, y); ctx.moveTo(x + p - 6, y); ctx.lineTo(x + p + 6, y);
+  ctx.moveTo(x, y - p - 6); ctx.lineTo(x, y - p + 6); ctx.moveTo(x, y + p - 6); ctx.lineTo(x, y + p + 6); ctx.stroke();
+  ctx.fillStyle = '#e33'; ctx.beginPath(); ctx.arc(x, y, 2, 0, 7); ctx.fill();
 }
 // Kleines Trampolin: (x, y) = Boden in der Mitte, b = halbe Breite, federn = wie weit das Tuch nach unten gedrückt ist
 function trampolinMalen(x, y, b, federn) {
@@ -2296,6 +2310,7 @@ function zeichne() {
   for (let x = Math.floor(links / 90) * 90; x < rechts; x += 90) { const s = Math.sin(zeit * 2 + x) * .5 + .5; ctx.fillRect(x + (x * 7 % 40), WASSER + 2 + (x * 13 % 20), 10 * s, 1.5); }
   for (const w of wuermer) if (!w.tot) namensschild(w);
   for (const w of wuermer) if (!w.tot) sprechblase(w);
+  if (spiel && spiel.zielPunkt && spiel.waffe === 'zielsuch' && spiel.phase === 'zielen' && spiel.quelle === 'live') fadenkreuz(spiel.zielPunkt.x, spiel.zielPunkt.y);
   const w = aktiver();
   if (spiel && w && !w.tot && spiel.phase === 'zielen' && spiel.quelle !== 'fern') {
     if (spiel.quelle === 'live') zeichneZielhilfe(w);
