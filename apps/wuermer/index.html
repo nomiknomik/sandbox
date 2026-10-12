@@ -198,7 +198,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.35';
+const APP_VERSION = '1.36';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -528,6 +528,7 @@ function updateWurm(w, dt) {
     w.flugZeit = (w.flugZeit || 0) + dt;
     if (w.seil) {                                     // am Seil: wie ein Pendel – Abstand zum Haken bleibt gleich
       const dx = w.x - w.seil.x, dy = w.y - w.seil.y, d = Math.hypot(dx, dy) || 1;
+      w.vx *= 1 - .25 * dt; w.vy *= 1 - .1 * dt;      // etwas Luftwiderstand, damit es nicht ewig schaukelt
       if (d > w.seil.len) {
         const nx = dx / d, ny = dy / d; w.x = w.seil.x + nx * w.seil.len; w.y = w.seil.y + ny * w.seil.len;
         const vr = w.vx * nx + w.vy * ny; if (vr > 0) { w.vx -= vr * nx; w.vy -= vr * ny; }
@@ -545,7 +546,7 @@ function updateWurm(w, dt) {
       const wucht = abprallen(o, ax, ay, 0.25, 0.65);
       if (wucht > 480 && !o.weich && !o.seil) schaden(o, Math.round((wucht - 480) / 9));   // weich = Trampolin-Flug, tut nicht weh
       if (o.weich && o.flugZeit < .15) return;           // Trampolin: kurz nach dem Abheben noch nicht landen
-      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.weich = false; o.umgeworfen = null; o.quetsch = Math.min(1, .3 + wucht / 300); }
+      if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.seil = null; o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.weich = false; o.umgeworfen = null; o.quetsch = Math.min(1, .3 + wucht / 300); }
     });
   } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
   if (w.y > WASSER + 8) ertrinken(w);
@@ -1123,6 +1124,10 @@ function simSchritt() {
 
 function updateSpiel(dt) {
   const w = aktiver();
+  // Ninja-Seil: Loslassen geht immer; ist der Zug vorbei (Zeit um, getroffen), lässt der Wurm von selbst los
+  if (w && w.seil && (spiel.ein.springen || !['zielen', 'flug', 'rueckzug'].includes(spiel.phase))) {
+    w.seil = null; if (spiel.ein.springen) w.vy = Math.min(w.vy, 0) - 120; spiel.ein.springen = false;
+  }
   const darfLaufen = (spiel.phase === 'zielen' || spiel.phase === 'flug' || spiel.phase === 'rueckzug') && w && !w.tot;
   if (darfLaufen && !spiel.graben && (spiel.ein.links || spiel.ein.rechts) && spiel.kudaGesagt !== spiel.zug) {
     const g = wuermer.find(x => !x.tot && x.team !== w.team && Math.hypot(x.x - w.x, x.y - w.y) < 70);
