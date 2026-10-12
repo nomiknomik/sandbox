@@ -198,7 +198,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.34';
+const APP_VERSION = '1.35';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2095,7 +2095,18 @@ function zeichneKiste(k) {
   ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(10, 9); ctx.moveTo(10, -8); ctx.lineTo(-10, 9); ctx.stroke();
   ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, .5, 7, 0, 7); ctx.fill();
-  if (k.art === 'trampolin') trampolinMalen(0, 4, 11, 0); else if (k.art === 'panzer') {   // Mini-Panzer auf der Kiste
+  if (k.art === 'trampolin') trampolinMalen(0, 3.5, 5.5, 0);
+  else if (k.art === 'molotow') {                      // Mini-Flasche mit Flamme
+    ctx.fillStyle = '#3f8f3a'; ctx.fillRect(-2.5, -2, 5, 7); ctx.fillRect(-1, -4.5, 2, 3);
+    ctx.fillStyle = '#ff6a1a'; ctx.beginPath(); ctx.arc(0, -5.5, 1.8, 0, 7); ctx.fill();
+  } else if (k.art === 'zielsuch') {                   // Mini-Rakete mit Radarwelle
+    ctx.save(); ctx.rotate(-.6); ctx.fillStyle = '#eee'; ctx.fillRect(-5, -1.5, 8, 3); ctx.fillStyle = '#d22'; ctx.fillRect(-2, -1.5, 1.5, 3);
+    ctx.beginPath(); ctx.moveTo(3, -1.5); ctx.lineTo(6, 0); ctx.lineTo(3, 1.5); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = '#2fbf4f'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(3, -3, 3, -1.6, 0); ctx.stroke();
+  } else if (k.art === 'mine') {                       // Mini-Mine
+    ctx.fillStyle = '#2b2b30'; ctx.beginPath(); ctx.ellipse(0, 2, 5, 3, 0, Math.PI, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff3030'; ctx.beginPath(); ctx.arc(0, -1.5, 1.3, 0, 7); ctx.fill();
+  } else if (k.art === 'panzer') {   // Mini-Panzer auf der Kiste
     ctx.fillStyle = '#333'; ctx.fillRect(-6, 2, 12, 3); ctx.fillStyle = '#5b7a34'; ctx.fillRect(-5, -2, 10, 4); ctx.fillRect(-2, -5, 5, 3);
     ctx.fillStyle = '#3f5524'; ctx.fillRect(2, -4.5, 6, 1.6);
   } else ctx.fillText(WAFFEN[k.art].icon, 0, 1);
