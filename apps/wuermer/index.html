@@ -166,6 +166,7 @@
     <button class="waffe" data-w="graben">⛏️<small></small></button>
     <button class="waffe" data-w="erdbrecher">🪨<small></small></button>
     <button class="waffe" data-w="trampolin"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><path d="M8 22 L4 35 M32 22 L36 35 M15 25 L13 35 M25 25 L27 35" stroke="#555" stroke-width="3" stroke-linecap="round"/><ellipse cx="20" cy="21" rx="17" ry="6" fill="#e33" stroke="#7a1010" stroke-width="2"/><ellipse cx="20" cy="20.5" rx="12.5" ry="3.6" fill="#1d2b44"/><path d="M20 4 l3 7 h-6z" fill="#ffd84d"/></svg><small></small></button>
+    <button class="waffe" data-w="panzer"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><rect x="4" y="24" width="32" height="9" rx="4.5" fill="#333"/><circle cx="10" cy="28.5" r="2.5" fill="#888"/><circle cx="20" cy="28.5" r="2.5" fill="#888"/><circle cx="30" cy="28.5" r="2.5" fill="#888"/><path d="M6 24 L9 17 H31 L34 24Z" fill="#5b7a34" stroke="#2d3d18" stroke-width="1.5"/><path d="M14 17 Q14 10 20 10 Q26 10 26 17Z" fill="#6d8f40" stroke="#2d3d18" stroke-width="1.5"/><rect x="24" y="11.5" width="14" height="3.5" rx="1.5" fill="#3f5524"/></svg><small></small></button>
     <button class="waffe" data-w="teleport">🌀<small></small></button>
     <div id="waffeninfo" class="box"></div>
   </div>
@@ -186,7 +187,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.30';
+const APP_VERSION = '1.31';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -238,6 +239,7 @@ const WAFFEN = {
   graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
   erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
   trampolin:  { icon: '', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
+  panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 3, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 3 Schüsse. Im Panzer nur halber Schaden.' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
 // Erfahrung: Jeder Sieg auf diesem Gerät zählt. Mit der Schwierigkeit (0–100) wird das Spiel
@@ -257,7 +259,7 @@ const KISTEN = { apotheke: .06, bonus: .04, waffe: .4 };
 const HEILUNG = 40;                      // so viele Leben gibt die Apotheke (höchstens bis 100)
 // Unwetter: Chance pro 3 Züge, und bis zu so viele Blitze pro Zug
 const UNWETTER = { chance: .25, blitze: 2, loch: 34 };
-const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag };
+const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag, panzergranate: { radius: 36, schaden: 38 } };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
 function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 + .1 * r), r: Math.min(1.25, 1 + .04 * r) }; }
@@ -467,6 +469,7 @@ function aktiver() { return spiel && spiel.wurm; }
 
 function schaden(w, n) {
   if (w.tot || n <= 0) return;
+  if (w.panzer) n = Math.ceil(n / 2);                  // Panzer schützt
   w.hp = Math.max(0, w.hp - n); w.aua = 1; w.auaBis = zeit + 1.3;
   if (w.hp > 0) sag(w, 'aua'); else sag(w, 'tschuess', true);
   if (spiel && aktiver() && w.team !== aktiver().team) spiel.trafGegner = true;
@@ -581,9 +584,19 @@ function funkeln(x, y) {
 }
 function feuern(staerke, zielX, zielY) {
   const w = aktiver(), art = spiel.waffe, team = spiel.teams[w.team];
+  if (w.panzer) {                                     // im Panzer: jeder Schuss ist eine Panzergranate (ohne Wind)
+    w.panzer.schuss--; spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true; spiel.trafGegner = false;
+    const a = w.ziel, v = staerke * MAX_V;
+    dinge.push({ art: 'panzergranate', x: w.x + Math.cos(a) * 24, y: w.y - 6 + Math.sin(a) * 24, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 4, t: 0, besitzer: w, dreh: a });
+    wackeln = Math.max(wackeln, 4); ton.bumm(14); zeigeWaffen(); return;
+  }
   if (!WAFFEN[art] || team.munition[art] === 0 || WAFFEN[art].ab > rundeNr()) return;
   if (team.munition[art] > 0) team.munition[art]--;
   if (art === 'graben') { spiel.graben = { t: 1.6, winkel: w.ziel, takt: 0 }; return; }   // Zug geht danach weiter
+  if (art === 'panzer' && !w.panzer) {                // Panzer: einsteigen – geschossen wird danach
+    w.panzer = { schuss: WAFFEN.panzer.schuesse }; spiel.waffe = 'panzer';
+    teilchen.push({ art: 'ring', x: w.x, y: w.y, r: 6, gross: 40, t: 0, max: .4 }); ton.klack(); zeigeWaffen(); return;
+  }
   if (art === 'trampolin') {                          // Trampolin: Der Wurm fliegt selbst wie eine Rakete
     const v = staerke * TRAMPOLIN_V * regel().trampolin;
     w.vx = Math.cos(w.ziel) * v; w.vy = Math.sin(w.ziel) * v; w.luft = true; w.weich = true; w.flugZeit = 0; w.doppel = false; w.y -= 2;
@@ -620,8 +633,8 @@ function feuern(staerke, zielX, zielY) {
 function updateDing(o, dt) {
   o.t += dt;
   if (o.zuender !== undefined) { o.zuender -= dt; if (o.zuender <= 0) return platzen(o); }
-  if (o.art === 'bazooka' || o.art === 'baenanchen' || o.art === 'luftrakete' || o.art === 'erdbrecher') {
-    o.vy += G * dt; if (o.art !== 'baenanchen' && o.art !== 'erdbrecher') o.vx += spiel.wind * dt * (o.art === 'luftrakete' ? .5 : 1);
+  if (o.art === 'bazooka' || o.art === 'baenanchen' || o.art === 'luftrakete' || o.art === 'erdbrecher' || o.art === 'panzergranate') {
+    o.vy += G * dt; if (o.art !== 'baenanchen' && o.art !== 'erdbrecher' && o.art !== 'panzergranate') o.vx += spiel.wind * dt * (o.art === 'luftrakete' ? .5 : 1);
     o.dreh = Math.atan2(o.vy, o.vx);
     if (o.art !== 'baenanchen' && o.art !== 'erdbrecher' && Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
     if (o.art === 'baenanchen' || o.art === 'erdbrecher') o.dreh = o.t * 12;
@@ -749,7 +762,9 @@ function naechsterZug() {
   else if (spiel.zug > 0 && wurf < K.apotheke + K.bonus) { kisten.push({ x: kx, y: -60, art: 'bonus', r: 9, luft: true }); kiste = '  🎁 Bonus-Kiste!'; }
   else if (spiel.zug > 0 && wurf < K.apotheke + K.bonus + K.waffe) {
     const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1 && (a !== 'trampolin' || regel().trampolin));
-    if (arten.length) { const art = arten[Math.floor(zr(0, arten.length))]; kisten.push({ x: kx, y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
+    let art = arten.length && arten[Math.floor(zr(0, arten.length))];
+    if (art === 'panzer' && zr(0, 1) < .6) art = arten[Math.floor(zr(0, arten.length))];   // Wunderwaffe: noch seltener
+    if (art) { kisten.push({ x: kx, y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
   }
   // Wetter: immer für 3 Züge gleich; bei Unwetter schlagen Blitze ein (Zeitpunkt und Ort vorher ausgewürfelt)
   spiel.regen = zufallsFolge((spiel.startzahl ^ Math.imul(Math.floor(spiel.zug / 3) + 7, 40503)) >>> 0)() < UNWETTER.chance;
@@ -794,6 +809,16 @@ function zugEnde() {
     if (gegner.length) { const g = gegner[Math.floor(Math.random() * gegner.length)]; sag(g, 'mazila', true); g.jubelBis = zeit + 2; }
   }
   spiel.trafGegner = false;
+  // Panzer: noch Schüsse übrig?
+  if (w && !w.tot && w.panzer && w.panzer.schuss > 0 && spiel.geschossen && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
+    spiel.geschossen = false; spiel.schuss++;
+    Object.assign(spiel, { phase: 'zielen', zugzeit: 20, warte: 0 });
+    kam.frei = false;
+    ansage('Panzer', 'Noch ' + w.panzer.schuss + (w.panzer.schuss > 1 ? ' Schüsse!' : ' Schuss!'), TEAMS[spiel.dran].hell);
+    zeigeWaffen();
+    return;
+  }
+  for (const x of wuermer) if (x.panzer) { x.panzer = null; teilchen.push({ art: 'puff', x: x.x, y: x.y - 4, vx: 0, vy: -20, t: 0, max: .8, r: 14 }); }   // aussteigen
   // Bonus-Kiste: noch ein Schuss
   if (w && !w.tot && spiel.geschossen && spiel.bonusSchuesse > 0 && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
     spiel.bonusSchuesse--; spiel.geschossen = false; spiel.schuss++;
@@ -1114,6 +1139,7 @@ function zeigeWaffen() {
     const s = b.querySelector('small'); if (s) s.textContent = zu ? 'R' + WAFFEN[b.dataset.w].ab : n < 0 ? '' : '×' + n;
   });
   const a = WAFFEN[spiel.waffe];
+  const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · noch ${pw.panzer.schuss} Schüsse · ◀ ▶ fahren`; return; }
   $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : spiel.waffe === 'schaf' && !regel().schafKnopf ? 'Läuft los und explodiert von selbst!' : a.info}` : '';
 }
 
@@ -1501,7 +1527,7 @@ const WURM_BILDER = ['01-soldat', '02-rambo', '03-hippie', '04-nachtsicht', '05-
 const WURM_GROESSE = .23;          // 1 Bild-Pixel = so viele Welt-Punkte (größer = dickere Würmer)
 // Welches Gesicht zeigt der Wurm gerade?
 function wurmVariante(w) {
-  if (w.luft && (w.weich || Math.hypot(w.vx, w.vy) > 220)) return 'fliegen';
+  if (w.luft && !w.panzer && (w.weich || Math.hypot(w.vx, w.vy) > 220)) return 'fliegen';
   if (w.auaBis > zeit) return 'aua';
   if (w.jubelBis > zeit) return 'jubel';
   if (w.hp < 30) return 'angst';
@@ -1584,11 +1610,13 @@ function zeichneWurm(w) {
       ctx.drawImage(B, -B.width / 2, -B.height / 2);
     } else {
       if (w.quetsch > 0) { const q = Math.sin(w.quetsch * Math.PI) * .3; ctx.translate(0, 9); ctx.scale(1 + q, 1 - q); ctx.translate(0, -9); }   // Gummi-Effekt
-      if (w.luft) ctx.rotate(w.dreh);
+      if (w.luft && !w.panzer) ctx.rotate(w.dreh);
+      if (w.panzer) ctx.translate(0, -12);              // im Panzer: nur der Oberkörper schaut raus
       ctx.translate(0, 9); ctx.scale(f * WURM_GROESSE, WURM_GROESSE * (1 + wipp * .012));   // atmen
       ctx.drawImage(B, -gemalt.ax, -B.height);
     }
     ctx.restore();
+    if (w.panzer) { panzerMalen(w); return; }
     if (spiel && w === aktiver() && spiel.phase === 'zielen' && !w.luft && spiel.quelle !== 'fern') zeichneWaffe(w);
     return;
   }
@@ -1809,7 +1837,11 @@ function schaf(o) {
 }
 
 function zeichneDing(o) {
-  if (o.art === 'bazooka' || o.art === 'luftrakete') {
+  if (o.art === 'panzergranate') {                    // dunkle Granate
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
+    ctx.fillStyle = '#3a3f2a'; ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(3, -3); ctx.quadraticCurveTo(8, 0, 3, 3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#c9a227'; ctx.fillRect(-6, -3, 2, 6); ctx.restore();
+  } else if (o.art === 'bazooka' || o.art === 'luftrakete') {
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh); if (o.art === 'luftrakete') ctx.scale(.8, .8);
     ctx.fillStyle = 'rgba(255,170,40,.9)'; ctx.beginPath(); ctx.moveTo(-8, -2.5); ctx.lineTo(-16 - Math.random() * 6, 0); ctx.lineTo(-8, 2.5); ctx.fill();
     ctx.fillStyle = '#6b7a46'; ctx.fillRect(-8, -3, 12, 6);
@@ -1861,7 +1893,10 @@ function zeichneKiste(k) {
   ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(10, 9); ctx.moveTo(10, -8); ctx.lineTo(-10, 9); ctx.stroke();
   ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, .5, 7, 0, 7); ctx.fill();
-  if (k.art === 'trampolin') trampolinMalen(0, 4, 11, 0); else ctx.fillText(WAFFEN[k.art].icon, 0, 1);
+  if (k.art === 'trampolin') trampolinMalen(0, 4, 11, 0); else if (k.art === 'panzer') {   // Mini-Panzer auf der Kiste
+    ctx.fillStyle = '#333'; ctx.fillRect(-6, 2, 12, 3); ctx.fillStyle = '#5b7a34'; ctx.fillRect(-5, -2, 10, 4); ctx.fillRect(-2, -5, 5, 3);
+    ctx.fillStyle = '#3f5524'; ctx.fillRect(2, -4.5, 6, 1.6);
+  } else ctx.fillText(WAFFEN[k.art].icon, 0, 1);
   ctx.restore();
 }
 function zeichneGrab(g) {
@@ -1872,6 +1907,24 @@ function zeichneGrab(g) {
   ctx.restore();
 }
 
+// Panzer um den Wurm herum (der Wurm schaut oben aus der Luke)
+function panzerMalen(w) {
+  const f = w.richtung;
+  ctx.save(); ctx.translate(w.x, w.y + 9);
+  // Kanone zeigt in Zielrichtung
+  ctx.save(); ctx.translate(0, -17); ctx.rotate(w.ziel);
+  ctx.fillStyle = '#3f5524'; ctx.strokeStyle = '#1e2a10'; ctx.lineWidth = 1; ctx.fillRect(0, -2.5, 26, 5); ctx.strokeRect(0, -2.5, 26, 5);
+  ctx.fillRect(24, -3.5, 4, 7); ctx.restore();
+  ctx.scale(f, 1);
+  ctx.fillStyle = '#5b7a34'; ctx.strokeStyle = '#2d3d18'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-17, -6); ctx.lineTo(-13, -15); ctx.lineTo(14, -15); ctx.lineTo(18, -6); ctx.closePath(); ctx.fill(); ctx.stroke();   // Wanne
+  ctx.fillStyle = '#333'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-19, -7, 38, 8, 4) : ctx.rect(-19, -7, 38, 8); ctx.fill();   // Kette
+  ctx.fillStyle = '#888'; const roll = (w.x * .4) % 6;
+  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.arc(i * 5.2, -3, 2, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#6d8f40'; ctx.beginPath(); ctx.ellipse(0, -15, 8, 3, 0, 0, 7); ctx.fill(); ctx.stroke();   // Luke
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★', -8, -8);
+  ctx.restore();
+}
 // Kleines Trampolin: (x, y) = Boden in der Mitte, b = halbe Breite, federn = wie weit das Tuch nach unten gedrückt ist
 function trampolinMalen(x, y, b, federn) {
   const h = b * .55;                                   // so hoch steht es
@@ -1977,8 +2030,9 @@ function zeichneSchleuder() {
 
 function namensschild(w) {
   const t = TEAMS[w.team], y = w.y - 46;
-  ctx.font = 'bold 11px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)';
-  ctx.strokeText(w.name, w.x, y - 12); ctx.fillStyle = t.hell; ctx.fillText(w.name, w.x, y - 12);
+  ctx.font = 'bold 15px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,.6)';
+  ctx.strokeText(w.name, w.x, y - 13); ctx.fillStyle = t.hell; ctx.fillText(w.name, w.x, y - 13);
+  ctx.font = 'bold 11px -apple-system,sans-serif';
   const txt = String(w.hp), bb = ctx.measureText(txt).width + 10;
   ctx.fillStyle = t.farbe; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(w.x - bb / 2, y - 8, bb, 14, 5) : ctx.rect(w.x - bb / 2, y - 8, bb, 14); ctx.fill(); ctx.stroke();
