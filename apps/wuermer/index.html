@@ -54,7 +54,11 @@
   .waffe.an{border-color:#ffd84d;background:linear-gradient(#a8801a,#5e430a);box-shadow:0 5px 0 #3d2b05,0 0 14px #ffd84d88}
   .waffe.leer{opacity:.35}
   .waffe small{position:absolute;right:4px;bottom:2px;font-size:12px;font-weight:700}
-  #waffen{margin-right:56px;position:relative}
+  #waffen{margin-right:56px;position:relative;min-width:0}
+  #waffenreihe{display:flex;gap:8px;overflow-x:auto;max-width:calc(100vw - 300px);padding:4px 2px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #waffenreihe::-webkit-scrollbar{display:none}
+  #waffenreihe .waffe{flex:none}
+  @media (max-width:760px){#waffenreihe{max-width:calc(100vw - 240px)}}
   #waffeninfo{position:absolute;right:0;bottom:72px;white-space:nowrap;font-size:14px;pointer-events:none}
   #waffeninfo:empty{display:none}
   .waffe.zu{opacity:.4}
@@ -157,6 +161,7 @@
     <button class="knopf" id="rechts">▶</button>
   </div>
   <div id="waffen">
+    <div id="waffenreihe">
     <button class="waffe an" data-w="bazooka">🚀</button>
     <button class="waffe" data-w="granate">💣</button>
     <button class="waffe" data-w="banane">🍌<small></small></button>
@@ -165,9 +170,15 @@
     <button class="waffe" data-w="dynamit">🧨<small></small></button>
     <button class="waffe" data-w="graben">⛏️<small></small></button>
     <button class="waffe" data-w="erdbrecher">🪨<small></small></button>
+    <button class="waffe" data-w="flinte">🔫<small></small></button>
+    <button class="waffe" data-w="zielsuch">🎯<small></small></button>
+    <button class="waffe" data-w="molotow">🔥<small></small></button>
+    <button class="waffe" data-w="mine">💥<small></small></button>
+    <button class="waffe" data-w="seil">🪢<small></small></button>
     <button class="waffe" data-w="trampolin"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><path d="M8 22 L4 35 M32 22 L36 35 M15 25 L13 35 M25 25 L27 35" stroke="#555" stroke-width="3" stroke-linecap="round"/><ellipse cx="20" cy="21" rx="17" ry="6" fill="#e33" stroke="#7a1010" stroke-width="2"/><ellipse cx="20" cy="20.5" rx="12.5" ry="3.6" fill="#1d2b44"/><path d="M20 4 l3 7 h-6z" fill="#ffd84d"/></svg><small></small></button>
     <button class="waffe" data-w="panzer"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><rect x="4" y="24" width="32" height="9" rx="4.5" fill="#333"/><circle cx="10" cy="28.5" r="2.5" fill="#888"/><circle cx="20" cy="28.5" r="2.5" fill="#888"/><circle cx="30" cy="28.5" r="2.5" fill="#888"/><path d="M6 24 L9 17 H31 L34 24Z" fill="#5b7a34" stroke="#2d3d18" stroke-width="1.5"/><path d="M14 17 Q14 10 20 10 Q26 10 26 17Z" fill="#6d8f40" stroke="#2d3d18" stroke-width="1.5"/><rect x="24" y="11.5" width="14" height="3.5" rx="1.5" fill="#3f5524"/></svg><small></small></button>
     <button class="waffe" data-w="teleport">🌀<small></small></button>
+    </div>
     <div id="waffeninfo" class="box"></div>
   </div>
 </div>
@@ -187,7 +198,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.31';
+const APP_VERSION = '1.33';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -239,9 +250,35 @@ const WAFFEN = {
   graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
   erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
   trampolin:  { icon: '', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
+  flinte:     { icon: '🔫', name: 'Schrotflinte',  sterne: 2, schaden: 25, ab: 1, info: '2 Schüsse geradeaus – kein Wind, keine Kurve' },
+  zielsuch:   { icon: '🎯', name: 'Zielsuchrakete', sterne: 4, radius: 38, schaden: 42, ab: 3, start: 1, info: 'Fliegt los und sucht sich den Gegner in Zielrichtung' },
+  molotow:    { icon: '🔥', name: 'Molotow',       sterne: 3, schaden: 4, ab: 2, start: 2, info: 'Zerplatzt und setzt den Boden in Brand' },
+  mine:       { icon: '💥', name: 'Landmine',      sterne: 3, radius: 40, schaden: 40, ab: 2, start: 2, info: 'Hinlegen – wer drauftritt, fliegt in die Luft' },
+  seil:       { icon: '🪢', name: 'Ninja-Seil',    sterne: 0, ab: 1, info: 'Seil schießen, mit ◀ ▶ schaukeln, ⤴ = loslassen. Der Zug geht weiter' },
   panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 3, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 3 Schüsse. Im Panzer nur halber Schaden.' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
+// Statistik dieses Geräts (bleibt nur hier gespeichert)
+function statistik() {
+  const leer = () => ({ spiele: 0, siege: 0, niederlagen: 0, farben: {} });
+  const st = speicher.lies('wu-statistik') || {};
+  return { einzel: { ...leer(), ...st.einzel }, mvm: { ...leer(), ...st.mvm } };
+}
+function statistikZeigen() {
+  const st = statistik(), e = st.einzel, m = st.mvm;
+  const quote = k => k.siege + k.niederlagen ? Math.round(k.siege / (k.siege + k.niederlagen) * 100) + ' %' : '–';
+  const farben = Object.entries(m.farben).sort((a, b) => b[1] - a[1]).map(([f, n]) => `${f}: ${n}`).join(' · ') || '–';
+  const zeile = (a, b) => `<tr><td style="text-align:left;padding:3px 10px 3px 0">${a}</td><td style="text-align:right;font-weight:800">${b}</td></tr>`;
+  karte('<h2>📊 Statistik</h2>', 'Gezählt auf diesem Gerät.', [],
+    `<table style="margin:0 auto 10px;font-size:15px">
+      <tr><td colspan="2" style="text-align:left;font-weight:900;padding-top:6px">🤖 Einzelspiel (gegen Computer)</td></tr>
+      ${zeile('Spiele', e.spiele)}${zeile('Gewonnen', e.siege)}${zeile('Verloren', e.niederlagen)}${zeile('Siegquote', quote(e))}
+      <tr><td colspan="2" style="text-align:left;font-weight:900;padding-top:10px">👥 Mensch gegen Mensch</td></tr>
+      ${zeile('Spiele', m.spiele)}${zeile('Online gewonnen', m.siege)}${zeile('Online verloren', m.niederlagen)}${zeile('Auf einem Gerät – Siege nach Farbe', farben)}
+      <tr><td colspan="2" style="text-align:left;font-weight:900;padding-top:10px">⭐ Erfahrung</td></tr>
+      ${zeile('Siege für die Schwierigkeit', meineSiege())}${zeile('Schwierigkeit', meinSchwer())}
+    </table>`, [['← Zurück', startMenue]]);
+}
 // Erfahrung: Jeder Sieg auf diesem Gerät zählt. Mit der Schwierigkeit (0–100) wird das Spiel
 //   Schritt für Schritt wie das Original: weniger Kisten, Wind immer an, Schaf ohne Zünd-Knopf,
 //   Trampolin wird schwächer und verschwindet. Online zählt das schwächste Gerät.
@@ -259,7 +296,7 @@ const KISTEN = { apotheke: .06, bonus: .04, waffe: .4 };
 const HEILUNG = 40;                      // so viele Leben gibt die Apotheke (höchstens bis 100)
 // Unwetter: Chance pro 3 Züge, und bis zu so viele Blitze pro Zug
 const UNWETTER = { chance: .25, blitze: 2, loch: 34 };
-const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag, panzergranate: { radius: 36, schaden: 38 } };
+const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag, zielsuch: WAFFEN.zielsuch, panzergranate: { radius: 36, schaden: 38 } };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
 function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 + .1 * r), r: Math.min(1.25, 1 + .04 * r) }; }
@@ -296,7 +333,7 @@ const zr = (a, b) => a + zufall() * (b - a);            // Zufall fürs Spiel (g
 const rnd = (a, b) => a + Math.random() * (b - a);      // Zufall nur fürs Aussehen (Funken, Rauch)
 
 let maske, erde, ectx, wand;    // maske: 1 = Erde, 0 = Luft
-let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [], kisten = [];
+let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [], kisten = [], minen = [];
 let spiel = null;               // Zustand eines laufenden Spiels
 let zeit = 0, wackeln = 0;
 const kam = { x: W / 2, y: H / 2, frei: false };
@@ -489,6 +526,14 @@ function updateWurm(w, dt) {
     w.vy += G * dt;
     w.dreh += w.vx * dt * 0.05;
     w.flugZeit = (w.flugZeit || 0) + dt;
+    if (w.seil) {                                     // am Seil: wie ein Pendel – Abstand zum Haken bleibt gleich
+      const dx = w.x - w.seil.x, dy = w.y - w.seil.y, d = Math.hypot(dx, dy) || 1;
+      if (d > w.seil.len) {
+        const nx = dx / d, ny = dy / d; w.x = w.seil.x + nx * w.seil.len; w.y = w.seil.y + ny * w.seil.len;
+        const vr = w.vx * nx + w.vy * ny; if (vr > 0) { w.vx -= vr * nx; w.vy -= vr * ny; }
+      }
+      if (!fest(w.seil.x, w.seil.y) && !fest(w.seil.x, w.seil.y + 3)) w.seil = null;   // Erde weggesprengt: Seil reißt
+    }
     if (w.weich) for (const o of wuermer) {                // Trampolin-Flug: andere Würmer umwerfen
       if (o === w || o.tot || (w.umgeworfen || []).includes(o) || Math.hypot(o.x - w.x, o.y - w.y) > R * 2 + 2) continue;
       (w.umgeworfen = w.umgeworfen || []).push(o);
@@ -498,7 +543,7 @@ function updateWurm(w, dt) {
     }
     bewege(w, dt, (o, ax, ay) => {
       const wucht = abprallen(o, ax, ay, 0.25, 0.65);
-      if (wucht > 480 && !o.weich) schaden(o, Math.round((wucht - 480) / 9));   // weich = Trampolin-Flug, tut nicht weh
+      if (wucht > 480 && !o.weich && !o.seil) schaden(o, Math.round((wucht - 480) / 9));   // weich = Trampolin-Flug, tut nicht weh
       if (o.weich && o.flugZeit < .15) return;           // Trampolin: kurz nach dem Abheben noch nicht landen
       if ((ay < -0.6 && wucht < 280) || Math.hypot(o.vx, o.vy) < 35) { o.vx = o.vy = 0; o.luft = false; o.dreh = 0; o.doppel = false; o.weich = false; o.umgeworfen = null; o.quetsch = Math.min(1, .3 + wucht / 300); }
     });
@@ -542,6 +587,7 @@ function explosion(x, y, r, dmg, nurErde) {
   for (let i = 0; i < 22; i++) { const a = rnd(0, 7), s = rnd(40, 260); teilchen.push({ art: 'feuer', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, t: 0, max: rnd(.3, .7), r: rnd(5, 11) }); }
   for (let i = 0; i < 14; i++) { const a = rnd(0, 7), s = rnd(10, 90); teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0, max: rnd(1, 2), r: rnd(8, 16) }); }
   for (let i = 0; i < 26; i++) { const a = rnd(Math.PI, Math.PI * 2), s = rnd(150, 450); teilchen.push({ art: 'brocken', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, max: rnd(.8, 1.6), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#4fae3f', '#5d3a20'][i % 4] }); }
+  for (const m of minen) if (Math.hypot(m.x - x, m.y - y) < r + 8 && (m.zuender < 0 || m.zuender > .15)) m.zuender = .15;   // Kettenreaktion
   for (const k of kisten) if (Math.hypot(k.x - x, k.y - y) < r + 10) {        // Kiste zerplatzt
     k.weg = true;
     for (let i = 0; i < 10; i++) teilchen.push({ art: 'brocken', x: k.x, y: k.y, vx: rnd(-200, 200), vy: rnd(-350, -100), t: 0, max: 1.2, r: rnd(2, 4), farbe: i % 2 ? '#b07a3e' : '#8a5a2b' });
@@ -562,6 +608,38 @@ function explosion(x, y, r, dmg, nurErde) {
 function trifftWurm(w, x, y, r) {
   return Math.hypot(w.x - x, w.y - y) < R + r + 2 ||
          Math.hypot(w.x + w.richtung * 4 - x, w.y - 24 - y) < 11 + r;
+}
+
+// ---------- Landminen ----------
+const START_MINEN = 3;
+function neueMine(x, y, scharf) { return { x, y, vy: 0, warten: scharf ? 0 : 3, zuender: -1 }; }
+function updateMinen(dt) {
+  for (const m of minen) {
+    if (!stoesst(m.x, m.y + 1, 4)) { m.vy += G * dt; m.y += m.vy * dt; if (stoesst(m.x, m.y, 4)) { freiMachen(m); m.vy = 0; } }   // fällt runter
+    if (m.warten > 0) { m.warten -= dt; continue; }                        // erst nach 3 s scharf
+    if (m.zuender < 0 && wuermer.some(w => !w.tot && Math.hypot(w.x - m.x, w.y + 6 - m.y) < 16)) { m.zuender = 1; ton.klack(); }   // jemand ist draufgetreten!
+    if (m.zuender >= 0) { m.zuender -= dt; if (m.zuender <= 0) { m.weg = true; const f = staerkeFaktor(); explosion(m.x, m.y, WAFFEN.mine.radius * f.r, Math.round(WAFFEN.mine.schaden * f.d)); } }
+    if (m.y > WASSER) m.weg = true;
+  }
+  minen = minen.filter(m => !m.weg);
+}
+function zeichneMine(m) {
+  ctx.fillStyle = '#2b2b30'; ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(m.x, m.y + 1, 6, 3.5, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const blink = m.zuender >= 0 ? Math.sin(zeit * 40) > 0 : Math.sin(zeit * 4 + m.x) > .6;
+  ctx.fillStyle = blink ? '#ff3030' : '#661010'; ctx.beginPath(); ctx.arc(m.x, m.y - 2.5, 1.6, 0, 7); ctx.fill();
+}
+
+// ---------- Strahl (Schrotflinte, Ninja-Seil): geradeaus bis Erde oder Wurm ----------
+function strahl(x, y, a, weit, wuermerTreffen, ohne) {
+  const c = Math.cos(a), s = Math.sin(a);
+  for (let d = 0; d < weit; d += 3) {
+    const px = x + c * d, py = y + s * d;
+    if (px < 0 || px > W || py > WASSER) return { x: px, y: py, nichts: true };
+    if (wuermerTreffen) { const w = wuermer.find(w => !w.tot && w !== ohne && trifftWurm(w, px, py, 1)); if (w) return { x: px, y: py, wurm: w }; }
+    if (fest(px, py)) return { x: px, y: py, erde: true };
+  }
+  return { x: x + c * weit, y: y + s * weit, nichts: true };
 }
 
 // ---------- Blitz (nur bei Unwetter) ----------
@@ -597,6 +675,27 @@ function feuern(staerke, zielX, zielY) {
     w.panzer = { schuss: WAFFEN.panzer.schuesse }; spiel.waffe = 'panzer';
     teilchen.push({ art: 'ring', x: w.x, y: w.y, r: 6, gross: 40, t: 0, max: .4 }); ton.klack(); zeigeWaffen(); return;
   }
+  if (art === 'seil') {                               // Ninja-Seil: geradeaus schießen, an der Erde festhaken
+    const z = strahl(w.x, w.y - 12, w.ziel, 330, false);
+    teilchen.push({ art: 'strahl', x: w.x, y: w.y - 12, x2: z.x, y2: z.y, t: 0, max: .15, farbe: '#d9c48a' });
+    if (z.erde) { w.seil = { x: z.x, y: z.y, len: Math.max(30, Math.hypot(z.x - w.x, z.y - w.y + 12)) }; w.luft = true; w.y -= 2; ton.klack(); }
+    zeigeWaffen(); return;                            // Zug geht weiter
+  }
+  if (art === 'mine') {                               // Landmine hinlegen
+    minen.push(neueMine(w.x + w.richtung * 24, w.y + 4, false));   // etwas vor den Wurm – scharf erst nach 3 s
+    spiel.phase = 'flug'; kam.frei = false; ton.klack(); zeigeWaffen(); return;
+  }
+  if (art === 'flinte') {                             // Schrotflinte: 2 Schüsse geradeaus
+    if (!spiel.flinte) spiel.flinte = 2;
+    spiel.flinte--; spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true; spiel.trafGegner = false;
+    const x0 = w.x + Math.cos(w.ziel) * 14, y0 = w.y - 4 + Math.sin(w.ziel) * 14, z = strahl(x0, y0, w.ziel, 700, true, w);
+    teilchen.push({ art: 'strahl', x: x0, y: y0, x2: z.x, y2: z.y, t: 0, max: .18, farbe: '#fff6b0' });
+    teilchen.push({ art: 'blitz', x: x0, y: y0, r: 10, t: 0 });
+    ton.bumm(10); wackeln = Math.max(wackeln, 3);
+    if (z.wurm) { const f = staerkeFaktor(); schaden(z.wurm, Math.round(WAFFEN.flinte.schaden * f.d)); z.wurm.vx += Math.cos(w.ziel) * 260; z.wurm.vy += Math.sin(w.ziel) * 200 - 120; z.wurm.luft = true; z.wurm.seil = null; }
+    else if (z.erde) explosion(z.x, z.y, 13, 0, true);
+    zeigeWaffen(); return;
+  }
   if (art === 'trampolin') {                          // Trampolin: Der Wurm fliegt selbst wie eine Rakete
     const v = staerke * TRAMPOLIN_V * regel().trampolin;
     w.vx = Math.cos(w.ziel) * v; w.vy = Math.sin(w.ziel) * v; w.luft = true; w.weich = true; w.flugZeit = 0; w.doppel = false; w.y -= 2;
@@ -623,6 +722,15 @@ function feuern(staerke, zielX, zielY) {
   if (art === 'banane') Object.assign(o, { r: 6, zuender: WAFFEN.banane.zuender });
   if (art === 'schaf') Object.assign(o, { r: 8, x: w.x + w.richtung * 12, y: w.y - 4, vx: w.richtung * 60, vy: -150, luft: true,
                                           richtung: w.richtung, zuender: WAFFEN.schaf.zuender, laufen: 0, spruenge: 0 });
+  if (art === 'zielsuch') {                          // Ziel: der Gegner, der am genauesten in Zielrichtung liegt
+    let best = null, bw = 9;
+    for (const g of wuermer) if (!g.tot && g.team !== w.team) {
+      const d = Math.abs(Math.atan2(Math.sin(Math.atan2(g.y - w.y, g.x - w.x) - a), Math.cos(Math.atan2(g.y - w.y, g.x - w.x) - a)));
+      if (d < bw) { bw = d; best = g; }
+    }
+    o.ziel = best;
+  }
+  if (art === 'molotow') Object.assign(o, { r: 4 });
   if (art === 'dynamit') Object.assign(o, { r: 5, x: w.x + w.richtung * 8, y: w.y, vx: w.richtung * 40, vy: -80, zuender: WAFFEN.dynamit.zuender });
   freiMachen(o);
   dinge.push(o);
@@ -641,6 +749,34 @@ function updateDing(o, dt) {
     if (bewege(o, dt, () => {})) return platzen(o);
     if (o.art === 'erdbrecher') return o.y > WASSER + 5 ? (platsch(o.x), false) : o.x > -400 && o.x < W + 400;   // fliegt durch Würmer durch
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
+  } else if (o.art === 'zielsuch') {
+    const z = o.ziel && !o.ziel.tot ? o.ziel : null;
+    if (z && o.t > .35 && o.t < 4) {                 // lenkt zum Ziel (ohne Schwerkraft)
+      const soll = Math.atan2(z.y - 10 - o.y, z.x - o.x), ist = Math.atan2(o.vy, o.vx);
+      const diff = Math.atan2(Math.sin(soll - ist), Math.cos(soll - ist)), neu = ist + Math.max(-3.5 * dt, Math.min(3.5 * dt, diff));
+      const v = Math.max(380, Math.hypot(o.vx, o.vy)); o.vx = Math.cos(neu) * v; o.vy = Math.sin(neu) * v;
+    } else o.vy += G * dt;
+    o.dreh = Math.atan2(o.vy, o.vx);
+    if (Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
+    if (bewege(o, dt, () => {})) return platzen(o);
+    for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .3) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
+  } else if (o.art === 'molotow') {                  // Flasche fliegt, zerplatzt beim Aufprall
+    o.vy += G * dt; o.dreh += dt * 12;
+    let platzt = bewege(o, dt, () => {});
+    for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) platzt = true;
+    if (platzt) {
+      ton.klack();
+      for (let i = 0; i < 9; i++) dinge.push({ art: 'flamme', x: o.x, y: o.y - 3, vx: zr(-150, 150), vy: zr(-230, -60), r: 3, t: 0, leben: zr(3.5, 5), takt: zr(0, .5) });
+      return false;
+    }
+  } else if (o.art === 'flamme') {                   // Feuer brennt am Boden und tut weh
+    if (!o.ruhe) { o.vy += G * dt; bewege(o, dt, (o, ax, ay) => { o.vx *= .3; o.vy = 0; if (ay < -.3) o.ruhe = true; }); }
+    else if (!stoesst(o.x, o.y + 1, o.r)) o.ruhe = false;
+    o.takt += dt;
+    if (o.takt >= .5) { o.takt -= .5; const f = staerkeFaktor();
+      for (const w of wuermer) if (!w.tot && Math.hypot(w.x - o.x, w.y + 4 - o.y) < 13) schaden(w, Math.round(WAFFEN.molotow.schaden * f.d)); }
+    if (Math.random() < .15) teilchen.push({ art: 'rauch', x: o.x, y: o.y - 6, vx: rnd(-8, 8), vy: rnd(-30, -10), t: 0, max: .9, r: rnd(3, 5) });
+    if (o.t > o.leben) return false;
   } else if (o.art === 'granate' || o.art === 'banane' || o.art === 'dynamit') {
     if (o.ruhe && !stoesst(o.x, o.y + 1, o.r)) o.ruhe = false;
     if (!o.ruhe) {
@@ -709,13 +845,18 @@ function updateTeilchen(dt) {
 function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = null, stufe = 'mittel', host = false, mitWind = true, anzahl = null, schwer = 0 }) {
   mitWind = mitWind || schwer >= AB.wind;              // ab dieser Stufe ist der Wind immer an
   baueLandschaft(startzahl);
-  wuermer = []; dinge = []; teilchen = []; texte = []; graeber = []; kisten = [];
+  wuermer = []; dinge = []; teilchen = []; texte = []; graeber = []; kisten = []; minen = [];
   spiel = { n, startzahl, modus, ich, id, art: art || Array(n).fill('m'), stufe, host, mitWind, schwer, anzahl: anzahl || Array(n).fill(4), zug: -1, dran: 0, wurm: null, phase: 'warten', zugzeit: ZUGZEIT,
             rueckzug: 0, warte: 0, wind: 0, waffe: 'bazooka', erster: true, bild: 0, ein: {}, eingaben: [], log: [],
             krater: [], quelle: 'live', zuege: [], ausstehend: [],
             teams: TEAMS.slice(0, n).map(() => ({ zeiger: -1, munition: Object.fromEntries(Object.entries(WAFFEN).map(([k, v]) => [k, v.start ?? -1])) })) };
   if (!regel().trampolin) spiel.teams.forEach(t => t.munition.trampolin = 0);
   for (let i = 0; i < Math.max(...spiel.anzahl); i++) for (let t = 0; t < n; t++) if (i < spiel.anzahl[t]) wuermer.push(neuerWurm(t));
+  // Wie im Original: ein paar Landminen liegen schon herum
+  for (let i = 0; i < START_MINEN; i++) {
+    const x = Math.round(zr(80, W - 80)); let y = 0; while (y < WASSER && !fest(x, y)) y += 2;
+    if (y < WASSER - 20 && wuermer.every(w => Math.hypot(w.x - x, w.y - y) > 50)) minen.push(neueMine(x, y - 4, true));
+  }
   // Würmer erst einmal fallen lassen
   for (let i = 0; i < 240; i++) for (const w of wuermer) updateWurm(w, SCHRITT);
   for (const w of wuermer) if (!w.tot) w.hp = 100;      // Fallschaden beim Start zählt nicht
@@ -770,6 +911,7 @@ function naechsterZug() {
   spiel.regen = zufallsFolge((spiel.startzahl ^ Math.imul(Math.floor(spiel.zug / 3) + 7, 40503)) >>> 0)() < UNWETTER.chance;
   spiel.blitze = [];
   if (spiel.regen) { const n = 1 + Math.floor(zr(0, UNWETTER.blitze)); for (let i = 0; i < n; i++) spiel.blitze.push({ bild: Math.round(zr(4, ZUGZEIT - 5) * 60), x: Math.round(zr(60, W - 60)) }); }
+  spiel.flinte = 0;
   spiel.bonusSchuesse = spiel.teams[spiel.dran].extra || 0; spiel.teams[spiel.dran].extra = 0; spiel.geschossen = false;
   if (spiel.regen) kiste += '  ⛈️ Unwetter!';
   if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
@@ -809,6 +951,15 @@ function zugEnde() {
     if (gegner.length) { const g = gegner[Math.floor(Math.random() * gegner.length)]; sag(g, 'mazila', true); g.jubelBis = zeit + 2; }
   }
   spiel.trafGegner = false;
+  for (const x of wuermer) x.seil = null;
+  // Schrotflinte: zweiter Schuss
+  if (w && !w.tot && spiel.flinte > 0 && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
+    spiel.geschossen = false; spiel.waffe = 'flinte';
+    Object.assign(spiel, { phase: 'zielen', zugzeit: Math.max(10, spiel.zugzeit), warte: 0 });
+    kam.frei = false; ansage('🔫 Schrotflinte', 'Noch ein Schuss!', TEAMS[spiel.dran].hell); zeigeWaffen();
+    return;
+  }
+  spiel.flinte = 0;
   // Panzer: noch Schüsse übrig?
   if (w && !w.tot && w.panzer && w.panzer.schuss > 0 && spiel.geschossen && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
     spiel.geschossen = false; spiel.schuss++;
@@ -873,7 +1024,8 @@ function zugMerken(rec) { if (spiel && rec && neuerAls(rec, spiel.zuege[rec.n]))
 function schnappschuss() {
   return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
            m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran,
-           ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]), x: spiel.teams.map(t => t.extra || 0) };
+           ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]), x: spiel.teams.map(t => t.extra || 0),
+           mi: minen.map(m => [Math.round(m.x), Math.round(m.y)]) };
 }
 function standSetzen(s) {
   s.w.forEach(([x, y, hp, tot, ri], i) => {
@@ -885,6 +1037,7 @@ function standSetzen(s) {
   s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
   spiel.dran = s.d;
   if (s.x) s.x.forEach((x, t) => spiel.teams[t].extra = x);
+  if (s.mi) minen = s.mi.map(([x, y]) => neueMine(x, y, true));
   if (s.ki) kisten = s.ki.map(([x, y, art, luft]) => ({ x, y, art, r: 9, luft: !!luft }));
   dinge = [];
 }
@@ -895,12 +1048,24 @@ function neuAufbauen(bis) {
 }
 
 function ende(sieger) {
-  // Sieg eines Menschen auf diesem Gerät? Dann Erfahrung +1 (und Schwierigkeit +1)
+  // Statistik dieses Geräts: Einzelspiel (gegen Computer) oder Mensch gegen Mensch
   let erfahrung = '';
-  if (sieger >= 0 && !spiel.gezaehlt && (spiel.modus === 'online' ? sieger === spiel.ich : spiel.art[sieger] === 'm')) {
+  const menschenZahl = spiel.art.filter(a => a === 'm').length, art = menschenZahl >= 2 ? 'mvm' : 'einzel';
+  const ichGewinne = sieger >= 0 && (spiel.modus === 'online' ? sieger === spiel.ich : spiel.art[sieger] === 'm');
+  if (!spiel.gezaehlt) {
     spiel.gezaehlt = true;
+    const st = statistik(), k = st[art];
+    k.spiele++;
+    if (spiel.modus === 'online' || art === 'einzel') { if (ichGewinne) k.siege++; else if (sieger >= 0) k.niederlagen++; }
+    else if (sieger >= 0) { const name = TEAMS[sieger].name.replace('Team ', ''); k.farben[name] = (k.farben[name] || 0) + 1; }   // Mensch gegen Mensch auf einem Gerät: wer hat gewonnen?
+    speicher.schreib('wu-statistik', st);
+  }
+  // Sieg auf diesem Gerät? Dann Erfahrung +1 (und Schwierigkeit +1) – nicht bei Mensch gegen Mensch auf einem Gerät
+  if (ichGewinne && !spiel.erfahrungGezaehlt && (spiel.modus === 'online' || art === 'einzel')) {
+    spiel.erfahrungGezaehlt = true;
+    const schwerVorher = meinSchwer();               // erst lesen, dann Siege erhöhen
     speicher.schreib('wu-siege', meineSiege() + 1);
-    speicher.schreib('wu-schwer', Math.min(100, meinSchwer() + 1));
+    speicher.schreib('wu-schwer', Math.min(100, schwerVorher + 1));
     erfahrung = `\n⭐ Erfahrung: ${meineSiege()} Siege · Schwierigkeit jetzt ${meinSchwer()}`;
   }
   spiel.phase = 'ende'; spiel.fertig = true;
@@ -917,7 +1082,7 @@ function ende(sieger) {
   for (let i = 0; i < 160; i++) teilchen.push({ art: 'konfetti', x: kam.x + rnd(-500, 500), y: kam.y - rnd(300, 600), vx: rnd(-60, 60), vy: rnd(-100, 50), t: 0, max: 4, r: rnd(3, 6), farbe: ['#ffd84d', '#ff6b9a', '#6fe0ff', '#7dff8a', '#fff'][i % 5] });
 }
 
-function ruhig() { return !dinge.length && wuermer.every(w => w.tot || !w.luft); }
+function ruhig() { return !dinge.length && wuermer.every(w => w.tot || !w.luft) && minen.every(m => m.zuender < 0); }
 
 // Eine Eingabe ausführen (live oder aus der Aufzeichnung)
 function anwenden(e) {
@@ -969,7 +1134,8 @@ function updateSpiel(dt) {
       if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; }
       laufen(w, d, dt); if (spiel.quelle === 'live') kam.frei = false;
     }
-    if (spiel.ein.springen) springen(w, d !== 0);
+    if (w.seil && d) { w.vx += d * 420 * dt; if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; } }   // schaukeln
+    if (spiel.ein.springen) { if (w.seil) { w.seil = null; w.vy = Math.min(w.vy, 0) - 120; } else springen(w, d !== 0); }   // loslassen
   }
   spiel.ein.springen = false;
   // Graben: Der Wurm buddelt sich in Zielrichtung durch die Erde
@@ -986,7 +1152,8 @@ function updateSpiel(dt) {
     if (g.t <= 0 || w.tot) { spiel.graben = null; freiMachen(w); }
   }
   for (const x of wuermer) updateWurm(x, dt);
-  dinge = dinge.filter(o => updateDing(o, dt) !== false);
+  updateMinen(dt);
+  { const alt = dinge, n0 = alt.length; dinge = alt.filter(o => updateDing(o, dt) !== false).concat(alt.slice(n0)); }   // was dabei neu entsteht (Flammen, Mini-Bananen), bleibt erhalten
   for (const g of graeber) { if (!stoesst(g.x, g.y + 1, 6)) { g.vy += G * dt; g.y += g.vy * dt; if (stoesst(g.x, g.y, 6)) { freiMachen(g); g.vy = 0; } } }
   graeber = graeber.filter(g => g.y < WASSER + 10);
   // Kisten schweben am Fallschirm herunter; wer sie berührt, bekommt die Waffe
@@ -1104,7 +1271,7 @@ function loslassen(e) {
       if (platzFrei(p.x, p.y)) eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'teleport', Math.round(p.x), Math.round(p.y)]);
       else $('waffeninfo').textContent = '🌀 Da passt kein Wurm hin!';
     }
-    else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && (spiel.waffe === 'schaf' || spiel.waffe === 'dynamit' || spiel.waffe === 'graben'))))
+    else if (darfZielen() && (zielt.staerke > .12 || (weg < 10 && ['schaf', 'dynamit', 'graben', 'mine', 'flinte', 'seil'].includes(spiel.waffe))))
       eingeben(['F', 0, runde(Math.max(.2, zielt.staerke)), runde(w.ziel), zielt.richtung, spiel.waffe]);
     zielt = null;
   }
@@ -1837,6 +2004,24 @@ function schaf(o) {
 }
 
 function zeichneDing(o) {
+  if (o.art === 'flamme') {                           // flackerndes Feuer
+    const h = 7 + Math.sin(zeit * 20 + o.x) * 2, a = Math.min(1, (o.leben - o.t) * 2);
+    ctx.globalAlpha = a; ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(o.x - 4, o.y + 2); ctx.quadraticCurveTo(o.x - 3, o.y - h, o.x, o.y - h - 2); ctx.quadraticCurveTo(o.x + 3, o.y - h, o.x + 4, o.y + 2); ctx.fill();
+    ctx.fillStyle = '#ffd84d'; ctx.beginPath(); ctx.ellipse(o.x, o.y - 1, 2, h * .35, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1; return;
+  }
+  if (o.art === 'molotow') {                          // Flasche mit brennendem Lappen
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
+    ctx.fillStyle = '#3f8f3a'; ctx.fillRect(-3, -4, 6, 8); ctx.fillRect(-1.2, -7, 2.4, 3);
+    ctx.fillStyle = Math.random() < .5 ? '#ffb02a' : '#ff5a1a'; ctx.beginPath(); ctx.arc(0, -8.5, 2.2, 0, 7); ctx.fill(); ctx.restore(); return;
+  }
+  if (o.art === 'zielsuch') {                         // rot-weiße Rakete + Fadenkreuz auf dem Ziel
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
+    ctx.fillStyle = 'rgba(255,170,40,.9)'; ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-15 - Math.random() * 5, 0); ctx.lineTo(-8, 2); ctx.fill();
+    ctx.fillStyle = '#eee'; ctx.fillRect(-8, -3, 12, 6); ctx.fillStyle = '#d22'; ctx.fillRect(-4, -3, 3, 6);
+    ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(10, 0); ctx.lineTo(4, 3); ctx.fill(); ctx.restore();
+    if (o.ziel && !o.ziel.tot) { ctx.strokeStyle = '#e33'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(o.ziel.x, o.ziel.y - 10, 14, 0, 7); ctx.moveTo(o.ziel.x - 18, o.ziel.y - 10); ctx.lineTo(o.ziel.x + 18, o.ziel.y - 10); ctx.moveTo(o.ziel.x, o.ziel.y - 28); ctx.lineTo(o.ziel.x, o.ziel.y + 8); ctx.stroke(); }
+    return;
+  }
   if (o.art === 'panzergranate') {                    // dunkle Granate
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
     ctx.fillStyle = '#3a3f2a'; ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(3, -3); ctx.quadraticCurveTo(8, 0, 3, 3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
@@ -1938,6 +2123,9 @@ function trampolinMalen(x, y, b, federn) {
 }
 function zeichneTeilchen(p) {
   const k = p.t / (p.max || .4);
+  if (p.art === 'strahl') {                            // Schuss-/Seil-Linie
+    ctx.strokeStyle = p.farbe; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x2, p.y2); ctx.stroke(); ctx.globalAlpha = 1; return;
+  }
   if (p.art === 'trampolin') {                         // Trampolin bleibt kurz stehen und federt nach
     ctx.globalAlpha = Math.min(1, (1 - k) * 3.5);
     trampolinMalen(p.x, p.y, 13, Math.sin(p.t * 22) * (1 - k) * 4 + (p.t < .12 ? 5 : 0));
@@ -1987,7 +2175,11 @@ function zeichneZielhilfe(w) {
   ctx.strokeStyle = '#e33'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(fx, fy, 6, 0, 7); ctx.moveTo(fx - 9, fy); ctx.lineTo(fx + 9, fy); ctx.moveTo(fx, fy - 9); ctx.lineTo(fx, fy + 9); ctx.stroke();
   if (staerke <= 0) return;
   // Flugbahn-Vorschau (ohne Wind)
-  if (spiel.waffe !== 'schaf') {
+  if (spiel.waffe === 'flinte' || spiel.waffe === 'seil') {   // gerade Linie statt Bogen
+    const weit = spiel.waffe === 'seil' ? 330 : 260;
+    ctx.strokeStyle = spiel.waffe === 'seil' ? 'rgba(217,196,138,.8)' : 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.setLineDash([5, 6]);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(w.ziel) * weit, cy + Math.sin(w.ziel) * weit); ctx.stroke(); ctx.setLineDash([]);
+  } else if (spiel.waffe !== 'schaf' && spiel.waffe !== 'mine') {
     const v = staerke * (spiel.waffe === 'trampolin' ? TRAMPOLIN_V * regel().trampolin : MAX_V);
     let x = cx, y = cy, vx = Math.cos(w.ziel) * v, vy = Math.sin(w.ziel) * v;
     const PUNKTE = 35;                                   // mehr Punkte = längere Vorschau (früher 26, dann 45)
@@ -2055,6 +2247,11 @@ function zeichne() {
   });
   for (const g of graeber) zeichneGrab(g);
   for (const k of kisten) zeichneKiste(k);
+  for (const m of minen) zeichneMine(m);
+  for (const w of wuermer) if (w.seil && !w.tot) {
+    ctx.strokeStyle = '#d9c48a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(w.x, w.y - 12); ctx.lineTo(w.seil.x, w.seil.y); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(w.seil.x, w.seil.y, 2.5, 0, 7); ctx.fill();
+  }
   for (const w of wuermer) if (!w.tot) zeichneWurm(w);
   for (const o of dinge) zeichneDing(o);
   welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
@@ -2242,7 +2439,7 @@ function hintergrund() {
 function startMenue() {
   Online.stop(); hintergrund();
   karte('<h1><img src="icon-192.png" alt="" style="width:64px;height:64px;border-radius:16px;vertical-align:middle;margin-right:10px">Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Springen:</b> ⤴ zweimal = Doppelsprung, ▶ + ⤴ = weiter Sprung.\n<b>Kamera:</b> mit zwei Fingern schieben und zoomen.\n💀 Gegner besiegt? Du darfst nochmal schießen!',
-    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]]);
+    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]], '', [['📊 Statistik', statistikZeigen]]);
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
