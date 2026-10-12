@@ -106,6 +106,12 @@
   #karte canvas{width:min(70vw,46vh);max-width:300px;image-rendering:pixelated;border-radius:12px;border:4px solid #2f8f3a}
   #karte .wahl{display:flex;align-items:center;gap:6px;margin:8px 0;justify-content:space-between;flex-wrap:wrap}
   #karte .wahl b{min-width:80px;text-align:left}
+  .laden{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 12px}
+  .sanduhr{font-size:34px;display:inline-block;animation:sanduhr 1.6s ease-in-out infinite}
+  @keyframes sanduhr{0%,40%{transform:rotate(0)}50%,90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+  .balken{width:180px;height:8px;border-radius:4px;background:#dfe6ec;overflow:hidden}
+  .balken i{display:block;width:40%;height:100%;border-radius:4px;background:linear-gradient(90deg,#4fbf55,#8fe08f);animation:balken 1.2s ease-in-out infinite}
+  @keyframes balken{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
   #karte .wahl span{display:flex;gap:6px}
   #karte .wahl button{font-size:14px;padding:8px 10px;background:#e7edf3;color:#1B2A3A;box-shadow:0 3px 0 #c5ced8}
   #karte .wahl button{text-shadow:none}
@@ -198,7 +204,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.37';
+const APP_VERSION = '1.38';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2794,7 +2800,9 @@ function onlineMenue() {
 }
 
 function lobby(text, knoepfe) {
-  karte('<h2>🌐 Online</h2>', text, knoepfe, '', [['📱 Einladung zeigen', einladungZeigen], ['⚙ Gerät zurücksetzen', zuruecksetzen], ['← Zurück', startMenue]]);
+  // Wird gerade gewartet (Text mit „…“)? Dann Sanduhr und Ladebalken zeigen
+  const laden = text.includes('…') ? '<div class="laden"><span class="sanduhr">⏳</span><div class="balken"><i></i></div></div>' : '';
+  karte('<h2>🌐 Online</h2>', text, knoepfe, laden, [['📱 Einladung zeigen', einladungZeigen], ['⚙ Gerät zurücksetzen', zuruecksetzen], ['← Zurück', startMenue]]);
 }
 const NEU_KNOEPFE = () => [[wurmIcon(0) + 'Neues Spiel einrichten', () => teamWahl('online')]];
 const menschen = st => (st.art || Array(st.teams).fill('m')).map((a, i) => a === 'm' ? i : -1).filter(i => i >= 0);
