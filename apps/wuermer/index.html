@@ -68,6 +68,7 @@
   #raus,#ton{position:fixed;top:calc(env(safe-area-inset-top) + 8px);width:46px;height:46px;font-size:20px}
   #raus{left:10px} #ton{right:10px}
   #uebersicht{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:62px;width:46px;height:46px;font-size:20px}
+  #uebersicht{position:fixed} #uebersicht small{pointer-events:none}
   #pause{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:114px;width:46px;height:46px;font-size:20px}
   #pausenbild{position:fixed;inset:0;z-index:50;background:rgba(10,20,40,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;cursor:pointer}
   #pausenbild b{font-size:64px;font-weight:900;text-shadow:0 4px 0 rgba(0,0,0,.35)}
@@ -204,7 +205,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.45';
+const APP_VERSION = '1.46';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -946,7 +947,7 @@ function naechsterZug() {
   if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
   spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich || (spiel.art[spiel.dran] === 'c' && spiel.host) ? 'live' : 'fern';
-  kam.frei = false; zoom = 1;                          // neuer Zug: wieder alle Würmer zeigen
+  kam.frei = false; zoom = ZOOM_STUFEN.includes(speicher.lies('wu-zoom')) ? speicher.lies('wu-zoom') : 1; zoomAnzeigen();   // gewählte Fernrohr-Stufe
   const t = TEAMS[spiel.dran], nr = rundeNr();
   let neu = '';
   if (spiel.zug % spiel.n === 0 && nr > 1) {
@@ -1278,7 +1279,7 @@ addEventListener('pointermove', e => {
     kam.x -= (neu.x - alt.x) / massstab / 2; kam.y -= (neu.y - alt.y) / massstab / 2; kam.frei = true;
     if (pinch && pinch.start > 20) {
       const r = neuAbstand / pinch.start, f = r > 1.1 ? r / 1.1 : r < .9 ? r / .9 : 1;
-      zoom = Math.max(.25, Math.min(2.2, pinch.zoom * f)); massstab = basisMassstab * zoom * autoZoom;
+      zoom = zoomIst = Math.max(.25, Math.min(2.2, pinch.zoom * f)); massstab = basisMassstab * zoom * autoZoom;
     }
     return;
   } else if (!darfZielen()) {
@@ -1553,13 +1554,18 @@ function groesse() {
   basisMassstab = bh < 500 ? Math.min(bh / 430, bw / 700) : Math.min(bh / 760, bw / 1000);   // Handy: näher ran
   massstab = basisMassstab * zoom * autoZoom;
 }
-let zoom = 1, autoZoom = 1, basisMassstab = 1;   // zoom: selbst mit Fingern, autoZoom: alle Würmer passen aufs Bild
-function zoomen(f) { zoom = Math.max(.3, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
+let zoom = 1, zoomIst = 1, autoZoom = 1, basisMassstab = 1;   // zoom: selbst mit Fingern, autoZoom: alle Würmer passen aufs Bild
+function zoomen(f) { zoom = zoomIst = Math.max(.3, Math.min(2.2, zoom * f)); massstab = basisMassstab * zoom * autoZoom; }
 let pinch = null;
 // 🔭 Übersicht: ganze Insel zeigen – nochmal tippen = zurück
+// 🔭 Fernrohr: 100 % (alle Würmer) → 150 % → 200 % → wieder 100 %; die Stufe wird gemerkt
+const ZOOM_STUFEN = [1, 1.5, 2];
 function uebersicht() {
-  ueberblick = !ueberblick; zoom = 1; kam.frei = false;
+  const i = ZOOM_STUFEN.findIndex(z => Math.abs(z - zoom) < .05);
+  zoom = ZOOM_STUFEN[(i + 1) % ZOOM_STUFEN.length]; kam.frei = false;
+  speicher.schreib('wu-zoom', zoom); zoomAnzeigen();
 }
+function zoomAnzeigen() { $('uebersicht').innerHTML = '🔭<small style="position:absolute;bottom:1px;left:0;right:0;font-size:10px;font-weight:800">' + Math.round(zoom * 100) + '%</small>'; }
 
 // Ungefähre Flugbahn vorausrechnen (mit Wind, ohne Abprallen) → Rechteck, das auf den Bildschirm soll
 function flugbahnBox(w, staerke) {
@@ -1636,7 +1642,8 @@ function kamera(dt) {
     // weich wie eine Feder: sanft anfahren, sanft abbremsen (Zoom in Verhältnissen, damit rein und raus gleich wirken)
     const lz = weich(Math.log(autoZoom), Math.log(ziel), kam, 'vz', ZOOM_ZEIT, dt);
     autoZoom = Math.exp(lz);
-    massstab = basisMassstab * zoom * autoZoom;
+    zoomIst = Math.exp(weich(Math.log(zoomIst), Math.log(zoom), kam, 'vu', ZOOM_ZEIT * .7, dt));   // Fernrohr-Stufe weich anfahren
+    massstab = basisMassstab * zoomIst * autoZoom;
     if (!kam.frei) {
       let zx = (x1 + x2) / 2, zy = (y1 + y2) / 2;
       if (zoom > 1.05) {                                        // selbst herangezoomt: dem Geschehen folgen
