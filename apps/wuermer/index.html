@@ -204,7 +204,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.41';
+const APP_VERSION = '1.42';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1595,6 +1595,14 @@ function sichtbereich() {
 // Kamera: Ruhig! Sie zeigt immer ALLE lebenden Würmer auf einmal (und was gerade fliegt).
 //   Mit zwei Fingern kann man selbst zoomen/schieben – das gilt bis zum nächsten Zug.
 let ueberblick = false;
+const ZOOM_ZEIT = 1.1, KAMERA_ZEIT = .8;    // so viele Sekunden braucht die Kamera ungefähr (größer = gemütlicher)
+// Weiche Bewegung zum Ziel (wie eine gedämpfte Feder). v = Name der Geschwindigkeit im Objekt o.
+function weich(wert, ziel, o, v, zeitDauer, dt) {
+  const om = 2 / zeitDauer, x = om * dt, e = 1 / (1 + x + .48 * x * x + .235 * x * x * x);
+  const diff = wert - ziel, tmp = ((o[v] || 0) + om * diff) * dt;
+  o[v] = ((o[v] || 0) - om * tmp) * e;
+  return ziel + (diff + tmp) * e;
+}
 function kamera(dt) {
   if (spiel) {
     let x1 = 1e9, x2 = -1e9, y1 = 1e9, y2 = -1e9;
@@ -1609,7 +1617,9 @@ function kamera(dt) {
     let ziel = Math.min(bw / (x2 - x1), hoch / (y2 - y1)) / basisMassstab;
     ziel = Math.max(.3, Math.min(1.3, ziel));                     // nicht zu nah, nicht zu fern
     if (spiel.phase === 'flug' && ziel > autoZoom) ziel = autoZoom;   // im Flug nur heraus-, nie hineinzoomen
-    autoZoom += (ziel - autoZoom) * Math.min(1, dt * 1.5);
+    // weich wie eine Feder: sanft anfahren, sanft abbremsen (Zoom in Verhältnissen, damit rein und raus gleich wirken)
+    const lz = weich(Math.log(autoZoom), Math.log(ziel), kam, 'vz', ZOOM_ZEIT, dt);
+    autoZoom = Math.exp(lz);
     massstab = basisMassstab * zoom * autoZoom;
     if (!kam.frei) {
       let zx = (x1 + x2) / 2, zy = (y1 + y2) / 2;
@@ -1618,8 +1628,8 @@ function kamera(dt) {
         if (z) { zx = z.x; zy = z.y - 30; }
       }
       zy -= ((sb.oben + sb.unten) / 2 - bh / 2) / massstab;     // Mitte des freien Bereichs, nicht des Bildschirms
-      const k = Math.min(1, dt * 2.5);
-      kam.x += (zx - kam.x) * k; kam.y += (zy - kam.y) * k;
+      kam.x = weich(kam.x, zx, kam, 'vx', KAMERA_ZEIT, dt);
+      kam.y = weich(kam.y, zy, kam, 'vy', KAMERA_ZEIT, dt);
     }
   }
   const vw = bw / massstab, vh = bh / massstab;
