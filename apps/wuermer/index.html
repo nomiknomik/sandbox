@@ -204,7 +204,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.40';
+const APP_VERSION = '1.41';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -967,7 +967,7 @@ function zugEnde() {
   if (w && !w.tot && spiel.flinte > 0 && spiel.teams.map((_, t) => t).filter(lebt).length > 1) {
     spiel.geschossen = false; spiel.waffe = 'flinte';
     Object.assign(spiel, { phase: 'zielen', zugzeit: Math.max(10, spiel.zugzeit), warte: 0 });
-    kam.frei = false; ansage('🔫 Schrotflinte', 'Noch ein Schuss!', TEAMS[spiel.dran].hell); zeigeWaffen();
+    kam.frei = false; ansage(symbol('flinte', '1.3em') + ' Schrotflinte', 'Noch ein Schuss!', TEAMS[spiel.dran].hell); zeigeWaffen();
     return;
   }
   spiel.flinte = 0;
@@ -1307,10 +1307,15 @@ halten('links', 'L'); halten('rechts', 'R'); halten('springen', 'J');
 document.querySelectorAll('.waffe').forEach(b => b.onclick = () => {
   if (!darfZielen()) return;
   const a = WAFFEN[b.dataset.w];
-  if (a.ab > rundeNr()) { $('waffeninfo').textContent = `🔒 ${a.icon} ${a.name} gibt es ab Runde ${a.ab}`; return; }
-  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) { $('waffeninfo').textContent = `${a.icon} ${a.name} ist aufgebraucht` + (a.nurKiste ? ' – gibt es nur aus Kisten 📦' : ''); return; }
+  if (a.ab > rundeNr()) { $('waffeninfo').innerHTML = `🔒 ${symbol(b.dataset.w)} ${a.name} gibt es ab Runde ${a.ab}`; return; }
+  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) { $('waffeninfo').innerHTML = `${symbol(b.dataset.w)} ${a.name} ist aufgebraucht` + (a.nurKiste ? ' – gibt es nur aus Kisten 📦' : ''); return; }
   spiel.waffe = b.dataset.w; zeigeWaffen();
 });
+// Symbol einer Waffe als HTML: das gezeichnete Bild aus dem Knopf (falls vorhanden), sonst das Emoji
+function symbol(art, groesse = '1.4em') {
+  const svg = document.querySelector(`.waffe[data-w="${art}"] svg`);
+  return svg ? svg.outerHTML.replace(/width="\d+" height="\d+"/, `width="${groesse}" height="${groesse}"`).replace('vertical-align:middle', 'vertical-align:-.3em') : WAFFEN[art].icon;
+}
 function zeigeWaffen() {
   if (!spiel || !spiel.teams[spiel.dran]) return;
   const m = spiel.teams[spiel.dran].munition, nr = rundeNr();
@@ -1325,7 +1330,7 @@ function zeigeWaffen() {
   const a = WAFFEN[spiel.waffe];
   if (spiel.waffe === 'zielsuch' && darfZielen()) { $('waffeninfo').textContent = spiel.zielPunkt ? '🎯 Ziel gesetzt – jetzt ziehen und loslassen' : '🎯 Erst kurz auf das Ziel tippen'; return; }
   const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · noch ${pw.panzer.schuss} Schüsse · ◀ ▶ fahren`; return; }
-  $('waffeninfo').textContent = darfZielen() || kiDran() ? `${a.icon} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : spiel.waffe === 'schaf' && !regel().schafKnopf ? 'Läuft los und explodiert von selbst!' : a.info}` : '';
+  $('waffeninfo').innerHTML = darfZielen() || kiDran() ? `${symbol(spiel.waffe)} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : spiel.waffe === 'schaf' && !regel().schafKnopf ? 'Läuft los und explodiert von selbst!' : a.info}` : '';
 }
 
 // Tastatur (am Computer): ◀ ▶ laufen, ▲ (oder Enter) springen, W/S zielen, Leertaste gedrückt halten = Kraft
@@ -1481,7 +1486,8 @@ $('raus').onclick = async () => {
 let ansageZeit;
 function ansage(gross, klein, farbe) {
   const a = $('ansage');
-  a.querySelector('b').textContent = gross; a.querySelector('b').style.color = farbe || '#fff';
+  if (gross.includes('<svg')) a.querySelector('b').innerHTML = gross; else a.querySelector('b').textContent = gross;   // gezeichnete Symbole erlaubt
+  a.querySelector('b').style.color = farbe || '#fff';
   a.querySelector('span').textContent = klein;
   a.classList.add('zeigen'); clearTimeout(ansageZeit);
   ansageZeit = setTimeout(() => a.classList.remove('zeigen'), 2800);
