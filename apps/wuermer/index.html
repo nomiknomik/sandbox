@@ -202,6 +202,7 @@
           <button class="waffe fach" data-w="dynamit">🧨<small></small></button>
           <button class="waffe fach" data-w="mine">💥<small></small></button>
           <button class="waffe fach" data-w="schaf">🐑<small></small></button>
+          <button class="waffe fach" data-w="uboot"><svg viewBox="0 0 40 40" width="36" height="36" style="vertical-align:middle"><rect x="0" y="25" width="40" height="15" fill="#3b8fc9" opacity=".7"/><path d="M4 24 Q4 18 12 18 H30 Q37 18 37 22 Q37 26 30 26 H10 Q4 26 4 24Z" fill="#4d5866" stroke="#1d242c" stroke-width="1.2"/><path d="M15 18 V12 H23 L25 18Z" fill="#5d6876" stroke="#1d242c" stroke-width="1.2"/><path d="M19 12 V6 H23" stroke="#1d242c" stroke-width="1.5" fill="none"/><circle cx="12" cy="22" r="1.4" fill="#ffd84d"/><circle cx="18" cy="22" r="1.4" fill="#ffd84d"/><circle cx="24" cy="22" r="1.4" fill="#ffd84d"/><path d="M30 10 l4 -8 l2 6z" fill="#e33"/></svg><small></small></button>
           <button class="waffe fach" data-w="luftschlag">✈️<small></small></button>
         </div>
       </div>
@@ -242,7 +243,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.49';
+const APP_VERSION = '1.50';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -301,6 +302,7 @@ const WAFFEN = {
   molotow:    { icon: '🔥', name: 'Molotow',       sterne: 3, schaden: 4, ab: 2, start: 2, info: 'Zerplatzt und setzt den Boden in Brand' },
   mine:       { icon: '💥', name: 'Landmine',      sterne: 3, radius: 40, schaden: 40, ab: 2, start: 2, info: 'Hinlegen – wer drauftritt, fliegt in die Luft' },
   seil:       { icon: '🪢', name: 'Ninja-Seil',    sterne: 0, ab: 1, info: 'Seil schießen, mit ◀ ▶ schaukeln, ⤴ = loslassen. Der Zug geht weiter' },
+  uboot:      { icon: '', name: 'U-Boot', sterne: 5, radius: 48, schaden: 50, ab: 4, start: 1, info: 'Ziel antippen – ein U-Boot taucht auf und schießt eine Rakete dorthin' },
   panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 3, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 3 Schüsse. Im Panzer nur halber Schaden.' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
@@ -342,7 +344,7 @@ const KISTEN = { apotheke: .06, bonus: .04, waffe: .4 };
 const HEILUNG = 40;                      // so viele Leben gibt die Apotheke (höchstens bis 100)
 // Unwetter: Chance pro 3 Züge, und bis zu so viele Blitze pro Zug
 const UNWETTER = { chance: .25, blitze: 2, loch: 34 };
-const MINI = { baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag, zielsuch: WAFFEN.zielsuch, panzergranate: { radius: 36, schaden: 38 } };
+const MINI = { ubootrakete: WAFFEN.uboot, baenanchen: { radius: 28, schaden: 22 }, luftrakete: WAFFEN.luftschlag, zielsuch: WAFFEN.zielsuch, panzergranate: { radius: 36, schaden: 38 } };
 // Mit jeder Runde werden alle Waffen stärker (Schaden bis +60 %, Größe bis +25 %)
 function rundeNr() { return spiel ? 1 + Math.floor(Math.max(0, spiel.zug) / spiel.n) : 1; }
 function staerkeFaktor() { const r = rundeNr() - 1; return { d: Math.min(1.6, 1 + .1 * r), r: Math.min(1.25, 1 + .04 * r) }; }
@@ -762,6 +764,13 @@ function feuern(staerke, zielX, zielY) {
   }
   spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true; spiel.trafGegner = false;
   if (Math.random() < .6) sag(w, 'lovi');
+  if (art === 'uboot') {                              // U-Boot kommt vom näheren Inselrand durchs Wasser
+    const links = zielX < W / 2, ri = links ? 1 : -1;
+    let halt = links ? -60 : W + 60;                   // vor der Insel starten, dann so nah ans Ziel wie das freie Wasser reicht
+    while (Math.abs(halt - zielX) > 60 && [0, 45, 90].every(d => obersterBoden(halt + ri * d) >= WASSER) && wegFrei(halt + ri * 45, WASSER - 30, halt + ri * 45, 200)) halt += ri * 10;
+    dinge.push({ art: 'uboot', x: links ? -220 : W + 220, y: WASSER + 4, ziel: { x: zielX, y: zielY }, halt, richtung: links ? 1 : -1, t: 0, phase: 0, r: 1 });
+    ton.wusch(); zeigeWaffen(); return;
+  }
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
     for (let i = 0; i < 5; i++) dinge.push({ art: 'luftrakete', x: zielX + (i - 2) * 26 - spiel.wind * .4, y: -120 - i * 34, vx: 0, vy: 260, r: 4, t: 0, dreh: Math.PI / 2 });
     teilchen.push({ art: 'flieger', x: zielX - 900, y: -170, vx: 900, vy: 0, t: 0, max: 2 });
@@ -802,20 +811,29 @@ function updateDing(o, dt) {
     if (bewege(o, dt, () => {})) return platzen(o);
     if (o.art === 'erdbrecher') return o.y > WASSER + 5 ? (platsch(o.x), false) : o.x > -400 && o.x < W + 400;   // fliegt durch Würmer durch
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
-  } else if (o.art === 'zielsuch') {
+  } else if (o.art === 'uboot') {                    // fahren → auftauchen → Rakete abfeuern → abtauchen
+    if (o.phase === 0) { o.x += o.richtung * 260 * dt; o.y = WASSER + 4; if ((o.x - o.halt) * o.richtung >= 0) { o.x = o.halt; o.phase = 1; o.pause = 0; } }
+    else if (o.phase === 1) { o.y -= 12 * dt; o.pause += dt; if (o.pause > .6) {
+        dinge.push({ art: 'ubootrakete', x: o.x + o.richtung * 6, y: o.y - 24, vx: 0, vy: -420, r: 4, t: 0, dreh: -Math.PI / 2, zielPunkt: o.ziel });
+        ton.wusch(); wackeln = Math.max(wackeln, 4); o.phase = 2; o.pause = 0; } }
+    else { o.pause += dt; o.y += 20 * dt; if (o.pause > 1.4) return false; }
+    if (Math.random() < .3) teilchen.push({ art: 'tropfen', x: o.x - o.richtung * 26, y: WASSER, vx: rnd(-30, 30), vy: rnd(-90, -30), t: 0, max: .6, r: rnd(1.5, 3) });
+  } else if (o.art === 'zielsuch' || o.art === 'ubootrakete') {
     const z = o.zielPunkt || (o.ziel && !o.ziel.tot ? { x: o.ziel.x, y: o.ziel.y - 10 } : null);
-    if (z && o.t > .15 && o.t < 7) {                 // lenkt zum Ziel (ohne Schwerkraft)
+    if (z && o.t > (o.art === 'ubootrakete' ? .45 : .15) && o.t < 7) {   // lenkt zum Ziel (ohne Schwerkraft)
       // Schlau fliegen: freien Weg suchen – senkrecht hoch, waagrecht hinüber, senkrecht hinab aufs Ziel
       if (o.planZeit === undefined) { o.planZeit = o.t; o.plan = flugPlan(o.x, o.y, z.x, z.y); }
       else if (o.t - o.planZeit > .5) {                // alle halbe Sekunde prüfen: ist der Weg noch frei?
         o.planZeit = o.t;
+        planZiel = z;
         const frei = o.plan == null ? wegFrei(o.x, o.y, z.x, z.y) : (o.y > o.plan.Y + 25 ? wegFrei(o.x, o.y, o.plan.X, o.plan.Y) : wegFrei(o.x, o.y, z.x, o.plan.Y));
         if (!frei) o.plan = flugPlan(o.x, o.y, z.x, z.y, o.plan);
       }
       const dx = z.x - o.x; let wp = z;
       if (o.plan != null && Math.abs(dx) > 70) {
         const { X, Y } = o.plan;
-        wp = o.y > Y + 25 ? { x: X, y: Y } : { x: z.x, y: Y };   // erst steigen, dann hinüber
+        wp = o.y > Y + 60 && Math.abs(o.x - X) < 200 ? { x: X, y: Y }                    // erst steigen
+           : { x: o.x + Math.sign(dx) * Math.min(90, Math.abs(dx)), y: Y };            // dann hinüber – Flughöhe eng halten
       }
       const soll = Math.atan2(wp.y - o.y, wp.x - o.x), ist = Math.atan2(o.vy, o.vx);
       const diff = Math.atan2(Math.sin(soll - ist), Math.cos(soll - ist)), neu = ist + Math.max(-6 * dt, Math.min(6 * dt, diff));
@@ -826,6 +844,7 @@ function updateDing(o, dt) {
     if (Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x - Math.cos(o.dreh) * 8, y: o.y - Math.sin(o.dreh) * 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
     if (bewege(o, dt, () => {})) return platzen(o);
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .3) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
+    if (o.y < -900) return false;
   } else if (o.art === 'molotow') {                  // Flasche fliegt, zerplatzt beim Aufprall
     o.vy += G * dt; o.dreh += dt * 12;
     let platzt = bewege(o, dt, () => {});
@@ -1301,7 +1320,7 @@ addEventListener('pointermove', e => {
     if (!darfZielen()) { zielt = null; return; }
     const w = aktiver();
     zielt.x = neu.x; zielt.y = neu.y;
-    if (spiel.waffe === 'luftschlag' || spiel.waffe === 'teleport') return;   // Finger zeigt nur das Ziel
+    if (spiel.waffe === 'luftschlag' || spiel.waffe === 'teleport' || spiel.waffe === 'uboot') return;   // Finger zeigt nur das Ziel
     const um = spiel.waffe === 'graben' ? -1 : 1;           // Graben: in Zugrichtung, sonst Gegenrichtung (Schleuder)
     const dx = (zielt.sx - neu.x) * um, dy = (zielt.sy - neu.y) * um, weg = Math.hypot(dx, dy);
     zielt.staerke = Math.min(1, weg / zugWeg());
@@ -1331,7 +1350,8 @@ function loslassen(e) {
   if (finger.size < 2) pinch = null;
   if (zielt && zielt.id === e.pointerId) {
     const w = aktiver(), weg = Math.hypot(zielt.x - zielt.sx, zielt.y - zielt.sy);
-    if (darfZielen() && spiel.waffe === 'luftschlag') eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'luftschlag', Math.round(inWelt(zielt.x, zielt.y).x)]);
+    if (darfZielen() && spiel.waffe === 'uboot') { const zp = inWelt(zielt.x, zielt.y); eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'uboot', Math.round(zp.x), Math.round(zp.y)]); }
+    else if (darfZielen() && spiel.waffe === 'luftschlag') eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'luftschlag', Math.round(inWelt(zielt.x, zielt.y).x)]);
     else if (darfZielen() && spiel.waffe === 'teleport') {
       const p = inWelt(zielt.x, zielt.y);
       if (platzFrei(p.x, p.y)) eingeben(['F', 0, .5, runde(w.ziel), w.richtung, 'teleport', Math.round(p.x), Math.round(p.y)]);
@@ -2083,12 +2103,14 @@ function zeichneWaffe(w) {
   else if (a === 'banane') banane(10, 0, 0);
   else if (a === 'dynamit') dynamit(10, 0, 0);
   else if (a === 'trampolin') trampolinMalen(10, 4, 14, 0);
-  else if (a === 'flinte') {                          // Pumpgun: Holzkolben, Gehäuse, zwei Läufe, Pumpe
-    ctx.fillStyle = '#8a5a2b'; ctx.strokeStyle = '#4a2e12'; ctx.lineWidth = .8;
-    ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-4, -2.5); ctx.lineTo(1, -2.5); ctx.lineTo(1, 2.5); ctx.lineTo(-6, 5); ctx.lineTo(-10, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#4a4a50'; ctx.fillRect(0, -3, 6, 5);
-    ctx.fillStyle = '#777'; ctx.fillRect(6, -2.8, 15, 1.8); ctx.fillStyle = '#5a5a60'; ctx.fillRect(6, -.8, 12, 1.6);
-    ctx.fillStyle = '#7a4a22'; ctx.fillRect(9, -1.2, 5, 3);
+  else if (a === 'flinte') {                          // Doppelflinte: Holzschaft, Verschluss, zwei glänzende Läufe
+    ctx.fillStyle = '#a0662e'; ctx.strokeStyle = '#4a2a0e'; ctx.lineWidth = .7;
+    ctx.beginPath(); ctx.moveTo(-11, -1); ctx.quadraticCurveTo(-11, -3, -8, -3); ctx.lineTo(0, -2.2); ctx.lineTo(1, 2); ctx.lineTo(-7, 3.8); ctx.quadraticCurveTo(-11, 3.8, -11, 1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#555b63'; ctx.fillRect(0, -2.6, 4.5, 4.6);
+    ctx.fillStyle = '#c9a227'; ctx.beginPath(); ctx.arc(2.2, -.3, .7, 0, 7); ctx.fill();
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(4.5, -2.4, 18, 1.9); ctx.fillStyle = '#6a7078'; ctx.fillRect(4.5, -.4, 18, 1.9);
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(4.5, -2.3, 18, .5);
+    ctx.fillStyle = '#a0662e'; ctx.fillRect(6, 1.4, 6, 1.6);
   } else if (a === 'molotow') {                       // Flasche mit brennendem Lappen
     ctx.save(); ctx.translate(9, 0); ctx.rotate(-w.ziel * (w.richtung < 0 ? -1 : 1) - Math.PI / 2);
     ctx.fillStyle = '#3f8f3a'; ctx.fillRect(-3, -4, 6, 8); ctx.fillRect(-1.2, -7, 2.4, 3);
@@ -2155,7 +2177,18 @@ function zeichneDing(o) {
     ctx.fillStyle = '#3f8f3a'; ctx.fillRect(-3, -4, 6, 8); ctx.fillRect(-1.2, -7, 2.4, 3);
     ctx.fillStyle = Math.random() < .5 ? '#ffb02a' : '#ff5a1a'; ctx.beginPath(); ctx.arc(0, -8.5, 2.2, 0, 7); ctx.fill(); ctx.restore(); return;
   }
-  if (o.art === 'zielsuch') {                         // rot-weiße Rakete + Fadenkreuz auf dem Ziel
+  if (o.art === 'uboot') {                            // U-Boot halb im Wasser
+    ctx.save(); ctx.translate(o.x, o.y); ctx.scale(o.richtung, 1);
+    ctx.fillStyle = '#4d5866'; ctx.strokeStyle = '#1d242c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 34, 9, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(-4, -20); ctx.lineTo(9, -20); ctx.lineTo(12, -7); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#1d242c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(2, -20); ctx.lineTo(2, -28); ctx.lineTo(7, -28); ctx.stroke();
+    ctx.fillStyle = '#ffd84d'; for (const x of [-18, -9, 0, 9, 18]) { ctx.beginPath(); ctx.arc(x, -1, 1.6, 0, 7); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(59,143,201,.75)'; ctx.fillRect(o.x - 40, WASSER, 80, 14);   // Wasser vor dem Rumpf
+    return;
+  }
+  if (o.art === 'zielsuch' || o.art === 'ubootrakete') {   // rot-weiße Rakete + Fadenkreuz auf dem Ziel
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.dreh);
     ctx.fillStyle = 'rgba(255,170,40,.9)'; ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-15 - Math.random() * 5, 0); ctx.lineTo(-8, 2); ctx.fill();
     ctx.fillStyle = '#eee'; ctx.fillRect(-8, -3, 12, 6); ctx.fillStyle = '#d22'; ctx.fillRect(-4, -3, 3, 6);
@@ -2263,19 +2296,27 @@ function panzerMalen(w) {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★', -8, -8);
   ctx.restore();
 }
+// Höchster Erdpunkt an Stelle x (WASSER = dort ist nur Wasser)
+function obersterBoden(x) { for (let y = 0; y < WASSER; y += 4) if (fest(x, y)) return y; return WASSER; }
 // Flugplan der Zielsuchrakete: die niedrigste Höhe Y, auf der der Weg hoch → hinüber → hinab frei ist (sonst null = direkt)
-function wegFrei(x1, y1, x2, y2) {
+let planZiel = null;                                  // der Zielpunkt zählt nicht als Hindernis
+function wegFrei(x1, y1, x2, y2, abstand = 16) {
   const n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 10);
-  for (let i = 1; i <= n; i++) if (stoesst(x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n, 16)) return false;   // mit Sicherheitsabstand
+  const im_weg = wuermer.filter(w => !w.tot && !(planZiel && Math.hypot(w.x - planZiel.x, w.y - 10 - planZiel.y) < 40));   // andere Würmer umfliegen
+  for (let i = 1; i <= n; i++) {
+    const px = x1 + (x2 - x1) * i / n, py = y1 + (y2 - y1) * i / n;
+    if (stoesst(px, py, abstand) || im_weg.some(w => trifftWurm(w, px, py, abstand - 4))) return false;
+  }   // mit Sicherheitsabstand
   return true;
 }
 function flugPlan(x, y, zx, zy, alt) {
+  planZiel = { x: zx, y: zy };
   if (wegFrei(x, y, zx, zy)) return null;            // direkte Linie ist frei
   const richtung = Math.sign(zx - x) || 1;
   for (let Y = alt ? alt.Y : Math.min(y, zy) - 20; Y > -300; Y -= 25)
     for (const versatz of [0, 70, -70, 140, -140, 210]) {   // steigen – notfalls schräg an einer Insel vorbei
       const X = x + versatz * richtung;
-      if (wegFrei(x, y, X, Y) && wegFrei(X, Y, zx, Y) && wegFrei(zx, Y, zx, zy - 24)) return { X, Y };
+      if (wegFrei(x, y, X, Y) && wegFrei(X, Y, zx, Y, 26) && wegFrei(zx, Y, zx, zy - 24)) return { X, Y };
     }
   return null;
 }
@@ -2377,11 +2418,11 @@ function zeichneZielhilfe(w) {
 function zeichneSchleuder() {
   if (!zielt) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (spiel && spiel.waffe === 'luftschlag') {
+  if (spiel && (spiel.waffe === 'luftschlag' || spiel.waffe === 'uboot')) {
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 22, 0, 7); ctx.stroke();
     ctx.strokeStyle = '#e33'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(zielt.x, zielt.y, 22, 0, 7);
     ctx.moveTo(zielt.x - 32, zielt.y); ctx.lineTo(zielt.x + 32, zielt.y); ctx.moveTo(zielt.x, zielt.y - 32); ctx.lineTo(zielt.x, zielt.y + 32); ctx.stroke();
-    ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✈️', zielt.x, zielt.y - 40);
+    ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(spiel.waffe === 'uboot' ? '🎯' : '✈️', zielt.x, zielt.y - 40);
     return;
   }
   if (spiel && spiel.waffe === 'teleport') {           // Zielkreis: grün = passt, rot = geht nicht
