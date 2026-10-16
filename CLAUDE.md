@@ -33,4 +33,8 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 - Eine Datei pro App (`index.html` mit CSS+JS), solange es übersichtlich bleibt.
 - Kindgerechte Kommentare im Code sind erwünscht (kurz, deutsch).
 - Lokal testen: `python3 -m http.server 8000` im Repo-Wurzelordner.
+- **Veröffentlichen (dauerhaft erlaubt):** Nach jedem Commit auch auf den
+  Standard-Branch `claude/clever-fermi-123ssk` pushen (GitHub Pages, ein `main`
+  gibt es nicht) – nur als Fast-Forward, nie mit Force:
+  `git push origin HEAD:claude/clever-fermi-123ssk`.
 - Playwright: Chromium unter `/opt/pw-browsers`, `serviceWorkers:'block'`.
