@@ -138,6 +138,7 @@
   #karte .wahl .zaehler button{padding:3px 9px;font-size:16px;box-shadow:none;border-radius:12px}
   #karte .wahl .zaehler b{min-width:18px;text-align:center}
   #karte .wahl button.farbknopf{width:44px;height:44px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #c5ced8,0 3px 6px rgba(0,0,0,.2);vertical-align:middle;margin-right:6px;overflow:hidden;position:relative;flex:none}
+  #karte input.teamname{font:inherit;font-size:14px;width:86px;padding:5px 7px;border-radius:10px;border:2px solid #c5ced8;background:#fff;color:#222}
   #karte .wahl button.farbknopf img{position:absolute;left:50%;bottom:1px;height:36px;transform:translateX(-50%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
   #karte .wahl b{display:flex;align-items:center}
   .wurmicon{height:1.6em;vertical-align:middle;margin:-.3em .25em -.2em 0}
@@ -243,7 +244,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.51';
+const APP_VERSION = '1.52';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -367,8 +368,11 @@ const FARBEN = [
   { name: 'Türkis',  farbe: '#14B8A6', hell: '#9ff0e4' },
   { name: 'Schwarz', farbe: '#1f1f24', hell: '#e6e6ee', balken: '#8a8a96' },
 ];
-function teamsSetzen(farben) {
-  (farben || [0, 1, 2]).forEach((f, i) => { const F = FARBEN[f] || FARBEN[i]; Object.assign(TEAMS[i], { name: 'Team ' + F.name, farbe: F.farbe, hell: F.hell, balken: F.balken || F.farbe }); });
+// Eigener Gruppenname: kurz und ohne Zeichen, die im Bildschirm-Code stören könnten
+const nameSauber = t => String(t || '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 14);
+function teamsSetzen(farben, namen) {
+  (farben || [0, 1, 2]).forEach((f, i) => { const F = FARBEN[f] || FARBEN[i];
+    Object.assign(TEAMS[i], { name: nameSauber(namen && namen[i]) || 'Team ' + F.name, farbName: F.name, farbe: F.farbe, hell: F.hell, balken: F.balken || F.farbe }); });
 }
 
 // Zufall mit „Startzahl“: Gleiche Startzahl = gleiche Zufallszahlen auf jedem Gerät.
@@ -1141,7 +1145,7 @@ function ende(sieger) {
     const st = statistik(), k = st[art];
     k.spiele++;
     if (spiel.modus === 'online' || art === 'einzel') { if (ichGewinne) k.siege++; else if (sieger >= 0) k.niederlagen++; }
-    else if (sieger >= 0) { const name = TEAMS[sieger].name.replace('Team ', ''); k.farben[name] = (k.farben[name] || 0) + 1; }   // Mensch gegen Mensch auf einem Gerät: wer hat gewonnen?
+    else if (sieger >= 0) { const name = TEAMS[sieger].farbName; k.farben[name] = (k.farben[name] || 0) + 1; }   // Mensch gegen Mensch auf einem Gerät: wer hat gewonnen?
     speicher.schreib('wu-statistik', st);
   }
   // Sieg auf diesem Gerät? Dann Erfahrung +1 (und Schwierigkeit +1) – nicht bei Mensch gegen Mensch auf einem Gerät
@@ -2667,18 +2671,21 @@ function startMenue() {
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
-function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = speicher.lies('wu-farben') || w.farben || [0, 1, 2]; w.anzahl = w.anzahl || [4, 4, 4]; return w; }
+function wahlLesen(modus) { const w = speicher.lies('wu-wahl-' + modus) || JSON.parse(JSON.stringify(WAHL_STANDARD[modus])); w.farben = speicher.lies('wu-farben') || w.farben || [0, 1, 2]; w.anzahl = w.anzahl || [4, 4, 4]; w.namen = w.namen || ['', '', '']; return w; }
 function teamWahl(modus) {
   const wahl = wahlLesen(modus);
   const los = () => {
     const art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
     if (modus === 'online' && !art.includes('m')) return alert('Mindestens ein Team muss ein Mensch sein.');
     speicher.schreib('wu-wahl-' + modus, wahl);
-    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false, wahl.farben, wahl.wind !== false, wahl.anzahl.slice(0, art.length));
+    modus === 'lokal' ? lokalesSpiel() : neuesOnlineSpiel(art, wahl.stufe, false, wahl.direkt !== false, wahl.farben, wahl.wind !== false, wahl.anzahl.slice(0, art.length),
+                                                  art.map((a, i) => a === 'm' && i !== art.indexOf('m') ? '' : nameSauber(wahl.namen[i])));   // andere Menschen wählen ihren Namen selbst
   };
   const malen = () => {
     const zeilen = TEAMS.map((_, i) => { const F = FARBEN[wahl.farben[i]]; return `<div class="wahl"><b style="color:${F.farbe}">` +
-      `<button class="farbknopf" data-f="${i}" style="background:radial-gradient(circle at 50% 35%, #fff 0, ${F.farbe} 75%)" aria-label="Farbe wechseln">${wurmIcon(i, i, '')}</button> ${F.name}</b><span>` +
+      `<button class="farbknopf" data-f="${i}" style="background:radial-gradient(circle at 50% 35%, #fff 0, ${F.farbe} 75%)" aria-label="Farbe wechseln">${wurmIcon(i, i, '')}</button> ` +
+      (modus === 'online' && wahl.art[i] === 'm' && i !== wahl.art.indexOf('m') ? `<i style="font-weight:400;opacity:.7">wählt selbst</i>`   // Mitspieler sucht sich Farbe + Namen beim Beitreten aus
+        : `<input class="teamname" data-name="${i}" maxlength="14" placeholder="Team ${F.name}" value="${nameSauber(wahl.namen[i])}" autocomplete="off">`) + `</b><span>` +
       [['m', '👤 Mensch'], ['c', '🤖 Computer'], ...(i === 2 ? [['-', 'aus']] : [])]
         .map(([a, txt]) => `<button data-t="${i}" data-a="${a}" class="${wahl.art[i] === a ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>'; }).join('');
     const wurmZeile = `<div class="wahl"><b>${wurmIcon(0)}Würmer</b><span>` + TEAMS.map((_, i) => wahl.art[i] === '-' ? '' :
@@ -2696,6 +2703,9 @@ function teamWahl(modus) {
       [["Los geht's!", los]], zeilen + stufen + schieber, [['← Zurück', modus === 'online' ? onlineMenue : startMenue]]);
     $('schwer').oninput = e => { speicher.schreib('wu-schwer', +e.target.value); $('schwerzahl').textContent = e.target.value; };
     $('schwer').onchange = () => malen();
+    $('karte').querySelectorAll('.teamname').forEach(e => e.oninput = () => {   // Gruppenname tippen
+      wahl.namen[+e.dataset.name] = nameSauber(e.value); speicher.schreib('wu-wahl-' + modus, wahl); teamsSetzen(wahl.farben, wahl.namen);
+    });
     $('karte').querySelectorAll('.wahl button').forEach(b => b.onclick = () => {
       if (b.dataset.z) { const i = +b.dataset.z; wahl.anzahl[i] = Math.max(1, Math.min(10, wahl.anzahl[i] + +b.dataset.n)); }   // 1 bis 10 Würmer
       else if (b.dataset.f) {                             // nächste Farbe, die kein anderes Team hat
@@ -2706,7 +2716,7 @@ function teamWahl(modus) {
       else if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
       speicher.schreib('wu-wahl-' + modus, wahl);          // sofort merken
       speicher.schreib('wu-farben', wahl.farben);           // Farben gelten lokal und online
-      teamsSetzen(wahl.farben);
+      teamsSetzen(wahl.farben, wahl.namen);
       malen();
     });
     // Wurm-Bilder noch nicht geladen? Dann gleich nochmal malen (für das Halstuch in Teamfarbe)
@@ -2717,7 +2727,7 @@ function teamWahl(modus) {
 function lokalesSpiel() {
   Online.stop();
   const wahl = wahlLesen('lokal'), art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
-  teamsSetzen(wahl.farben);
+  teamsSetzen(wahl.farben, wahl.namen);
   neuesSpiel({ n: art.length, art, stufe: wahl.stufe, mitWind: wahl.wind !== false, anzahl: wahl.anzahl.slice(0, art.length), startzahl: (Math.random() * 2 ** 31) >>> 0, schwer: meinSchwer() });
   naechsterZug();
 }
@@ -2922,7 +2932,7 @@ const Sync = {
    ===================================================================== */
 const Online = {
   timer: null, tickt: false, fehlerText: '', sendet: false,
-  start() { this.stop(); this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
+  start() { this.stop(); gruppeWaehlen = false; this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
     if (this.tickt || document.hidden || !this.timer || !Sync.cfg) return;
@@ -2991,7 +3001,9 @@ function steuern(st) {
   }
   if (spiel) return;                                          // lokales Spiel läuft
   const ich = st ? st.geraete.indexOf(Sync.geraet) : -1;
-  if (st) teamsSetzen(st.farben);
+  if (gruppeWaehlen && st && st.status === 'wartet' && !st.geraete.includes(Sync.geraet)) return;   // Fenster „Deine Gruppe“ offen lassen
+  gruppeWaehlen = false;
+  if (st) teamsSetzen(st.farben, st.namen);
   // Lobby nur neu malen, wenn sich etwas geändert hat (sonst flackern die Knöpfe)
   const zeige = (text, knoepfe) => { if (text !== lobbyText) { lobbyText = text; lobby(text, knoepfe); } };
   if (!st || st.status === 'ende') return zeige('Kein offenes Spiel.', NEU_KNOEPFE());
@@ -3000,7 +3012,7 @@ function steuern(st) {
   if (st.status === 'wartet') {
     const wer = st.geraete.map((_, i) => TEAMS[mensch[i]].name).join(', ');
     if (ich >= 0) return zeige(`Warte auf Mitspieler … (${st.geraete.length} von ${mensch.length} Geräten)\nSchon da: ${wer}${mitCpu}\nDu bist ${TEAMS[mensch[ich]].name}.\n\nAuf dem anderen Gerät: Würmer → Online → Beitreten`, [['Abbrechen', abbrechen]]);
-    return zeige(`Ein Spiel wartet auf dich! (${st.geraete.length} von ${mensch.length} Geräten da)${mitCpu}\nDu wirst ${TEAMS[mensch[st.geraete.length]].name}.`, [[wurmIcon(1) + 'Beitreten', beitreten], ['Neues Spiel (altes beenden)', () => teamWahl('online')]]);
+    return zeige(`Ein Spiel wartet auf dich! (${st.geraete.length} von ${mensch.length} Geräten da)${mitCpu}\nGleich suchst du dir deine Farbe und deinen Gruppennamen aus.`, [[wurmIcon(1) + 'Beitreten', beitretenWahl], ['Neues Spiel (altes beenden)', () => teamWahl('online')]]);
   }
   if (st.status === 'laeuft') {
     if (ich >= 0) { lobbyText = ''; return spielLaden(st, ich); }
@@ -3024,7 +3036,7 @@ function spielLaden(st, ich) {
   Direkt.start(st);
 }
 
-async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, farben = [0, 1, 2], wind = true, anzahl = null) {
+async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, farben = [0, 1, 2], wind = true, anzahl = null, namen = []) {
   const st = Sync.stand;
   if (!ersetzen && st && st.status === 'laeuft') {
     Online.stop();
@@ -3032,7 +3044,7 @@ async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, far
     if (!ok) return onlineMenue();
     Online.start();
   }
-  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben, wind, anzahl, schwer: meinSchwer(),
+  const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben, namen, wind, anzahl, schwer: meinSchwer(),
                 startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
   if (menschen(neu).length === 1) neu.status = 'laeuft';        // nur ich gegen Computer: sofort los
   lobbyText = ''; lobby('Starte …', []);
@@ -3043,18 +3055,46 @@ async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, far
     Online.tick();
   } catch (e) { lobby('⚠ ' + e.message, [['Nochmal', () => neuesOnlineSpiel(art, stufe, ersetzen)]]); }
 }
-async function beitreten() {
+// Vor dem Beitreten: eigene Farbe und eigenen Gruppennamen aussuchen
+let gruppeWaehlen = false;
+function beitretenWahl() {
+  gruppeWaehlen = true;
+  const st = Sync.stand; if (!st || st.status !== 'wartet') return Online.tick();
+  const platz = menschen(st)[st.geraete.length], belegt = (st.farben || [0, 1, 2]).slice(0, st.teams).filter((_, i) => i !== platz);
+  let farbe = st.farben && !belegt.includes(st.farben[platz]) ? st.farben[platz] : FARBEN.findIndex((_, f) => !belegt.includes(f));
+  const meine = speicher.lies('wu-meinefarbe'); if (meine != null && FARBEN[meine] && !belegt.includes(meine)) farbe = meine;
+  let name = nameSauber(speicher.lies('wu-meinname'));
+  const malen = () => {
+    const knoepfe = FARBEN.map((F, f) => `<button class="farbknopf${f === farbe ? ' an' : ''}" data-f="${f}" ${belegt.includes(f) ? 'disabled style="opacity:.25;' : 'style="'}background:radial-gradient(circle at 50% 35%, #fff 0, ${F.farbe} 75%);${f === farbe ? 'box-shadow:0 0 0 4px #2f8a3a;transform:scale(1.12);color:#fff;font-size:22px;' : ''}" aria-label="${F.name}">${f === farbe ? '✓' : ''}</button>`).join('');
+    lobbyText = '';
+    karte('<h2>Deine Gruppe</h2>', 'Such dir eine Farbe aus und gib deiner Gruppe einen Namen.',
+      [[wurmIcon(1) + 'Beitreten', () => beitreten(farbe, name)]],
+      `<div class="wahl" style="justify-content:center;flex-wrap:wrap">${knoepfe}</div>` +
+      `<div class="wahl" style="justify-content:center"><input class="teamname" id="meinname" maxlength="14" placeholder="Team ${FARBEN[farbe].name}" value="${name}" autocomplete="off"></div>`,
+      [['← Zurück', () => { gruppeWaehlen = false; lobbyText = ''; Online.tick(); }]]);
+    $('meinname').oninput = e => { name = nameSauber(e.target.value); };
+    $('karte').querySelectorAll('.farbknopf').forEach(b => b.onclick = () => { farbe = +b.dataset.f; malen(); });
+  };
+  malen();
+}
+async function beitreten(farbe, name) {
+  gruppeWaehlen = false;
+  speicher.schreib('wu-meinefarbe', farbe); speicher.schreib('wu-meinname', name);
   lobbyText = ''; lobby('Trete bei …', []);
   try {
     await Sync.aendern(s => {
       if (!s || s.status !== 'wartet' || s.geraete.includes(Sync.geraet) || s.geraete.length >= menschen(s).length) return null;
+      const platz = menschen(s)[s.geraete.length];
+      s.farben = (s.farben || [0, 1, 2]).slice(); s.namen = (s.namen || []).slice();
+      if (!s.farben.some((f, i) => i !== platz && i < s.teams && f === farbe)) s.farben[platz] = farbe;   // Farbe noch frei? Dann gehört sie mir
+      s.namen[platz] = nameSauber(name);
       s.geraete.push(Sync.geraet);
       s.schwer = Math.min(s.schwer ?? 100, meinSchwer());          // an den Schwächsten anpassen
       if (s.geraete.length === menschen(s).length) s.status = 'laeuft';      // alle da – los geht's
       return s;
     });
     Online.tick();
-  } catch (e) { lobby('⚠ ' + e.message, [['Nochmal', beitreten]]); }
+  } catch (e) { lobby('⚠ ' + e.message, [['Nochmal', () => beitreten(farbe, name)]]); }
 }
 async function abbrechen() {
   try { await Sync.aendern(s => s && s.geraete.includes(Sync.geraet) ? { ...s, status: 'ende', sieger: -1 } : null); } catch {}
@@ -3325,7 +3365,7 @@ function einladungAusLink() {
 }
 
 // ================= Start =================
-teamsSetzen(speicher.lies('wu-farben'));              // zuletzt gewählte Farben
+teamsSetzen(speicher.lies('wu-farben'), wahlLesen('lokal').namen);              // zuletzt gewählte Farben
 // Hintergrund-Welt fürs Menü
 baueLandschaft((Math.random() * 2 ** 31) >>> 0);
 for (let i = 0; i < 4; i++) for (let t = 0; t < 2; t++) wuermer.push(neuerWurm(t));
