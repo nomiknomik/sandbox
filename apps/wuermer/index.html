@@ -244,7 +244,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.52';
+const APP_VERSION = '1.53';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -822,10 +822,12 @@ function updateDing(o, dt) {
         ton.wusch(); wackeln = Math.max(wackeln, 4); o.phase = 2; o.pause = 0; } }
     else { o.pause += dt; o.y += 20 * dt; if (o.pause > 1.4) return false; }
     if (Math.random() < .3) teilchen.push({ art: 'tropfen', x: o.x - o.richtung * 26, y: WASSER, vx: rnd(-30, 30), vy: rnd(-90, -30), t: 0, max: .6, r: rnd(1.5, 3) });
-  } else if (o.art === 'ubootrakete' && o.vorne) {   // fliegt vor dem Felsen senkrecht hoch, bis sie freie Luft hat
+  } else if (o.art === 'ubootrakete' && o.vorne) {   // fliegt vor dem Felsen senkrecht hoch – bis über den Berg und über das Ziel
     o.y += o.vy * dt;
     if (Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x, y: o.y + 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
-    if (o.t > .2 && !stoesst(o.x, o.y, o.r + 2)) o.vorne = false;
+    const oben = Math.min(obersterBoden(o.x), o.zielPunkt.y) - 70;   // so hoch muss sie, dann wendet sie
+    if (o.y < oben && !stoesst(o.x, o.y, o.r + 2)) { o.vorne = false; o.t = Math.max(o.t, .45); }
+    if (o.y < -800) o.vorne = false;
   } else if (o.art === 'zielsuch' || o.art === 'ubootrakete') {
     const z = o.zielPunkt || (o.ziel && !o.ziel.tot ? { x: o.ziel.x, y: o.ziel.y - 10 } : null);
     if (z && o.t > (o.art === 'ubootrakete' ? .45 : .15) && o.t < 7) {   // lenkt zum Ziel (ohne Schwerkraft)
