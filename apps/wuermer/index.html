@@ -243,7 +243,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.50';
+const APP_VERSION = '1.51';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -764,11 +764,11 @@ function feuern(staerke, zielX, zielY) {
   }
   spiel.phase = 'flug'; kam.frei = false; spiel.geschossen = true; spiel.trafGegner = false;
   if (Math.random() < .6) sag(w, 'lovi');
-  if (art === 'uboot') {                              // U-Boot kommt vom näheren Inselrand durchs Wasser
+  if (art === 'uboot') {                              // U-Boot kommt vom näheren Rand und hält fast unter dem Ziel
     const links = zielX < W / 2, ri = links ? 1 : -1;
-    let halt = links ? -60 : W + 60;                   // vor der Insel starten, dann so nah ans Ziel wie das freie Wasser reicht
-    while (Math.abs(halt - zielX) > 60 && [0, 45, 90].every(d => obersterBoden(halt + ri * d) >= WASSER) && wegFrei(halt + ri * 45, WASSER - 30, halt + ri * 45, 200)) halt += ri * 10;
-    dinge.push({ art: 'uboot', x: links ? -220 : W + 220, y: WASSER + 4, ziel: { x: zielX, y: zielY }, halt, richtung: links ? 1 : -1, t: 0, phase: 0, r: 1 });
+    const halt = Math.max(50, Math.min(W - 50, zielX - ri * 90));   // überall im Wasser – auch vor dem Felsen im Vordergrund
+    const start = links ? Math.max(-220, halt - 700) : Math.min(W + 220, halt + 700);
+    dinge.push({ art: 'uboot', x: start, y: WASSER + 4, ziel: { x: zielX, y: zielY }, halt, richtung: links ? 1 : -1, t: 0, phase: 0, r: 1 });
     ton.wusch(); zeigeWaffen(); return;
   }
   if (art === 'luftschlag') {                         // 5 Raketen fallen vom Himmel
@@ -813,11 +813,15 @@ function updateDing(o, dt) {
     for (const w of wuermer) if (!w.tot && !(w === o.besitzer && o.t < .25) && trifftWurm(w, o.x, o.y, o.r)) return platzen(o);
   } else if (o.art === 'uboot') {                    // fahren → auftauchen → Rakete abfeuern → abtauchen
     if (o.phase === 0) { o.x += o.richtung * 260 * dt; o.y = WASSER + 4; if ((o.x - o.halt) * o.richtung >= 0) { o.x = o.halt; o.phase = 1; o.pause = 0; } }
-    else if (o.phase === 1) { o.y -= 12 * dt; o.pause += dt; if (o.pause > .6) {
-        dinge.push({ art: 'ubootrakete', x: o.x + o.richtung * 6, y: o.y - 24, vx: 0, vy: -420, r: 4, t: 0, dreh: -Math.PI / 2, zielPunkt: o.ziel });
+    else if (o.phase === 1) { o.y = Math.max(WASSER - 8, o.y - 40 * dt); o.pause += dt; if (o.pause > .8) {   // richtig auftauchen, damit man es sieht
+        dinge.push({ art: 'ubootrakete', x: o.x + o.richtung * 6, y: o.y - 24, vx: 0, vy: -420, r: 4, t: 0, dreh: -Math.PI / 2, zielPunkt: o.ziel, vorne: true });
         ton.wusch(); wackeln = Math.max(wackeln, 4); o.phase = 2; o.pause = 0; } }
     else { o.pause += dt; o.y += 20 * dt; if (o.pause > 1.4) return false; }
     if (Math.random() < .3) teilchen.push({ art: 'tropfen', x: o.x - o.richtung * 26, y: WASSER, vx: rnd(-30, 30), vy: rnd(-90, -30), t: 0, max: .6, r: rnd(1.5, 3) });
+  } else if (o.art === 'ubootrakete' && o.vorne) {   // fliegt vor dem Felsen senkrecht hoch, bis sie freie Luft hat
+    o.y += o.vy * dt;
+    if (Math.random() < .8) teilchen.push({ art: 'rauch', x: o.x, y: o.y + 8, vx: rnd(-10, 10), vy: rnd(-20, 0), t: 0, max: .8, r: rnd(3, 6) });
+    if (o.t > .2 && !stoesst(o.x, o.y, o.r + 2)) o.vorne = false;
   } else if (o.art === 'zielsuch' || o.art === 'ubootrakete') {
     const z = o.zielPunkt || (o.ziel && !o.ziel.tot ? { x: o.ziel.x, y: o.ziel.y - 10 } : null);
     if (z && o.t > (o.art === 'ubootrakete' ? .45 : .15) && o.t < 7) {   // lenkt zum Ziel (ohne Schwerkraft)
@@ -990,8 +994,8 @@ function naechsterZug() {
   else if (spiel.zug > 0 && wurf < K.apotheke + K.bonus + K.waffe) {
     const arten = Object.keys(WAFFEN).filter(a => WAFFEN[a].start !== undefined && WAFFEN[a].ab <= rundeNr() + 1 && a !== 'trampolin');   // Trampolin kommt nie aus Kisten
     let art = arten.length && arten[Math.floor(zr(0, arten.length))];
-    // Panzer: bei wenig Schwierigkeit oft (bis 30 % der Waffenkisten), später wieder eine seltene Wunderwaffe
-    if (arten.includes('panzer') && zr(0, 1) < .3 * (1 - (spiel.schwer || 0) / 100)) art = 'panzer';
+    // Panzer: bei wenig Schwierigkeit öfter (bis 18 % der Waffenkisten), später wieder eine seltene Wunderwaffe
+    if (arten.includes('panzer') && zr(0, 1) < .18 * (1 - (spiel.schwer || 0) / 100)) art = 'panzer';
     else if (art === 'panzer' && zr(0, 1) < .6) art = arten[Math.floor(zr(0, arten.length))];
     if (art) { kisten.push({ x: kx, y: -60, art, r: 9, luft: true }); kiste = '  📦 Nachschub!'; }
   }
@@ -2185,7 +2189,7 @@ function zeichneDing(o) {
     ctx.strokeStyle = '#1d242c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(2, -20); ctx.lineTo(2, -28); ctx.lineTo(7, -28); ctx.stroke();
     ctx.fillStyle = '#ffd84d'; for (const x of [-18, -9, 0, 9, 18]) { ctx.beginPath(); ctx.arc(x, -1, 1.6, 0, 7); ctx.fill(); }
     ctx.restore();
-    ctx.fillStyle = 'rgba(59,143,201,.75)'; ctx.fillRect(o.x - 40, WASSER, 80, 14);   // Wasser vor dem Rumpf
+    ctx.fillStyle = 'rgba(59,143,201,.6)'; ctx.fillRect(o.x - 40, WASSER + 2, 80, 12);   // Wasser vor dem Rumpf
     return;
   }
   if (o.art === 'zielsuch' || o.art === 'ubootrakete') {   // rot-weiße Rakete + Fadenkreuz auf dem Ziel
