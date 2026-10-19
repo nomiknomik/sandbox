@@ -62,6 +62,9 @@
                color:#fff;font-size:30px;box-shadow:0 5px 0 rgba(0,0,0,.35),4px -4px 0 -1px rgba(255,255,255,.25),8px -8px 0 -2px rgba(255,255,255,.12);padding:0}
   .stapelknopf.an{border-color:#ffd84d;background:linear-gradient(#a8801a,#5e430a)}
   .stapelknopf small{position:absolute;right:4px;bottom:2px;font-size:12px;font-weight:700}
+  .stapelknopf.neu:before,.waffe.neu:before{content:"!";position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#ff4d4d;color:#fff;font:700 13px/20px system-ui,sans-serif;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.35);animation:hupf 1s ease-in-out infinite;z-index:2}
+  .waffe.neu{position:relative}
+  @keyframes hupf{50%{transform:translateY(-3px)}}
   .stapelknopf:after{content:"▴";position:absolute;top:-2px;left:0;right:0;font-size:12px;opacity:.8}
   .faecher{position:absolute;bottom:74px;left:50%;display:flex;flex-direction:column-reverse;align-items:flex-start;gap:6px;pointer-events:none;z-index:20}
   .faecher > b{order:-1;display:none}
@@ -188,8 +191,8 @@
   <div id="waffen">
     <div id="waffenreihe">
       <div class="stapel" data-g="0">
-        <button class="stapelknopf" aria-label="Geschosse"></button>
-        <div class="faecher"><b>Geschosse</b>
+        <button class="stapelknopf" aria-label="Fliegen"></button>
+        <div class="faecher"><b>Fliegen</b>
           <button class="waffe fach an" data-w="bazooka">🚀</button>
           <button class="waffe fach" data-w="granate">💣</button>
           <button class="waffe fach" data-w="banane">🍌<small></small></button>
@@ -198,20 +201,20 @@
         </div>
       </div>
       <div class="stapel" data-g="1">
-        <button class="stapelknopf" aria-label="Sprengen"></button>
-        <div class="faecher"><b>Sprengen</b>
+        <button class="stapelknopf" aria-label="Legen"></button>
+        <div class="faecher"><b>Legen</b>
           <button class="waffe fach" data-w="dynamit">🧨<small></small></button>
           <button class="waffe fach" data-w="mine">💥<small></small></button>
           <button class="waffe fach" data-w="schaf">🐑<small></small></button>
-          <button class="waffe fach" data-w="uboot"><svg viewBox="0 0 40 40" width="36" height="36" style="vertical-align:middle"><rect x="0" y="25" width="40" height="15" fill="#3b8fc9" opacity=".7"/><path d="M4 24 Q4 18 12 18 H30 Q37 18 37 22 Q37 26 30 26 H10 Q4 26 4 24Z" fill="#4d5866" stroke="#1d242c" stroke-width="1.2"/><path d="M15 18 V12 H23 L25 18Z" fill="#5d6876" stroke="#1d242c" stroke-width="1.2"/><path d="M19 12 V6 H23" stroke="#1d242c" stroke-width="1.5" fill="none"/><circle cx="12" cy="22" r="1.4" fill="#ffd84d"/><circle cx="18" cy="22" r="1.4" fill="#ffd84d"/><circle cx="24" cy="22" r="1.4" fill="#ffd84d"/><path d="M30 10 l4 -8 l2 6z" fill="#e33"/></svg><small></small></button>
-          <button class="waffe fach" data-w="luftschlag">✈️<small></small></button>
         </div>
       </div>
       <div class="stapel" data-g="2">
-        <button class="stapelknopf" aria-label="Schießen"></button>
-        <div class="faecher"><b>Schießen</b>
+        <button class="stapelknopf" aria-label="Schießen &amp; Großes"></button>
+        <div class="faecher"><b>Schießen &amp; Großes</b>
           <button class="waffe fach" data-w="flinte"><svg viewBox="0 0 40 40" width="36" height="36" style="vertical-align:middle"><defs><linearGradient id="holz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c68642"/><stop offset="1" stop-color="#7a4a1e"/></linearGradient><linearGradient id="lauf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dde3"/><stop offset=".5" stop-color="#7d838c"/><stop offset="1" stop-color="#3c4048"/></linearGradient></defs><g transform="rotate(-32 20 20)"><path d="M1 19.5 Q1 16.5 4 16.5 L13 17.5 L14 22 L5 25 Q1 25 1 22Z" fill="url(#holz)" stroke="#4a2a0e" stroke-width=".9"/><path d="M3 19 Q7 18.5 11 19" stroke="#e0a86a" stroke-width=".7" fill="none" opacity=".8"/><rect x="12.5" y="17" width="6" height="5" rx="1" fill="#555b63" stroke="#25282d" stroke-width=".8"/><circle cx="15.5" cy="19.5" r=".9" fill="#c9a227"/><rect x="18" y="17" width="21" height="2.2" rx="1" fill="url(#lauf)" stroke="#25282d" stroke-width=".6"/><rect x="18" y="19.3" width="21" height="2.2" rx="1" fill="url(#lauf)" stroke="#25282d" stroke-width=".6"/><path d="M20 21.6 L27 21.6 L26 23.5 L21 23.5Z" fill="url(#holz)" stroke="#4a2a0e" stroke-width=".6"/><path d="M14 22 Q14.5 25 17 25" stroke="#25282d" stroke-width="1.2" fill="none"/></g></svg><small></small></button>
           <button class="waffe fach" data-w="panzer"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><rect x="4" y="24" width="32" height="9" rx="4.5" fill="#333"/><circle cx="10" cy="28.5" r="2.5" fill="#888"/><circle cx="20" cy="28.5" r="2.5" fill="#888"/><circle cx="30" cy="28.5" r="2.5" fill="#888"/><path d="M6 24 L9 17 H31 L34 24Z" fill="#5b7a34" stroke="#2d3d18" stroke-width="1.5"/><path d="M14 17 Q14 10 20 10 Q26 10 26 17Z" fill="#6d8f40" stroke="#2d3d18" stroke-width="1.5"/><rect x="24" y="11.5" width="14" height="3.5" rx="1.5" fill="#3f5524"/></svg><small></small></button>
+          <button class="waffe fach" data-w="uboot"><svg viewBox="0 0 40 40" width="36" height="36" style="vertical-align:middle"><rect x="0" y="25" width="40" height="15" fill="#3b8fc9" opacity=".7"/><path d="M4 24 Q4 18 12 18 H30 Q37 18 37 22 Q37 26 30 26 H10 Q4 26 4 24Z" fill="#4d5866" stroke="#1d242c" stroke-width="1.2"/><path d="M15 18 V12 H23 L25 18Z" fill="#5d6876" stroke="#1d242c" stroke-width="1.2"/><path d="M19 12 V6 H23" stroke="#1d242c" stroke-width="1.5" fill="none"/><circle cx="12" cy="22" r="1.4" fill="#ffd84d"/><circle cx="18" cy="22" r="1.4" fill="#ffd84d"/><circle cx="24" cy="22" r="1.4" fill="#ffd84d"/><path d="M30 10 l4 -8 l2 6z" fill="#e33"/></svg><small></small></button>
+          <button class="waffe fach" data-w="luftschlag">✈️<small></small></button>
         </div>
       </div>
       <div class="stapel" data-g="3">
@@ -221,7 +224,7 @@
           <button class="waffe fach" data-w="trampolin"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><path d="M8 22 L4 35 M32 22 L36 35 M15 25 L13 35 M25 25 L27 35" stroke="#555" stroke-width="3" stroke-linecap="round"/><ellipse cx="20" cy="21" rx="17" ry="6" fill="#e33" stroke="#7a1010" stroke-width="2"/><ellipse cx="20" cy="20.5" rx="12.5" ry="3.6" fill="#1d2b44"/><path d="M20 4 l3 7 h-6z" fill="#ffd84d"/></svg><small></small></button>
           <button class="waffe fach" data-w="teleport">🌀<small></small></button>
           <button class="waffe fach" data-w="bunker">🛡️<small></small></button>
-          <button class="waffe fach" data-w="graben">⛏️<small></small></button>
+          <button class="waffe fach" data-w="graben"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><rect x="8" y="3" width="24" height="5" rx="2.5" fill="#333"/><rect x="14" y="7" width="12" height="19" rx="3" fill="#e0a21b" stroke="#7a560a" stroke-width="1.5"/><rect x="16.5" y="11" width="7" height="2" fill="#7a560a"/><rect x="16.5" y="16" width="7" height="2" fill="#7a560a"/><rect x="18" y="26" width="4" height="9" fill="#9aa0a6"/><path d="M17.5 35h5L20 39.5z" fill="#555"/></svg><small></small></button>
           <button class="waffe fach" data-w="erdbrecher">🪨<small></small></button>
         </div>
       </div>
@@ -245,7 +248,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.55';
+const APP_VERSION = '1.56';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -296,16 +299,16 @@ const WAFFEN = {
   schaf:      { icon: '🐑', name: 'Schaf',        sterne: 3, radius: 62, schaden: 60, ab: 3, zuender: 10, start: 2, info: 'Läuft los – mit 💥 ZÜNDEN sprengst du es' },
   luftschlag: { icon: '✈️', name: 'Luftschlag',   sterne: 4, radius: 30, schaden: 26, ab: 4, start: 1, info: 'Tippe auf das Ziel!' },
   dynamit:    { icon: '🧨', name: 'Dynamit',      sterne: 5, radius: 80, schaden: 75, ab: 5, zuender: 5, start: 1, info: 'Hinlegen – und schnell weglaufen!' },
-  graben:     { icon: '⛏️', name: 'Graben',       sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du graben willst – der Zug geht danach weiter' },
+  graben:     { icon: '', name: 'Pressluftbohrer', sterne: 0, ab: 1, info: 'In die Richtung ziehen, in die du bohren willst – bohrt, bis die Zeit um ist (⤴ = aufhören). Danach darfst du nicht mehr schießen!' },
   erdbrecher: { icon: '🪨', name: 'Erdbrecher',   sterne: 0, radius: 55, schaden: 0, ab: 1, nurErde: true, info: 'Sprengt nur Erde weg – tut keinem Wurm weh' },
   trampolin:  { icon: '', name: 'Trampolin',    sterne: 0, ab: 1, start: 2, schaden: 10, info: 'Zielen wie mit der Bazooka – du fliegst selbst und wirfst andere Würmer um!' },
-  flinte:     { icon: '🔫', name: 'Schrotflinte',  sterne: 2, schaden: 25, ab: 1, info: '2 Schüsse kurz hintereinander, geradeaus – kein Wind, keine Kurve' },
+  flinte:     { icon: '🔫', name: 'Schrotflinte',  sterne: 2, schaden: 18, ab: 1, info: '2 Schüsse kurz hintereinander, geradeaus – kein Wind, keine Kurve' },
   zielsuch:   { icon: '🎯', name: 'Zielsuchrakete', sterne: 4, radius: 38, schaden: 42, ab: 3, start: 1, info: 'Erst kurz auf das Ziel tippen 🎯, dann wie die Bazooka abschießen' },
   molotow:    { icon: '🔥', name: 'Molotow',       sterne: 3, schaden: 4, ab: 2, start: 2, info: 'Zerplatzt und setzt den Boden in Brand' },
   mine:       { icon: '💥', name: 'Landmine',      sterne: 3, radius: 40, schaden: 40, ab: 2, start: 2, info: 'Hinlegen – wer drauftritt, fliegt in die Luft' },
   seil:       { icon: '🪢', name: 'Ninja-Seil',    sterne: 0, ab: 1, info: 'Seil schießen, mit ◀ ▶ schaukeln, ⤴ = loslassen. Der Zug geht weiter' },
   uboot:      { icon: '', name: 'U-Boot', sterne: 5, radius: 48, schaden: 50, ab: 4, start: 1, info: 'Ziel antippen – ein U-Boot taucht auf und schießt eine Rakete dorthin' },
-  panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 3, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 3 Schüsse. Im Panzer nur halber Schaden.' },
+  panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 1, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 1 Schuss. Im Panzer nur halber Schaden.' },
   bunker:     { icon: '🛡️', name: 'Bunker', sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Ziehen und loslassen – ein Bunker schützt deinen Wurm bis zu seinem nächsten Zug. Der Zug ist danach vorbei.' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
@@ -386,7 +389,7 @@ let zufall = zufallsFolge(1);
 const zr = (a, b) => a + zufall() * (b - a);            // Zufall fürs Spiel (gleich auf allen Geräten)
 const rnd = (a, b) => a + Math.random() * (b - a);      // Zufall nur fürs Aussehen (Funken, Rauch)
 
-let maske, erde, ectx, wand;    // maske: 1 = Erde, 0 = Luft
+let maske, erde, ectx, wand, schatten;    // maske: 1 = Erde, 0 = Luft
 let welt = 'wiese';             // 'wiese' (Erde + Gras) oder 'felsen' (Stein)
 let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [], kisten = [], minen = [];
 let spiel = null;               // Zustand eines laufenden Spiels
@@ -423,6 +426,10 @@ function baueLandschaft(startzahl) {
   wc.fillStyle = fels ? '#4f493e' : '#4a2d18'; wc.fillRect(0, 0, W, H);
   for (let i = 0; i < 1500 * W / 2000; i++) { wc.fillStyle = fels ? (i % 2 ? '#3f3a31' : '#5e574a') : (i % 2 ? '#3a2312' : '#5a3a22'); wc.beginPath(); wc.arc(rnd(0, W), rnd(150, H), rnd(2, 6), 0, 7); wc.fill(); }
   wc.globalCompositeOperation = 'destination-in'; wc.drawImage(m, 0, 0);
+  // Schatten der Landschaft (wird versetzt dahinter gemalt – so steht sie vor dem Hintergrund)
+  schatten = document.createElement('canvas'); schatten.width = W; schatten.height = H;
+  const sc = schatten.getContext('2d'); sc.drawImage(m, 0, 0); sc.globalCompositeOperation = 'source-in'; sc.fillStyle = '#000'; sc.fillRect(0, 0, W, H);
+  const voll = g.getImageData(0, 0, W, H).data;       // Form ohne Höhlen (für Licht und Schatten)
   // Höhlen
   g.globalCompositeOperation = 'destination-out';
   for (let i = 0; i < Math.round(5 * W / 2000); i++) {
@@ -463,15 +470,16 @@ function baueLandschaft(startzahl) {
     let tiefe = 0;
     for (let y = 0; y < H; y++) {
       const i = y * W + x;
-      if (!maske[i]) { tiefe = 0; continue; }
-      tiefe++;
+      if (!voll[i * 4 + 3]) tiefe = 0;                 // Tiefe zählt ohne Höhlen – sonst wird es unter jeder Höhle wieder hell
+      else tiefe++;
+      if (!maske[i]) continue;
       let f = 1.15 - Math.min(tiefe, 180) / 180 * .35;
       if (unten[y] < 10) f *= .6 + unten[y] * .04;
       if (fels) {                                      // Felsen: Kante oben links hell, unten rechts dunkel = sieht erhaben aus
         let k = 0;
-        for (const d of [2, 4, 7]) {
-          if (x >= d && y >= d && !maske[i - d * W - d]) k += .09;
-          if (x + d < W && y + d < H && !maske[i + d * W + d]) k -= .12;
+        for (const d of [2, 4, 7, 11, 16]) {
+          if (x >= d && y >= d && !maske[i - d * W - d]) k += .08;
+          if (x + d < W && y + d < H && !maske[i + d * W + d]) k -= .11;
         }
         f *= 1 + k;
       }
@@ -559,6 +567,7 @@ function blume(x, y) {
 
 // Loch in die Erde sprengen
 function loch(x, y, r) {
+  const sc = schatten.getContext('2d'); sc.globalCompositeOperation = 'destination-out'; sc.beginPath(); sc.arc(x, y, r, 0, 7); sc.fill();
   ectx.globalCompositeOperation = 'destination-out';
   ectx.beginPath(); ectx.arc(x, y, r, 0, 7); ectx.fill();
   ectx.globalCompositeOperation = 'source-atop';      // verbrannter Rand
@@ -806,7 +815,7 @@ function feuern(staerke, zielX, zielY) {
   }
   if (!WAFFEN[art] || team.munition[art] === 0 || WAFFEN[art].ab > rundeNr()) return;
   if (team.munition[art] > 0) team.munition[art]--;
-  if (art === 'graben') { spiel.graben = { t: 1.6, winkel: w.ziel, takt: 0 }; return; }   // Zug geht danach weiter
+  if (art === 'graben') { spiel.graben = { winkel: w.ziel, takt: 0 }; return; }   // bohrt, bis die Zeit um ist – schießen darf man danach nicht mehr
   if (art === 'panzer' && !w.panzer) {                // Panzer: einsteigen – geschossen wird danach
     w.panzer = { schuss: WAFFEN.panzer.schuesse }; spiel.waffe = 'panzer';
     teilchen.push({ art: 'ring', x: w.x, y: w.y, r: 6, gross: 40, t: 0, max: .4 }); ton.klack(); zeigeWaffen(); return;
@@ -1315,19 +1324,24 @@ function updateSpiel(dt) {
     if (w.seil && d) { w.vx += d * 420 * dt; if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; } }   // schaukeln
     if (spiel.ein.springen) { if (w.seil) { w.seil = null; w.vy = Math.min(w.vy, 0) - 120; } else springen(w, d !== 0); }   // loslassen
   }
+  if (spiel.graben && spiel.ein.springen) spiel.graben.stop = true;   // ⤴ = mit dem Bohren aufhören
   spiel.ein.springen = false;
-  // Graben: Der Wurm buddelt sich in Zielrichtung durch die Erde
+  // Pressluftbohrer: Der Wurm bohrt sich in Zielrichtung durch die Erde
   if (spiel.graben && w) {
     const g = spiel.graben, c = Math.cos(g.winkel), s = Math.sin(g.winkel);
-    g.t -= dt; g.takt++;
+    g.takt++;
     w.x += c * 50 * dt; w.y += s * 50 * dt; w.vx = w.vy = 0; w.luft = false;
     if (g.takt % 4 === 1) {
       const x = w.x + c * 6, y = w.y + s * 6 - 2;
       loch(x, y, 13); spiel.krater.push([x, y, 13]);
       for (let i = 0; i < 3; i++) teilchen.push({ art: 'brocken', x: x + c * 10, y: y + s * 10, vx: rnd(-120, 120), vy: rnd(-200, -60), t: 0, max: .8, r: rnd(1.5, 3), farbe: brockenFarbe(i) });
-      if (g.takt % 12 === 1) ton.klack();
+      if (g.takt % 8 === 1) ton.klack();
     }
-    if (g.t <= 0 || w.tot) { spiel.graben = null; freiMachen(w); }
+    const draussen = !stoesst(w.x, w.y, R + 16) || w.y > WASSER - 15 || w.x < 20 || w.x > W - 20;   // keine Erde mehr drumherum? dann aufhören
+    if (g.stop || draussen || spiel.phase !== 'zielen' || w.tot) {
+      spiel.graben = null; freiMachen(w);
+      if (spiel.phase === 'zielen') { spiel.phase = 'rueckzug'; spiel.rueckzug = 3; }   // weglaufen ja – schießen nein
+    }
   }
   for (const x of wuermer) updateWurm(x, dt);
   updateMinen(dt);
@@ -1350,6 +1364,7 @@ function updateSpiel(dt) {
         texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 Schuss 🎁', farbe: TEAMS[w.team].farbe });
       } else {
         const m = spiel.teams[w.team].munition; if (m[k.art] >= 0) m[k.art]++;
+        if (spiel.teams[w.team].gesehen) delete spiel.teams[w.team].gesehen[k.art];   // neu eingesammelt → Hinweis am Stapel
         texte.push({ x: k.x, y: k.y - 20, t: 0, text: '+1 ' + (WAFFEN[k.art].icon || WAFFEN[k.art].name), farbe: TEAMS[w.team].farbe });
       }
       ton.boing(); k.weg = true; zeigeWaffen();
@@ -1470,7 +1485,14 @@ halten('links', 'L'); halten('rechts', 'R'); halten('springen', 'J');
 
 // Stapel: Name an jede Waffe im Fächer, Antippen öffnet/schließt den Fächer
 document.querySelectorAll('.faecher .waffe').forEach(b => { const n = document.createElement('span'); n.className = 'name'; n.textContent = WAFFEN[b.dataset.w].name; b.insertBefore(n, b.querySelector('small')); });
-function stapelZu() { document.querySelectorAll('.stapel.offen').forEach(st => st.classList.remove('offen')); }
+function stapelZu() {
+  const t = spiel && spiel.teams[spiel.dran];
+  document.querySelectorAll('.stapel.offen').forEach(st => {
+    if (t && t.gesehen) st.querySelectorAll('.waffe.neu').forEach(b => t.gesehen[b.dataset.w] = true);   // angeschaut – Hinweis weg
+    st.classList.remove('offen');
+  });
+  if (t) zeigeWaffen();
+}
 function stapelFaechern(st) {                         // Waffen schräg nach oben auffächern (wie im Dock)
   const sichtbar = [...st.querySelectorAll('.waffe')].filter(b => !b.classList.contains('versteckt'));
   const l = st.classList.contains('links') ? -1 : 1;
@@ -1498,7 +1520,9 @@ function symbol(art, groesse = '1.4em') {
 }
 function zeigeWaffen() {
   if (!spiel || !spiel.teams[spiel.dran]) return;
-  const m = spiel.teams[spiel.dran].munition, nr = rundeNr();
+  const m = spiel.teams[spiel.dran].munition, nr = rundeNr(), team = spiel.teams[spiel.dran];
+  const frei = w => m[w] !== 0 && WAFFEN[w].ab <= nr;
+  if (!team.gesehen) team.gesehen = Object.fromEntries(Object.keys(WAFFEN).filter(frei).map(w => [w, true]));   // was man am Anfang schon hat, ist nicht „neu“
   document.querySelectorAll('.waffe').forEach(b => {
     const n = m[b.dataset.w], zu = WAFFEN[b.dataset.w].ab > nr;
     b.classList.toggle('an', b.dataset.w === spiel.waffe);
@@ -1506,6 +1530,7 @@ function zeigeWaffen() {
     b.classList.toggle('zu', zu);
     b.classList.toggle('versteckt', (!!WAFFEN[b.dataset.w].nurKiste && n === 0) || (b.dataset.w === 'trampolin' && !regel().trampolin));   // Kisten-Waffe erst zeigen, wenn man eine hat
     const s = b.querySelector('small'); if (s) s.textContent = zu ? 'R' + WAFFEN[b.dataset.w].ab : n < 0 ? '' : '×' + n;
+    b.classList.toggle('neu', frei(b.dataset.w) && !b.classList.contains('versteckt') && !team.gesehen[b.dataset.w]);
   });
   // Stapelknopf zeigt die gewählte (oder zuletzt benutzte) Waffe seiner Gruppe
   document.querySelectorAll('.stapel').forEach(st => {
@@ -1513,6 +1538,7 @@ function zeigeWaffen() {
     const zeig = ws.find(b => b.dataset.w === spiel.waffe) || ws.find(b => b.dataset.w === st.dataset.zuletzt) || ws.find(b => !b.classList.contains('zu') && !b.classList.contains('leer')) || ws[0];
     const k = st.querySelector('.stapelknopf');
     k.classList.toggle('an', !!ws.find(b => b.dataset.w === spiel.waffe));
+    k.classList.toggle('neu', !!st.querySelector('.waffe.neu') && !kiDran());   // ✨ etwas Neues drin
     if (zeig && k.dataset.w !== zeig.dataset.w + zeig.querySelector('small')?.textContent) {
       k.dataset.w = zeig.dataset.w + zeig.querySelector('small')?.textContent;
       const kopie = zeig.cloneNode(true); kopie.querySelector('.name')?.remove();
@@ -1521,7 +1547,7 @@ function zeigeWaffen() {
   });
   const a = WAFFEN[spiel.waffe];
   if (spiel.waffe === 'zielsuch' && darfZielen()) { $('waffeninfo').textContent = spiel.zielPunkt ? '🎯 Ziel gesetzt – jetzt ziehen und loslassen' : '🎯 Erst kurz auf das Ziel tippen'; return; }
-  const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · noch ${pw.panzer.schuss} Schüsse · ◀ ▶ fahren`; return; }
+  const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · ${pw.panzer.schuss === 1 ? '1 Schuss' : 'noch ' + pw.panzer.schuss + ' Schüsse'} · ◀ ▶ fahren`; return; }
   $('waffeninfo').innerHTML = darfZielen() || kiDran() ? `${symbol(spiel.waffe)} ${a.name} ${'★'.repeat(a.sterne)}${'☆'.repeat(5 - a.sterne)} · ${spiel.waffe === 'bazooka' && !spiel.mitWind ? 'Fliegt im Bogen' : spiel.waffe === 'schaf' && !regel().schafKnopf ? 'Läuft los und explodiert von selbst!' : a.info}` : '';
 }
 
@@ -1868,15 +1894,26 @@ function zeichneHimmel() {
     for (const [dx, dy, r] of [[-8, -6, 6], [7, 5, 4], [-3, 10, 3], [9, -9, 3]]) { ctx.beginPath(); ctx.arc(mx + dx, my + dy, r, 0, 7); ctx.fill(); }
   }
   // Berge im Hintergrund (bewegen sich langsamer = Tiefe)
-  berge(.25, 640, farbe('b1'), 140, .0025, 1);
-  wolkenZeichnen();
-  berge(.45, 760, farbe('b2'), 110, .004, 2);
+  if (welt === 'felsen') {                            // Felsen-Welt: blasse Felstürme im Dunst – je weiter weg, desto heller
+    berge(.12, 600, mischen(farbe('b1'), farbe('m'), .6), 200, .004, 4, true);
+    berge(.25, 640, mischen(farbe('b1'), '#bdb5a3', .45), 150, .0028, 1, true);
+    wolkenZeichnen();
+    berge(.45, 760, mischen(farbe('b2'), '#968c78', .65), 120, .0045, 2, true);
+  } else {
+    berge(.25, 640, farbe('b1'), 140, .0025, 1);
+    wolkenZeichnen();
+    berge(.45, 760, farbe('b2'), 110, .004, 2);
+  }
+  const d = ctx.createLinearGradient(0, bh * .35, 0, bh);   // Dunst: weit weg wird es heller
+  d.addColorStop(0, farbe('u') + '00'); d.addColorStop(1, farbe('u') + '73');
+  ctx.fillStyle = d; ctx.fillRect(0, bh * .35, bw, bh * .65);
 }
-function berge(p, basis, farbe, hoehe, frq, s) {
+function berge(p, basis, farbe, hoehe, frq, s, zacken) {
   ctx.fillStyle = farbe; ctx.beginPath(); ctx.moveTo(0, bh);
   for (let x = 0; x <= bw + 10; x += 10) {
     const lx = (x - bw / 2) / (massstab * p) + kam.x * 1;
-    const ly = basis - (Math.sin(lx * frq + s) * .6 + Math.sin(lx * frq * 2.3 + s * 3) * .3 + 1) * hoehe;
+    const ly = basis - (Math.sin(lx * frq + s) * .6 + Math.sin(lx * frq * 2.3 + s * 3) * .3 + 1) * hoehe
+             - (zacken ? (1 - Math.abs(Math.sin(lx * frq * 5.3 + s * 2))) * hoehe * .45 : 0);   // Zacken = spitze Felsen
     ctx.lineTo(x, (ly - kam.y) * massstab * p + bh / 2 + bh * .12 * (1 - p));
   }
   ctx.lineTo(bw, bh); ctx.fill();
@@ -2390,6 +2427,16 @@ function bunkerMalen(w, hinten) {
   ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('🛡️', x, y - 8);
 }
+// Pressluftbohrer in der Hand – rüttelt beim Bohren
+function bohrerMalen(w, winkel) {
+  ctx.save(); ctx.translate(w.x + Math.cos(winkel) * 8 + rnd(-1, 1), w.y - 2 + Math.sin(winkel) * 8 + rnd(-1, 1)); ctx.rotate(winkel - Math.PI / 2);
+  ctx.fillStyle = '#333'; ctx.fillRect(-8, -12, 16, 3.5);                               // Griff
+  ctx.fillStyle = '#e0a21b'; ctx.strokeStyle = '#7a560a'; ctx.lineWidth = 1;
+  ctx.fillRect(-4.5, -9, 9, 13); ctx.strokeRect(-4.5, -9, 9, 13);                     // Motor
+  ctx.fillStyle = '#9aa0a6'; ctx.fillRect(-1.5, 4, 3, 7);                              // Meißel
+  ctx.fillStyle = '#555'; ctx.beginPath(); ctx.moveTo(-1.5, 11); ctx.lineTo(1.5, 11); ctx.lineTo(0, 14); ctx.fill();
+  ctx.restore();
+}
 // Schatten auf dem Boden – je höher etwas schwebt, desto kleiner und blasser (das sieht nach 3D aus)
 function schattenMalen(x, y, b) {
   let h = 0; while (h < 260 && !fest(x, y + h)) h += 3;
@@ -2581,6 +2628,7 @@ function zeichne() {
   const links = kam.x - bw / 2 / massstab - 20, rechts = kam.x + bw / 2 / massstab + 20, unten = kam.y + bh / 2 / massstab + 20;
   welle(WASSER - 14, '#3b8fc9', 5, 2, links, rechts, unten);
   ctx.drawImage(wand, 0, 0);
+  ctx.globalAlpha = .28; ctx.drawImage(schatten, -12, 9); ctx.globalAlpha = 1;   // Schatten auf Hintergrund und Höhlenwand
   ctx.drawImage(erde, 0, 0);
   const spur = spiel && spiel.phase === 'zielen' && (zielt || spiel.ladung) && spiel.spuren && spiel.spuren[spiel.dran];   // nur beim Zielen
   if (spur) spur.forEach(([x, y], i) => {
@@ -2595,6 +2643,7 @@ function zeichne() {
     ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(w.seil.x, w.seil.y, 2.5, 0, 7); ctx.fill();
   }
   for (const w of wuermer) if (!w.tot) { if (w.bunker) bunkerMalen(w, true); zeichneWurm(w); if (w.bunker) bunkerMalen(w, false); }
+  if (spiel && spiel.graben && aktiver()) bohrerMalen(aktiver(), spiel.graben.winkel);
   for (const o of dinge) zeichneDing(o);
   welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
   welle(WASSER + 10, 'rgba(30,100,175,.85)', 5, 4, links, rechts, unten);
