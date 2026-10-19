@@ -244,7 +244,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.53';
+const APP_VERSION = '1.54';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -385,6 +385,7 @@ const zr = (a, b) => a + zufall() * (b - a);            // Zufall fürs Spiel (g
 const rnd = (a, b) => a + Math.random() * (b - a);      // Zufall nur fürs Aussehen (Funken, Rauch)
 
 let maske, erde, ectx, wand;    // maske: 1 = Erde, 0 = Luft
+let welt = 'wiese';             // 'wiese' (Erde + Gras) oder 'felsen' (Stein)
 let wuermer = [], dinge = [], teilchen = [], texte = [], graeber = [], wolken = [], kisten = [], minen = [];
 let spiel = null;               // Zustand eines laufenden Spiels
 let zeit = 0, wackeln = 0;
@@ -393,6 +394,7 @@ const kam = { x: W / 2, y: H / 2, frei: false };
 // ---------- Landschaft bauen ----------
 function baueLandschaft(startzahl) {
   zufall = zufallsFolge(startzahl);
+  welt = (startzahl >>> 4) % 2 ? 'felsen' : 'wiese';   // Welt auslosen – aus der Startzahl, also auf allen Geräten gleich
   const m = document.createElement('canvas'); m.width = W; m.height = H;
   const g = m.getContext('2d');
   const p = [zr(0, 7), zr(0, 7), zr(0, 7), zr(0, 7)];
@@ -415,8 +417,9 @@ function baueLandschaft(startzahl) {
   // Rückwand: dunkle Erde, die man in Löchern und Höhlen sieht
   wand = document.createElement('canvas'); wand.width = W; wand.height = H;
   const wc = wand.getContext('2d');
-  wc.fillStyle = '#4a2d18'; wc.fillRect(0, 0, W, H);
-  for (let i = 0; i < 1500 * W / 2000; i++) { wc.fillStyle = i % 2 ? '#3a2312' : '#5a3a22'; wc.beginPath(); wc.arc(rnd(0, W), rnd(150, H), rnd(2, 6), 0, 7); wc.fill(); }
+  const fels = welt === 'felsen';
+  wc.fillStyle = fels ? '#4f493e' : '#4a2d18'; wc.fillRect(0, 0, W, H);
+  for (let i = 0; i < 1500 * W / 2000; i++) { wc.fillStyle = fels ? (i % 2 ? '#3f3a31' : '#5e574a') : (i % 2 ? '#3a2312' : '#5a3a22'); wc.beginPath(); wc.arc(rnd(0, W), rnd(150, H), rnd(2, 6), 0, 7); wc.fill(); }
   wc.globalCompositeOperation = 'destination-in'; wc.drawImage(m, 0, 0);
   // Höhlen
   g.globalCompositeOperation = 'destination-out';
@@ -432,19 +435,21 @@ function baueLandschaft(startzahl) {
   // Erde bemalen
   erde = document.createElement('canvas'); erde.width = W; erde.height = H;
   ectx = erde.getContext('2d');
-  const v = ectx.createLinearGradient(0, 250, 0, H);
-  v.addColorStop(0, '#a8713f'); v.addColorStop(.5, '#7b4c2a'); v.addColorStop(1, '#4b2c18');
-  ectx.fillStyle = v; ectx.fillRect(0, 0, W, H);
-  for (let y = 300; y < H; y += 26) {                 // Erdschichten
-    ectx.strokeStyle = 'rgba(0,0,0,.07)'; ectx.lineWidth = 8; ectx.beginPath();
-    for (let x = 0; x <= W; x += 20) ectx.lineTo(x, y + Math.sin(x * .01 + y) * 6);
-    ectx.stroke();
-  }
-  for (let i = 0; i < 3500; i++) {                    // Steinchen
-    const x = rnd(0, W), y = rnd(150, H), r = rnd(1.5, 6);
-    ectx.fillStyle = ['#c9935d', '#5d3a20', '#9c6b43', '#d8b28a', '#6d4a33'][i % 5];
-    ectx.globalAlpha = rnd(.3, .8);
-    ectx.beginPath(); ectx.ellipse(x, y, r, r * rnd(.5, .9), rnd(0, 3), 0, 7); ectx.fill();
+  if (fels) malFelsen(); else {
+    const v = ectx.createLinearGradient(0, 250, 0, H);
+    v.addColorStop(0, '#a8713f'); v.addColorStop(.5, '#7b4c2a'); v.addColorStop(1, '#4b2c18');
+    ectx.fillStyle = v; ectx.fillRect(0, 0, W, H);
+    for (let y = 300; y < H; y += 26) {                 // Erdschichten
+      ectx.strokeStyle = 'rgba(0,0,0,.07)'; ectx.lineWidth = 8; ectx.beginPath();
+      for (let x = 0; x <= W; x += 20) ectx.lineTo(x, y + Math.sin(x * .01 + y) * 6);
+      ectx.stroke();
+    }
+    for (let i = 0; i < 3500; i++) {                    // Steinchen
+      const x = rnd(0, W), y = rnd(150, H), r = rnd(1.5, 6);
+      ectx.fillStyle = ['#c9935d', '#5d3a20', '#9c6b43', '#d8b28a', '#6d4a33'][i % 5];
+      ectx.globalAlpha = rnd(.3, .8);
+      ectx.beginPath(); ectx.ellipse(x, y, r, r * rnd(.5, .9), rnd(0, 3), 0, 7); ectx.fill();
+    }
   }
   ectx.globalAlpha = 1;
   ectx.globalCompositeOperation = 'destination-in'; ectx.drawImage(m, 0, 0);
@@ -469,6 +474,13 @@ function baueLandschaft(startzahl) {
   for (let x = 0; x < W; x++) {
     for (let y = 1; y < H; y++) {
       if (maske[y * W + x] && !maske[(y - 1) * W + x]) {
+        if (fels) {                                      // Felsen: helle Steinkante statt Gras
+          ectx.fillStyle = 'rgba(70,60,45,.5)'; ectx.fillRect(x, y + 5, 1, 2);
+          ectx.fillStyle = '#e6dbbe'; ectx.fillRect(x, y, 1, 5);
+          ectx.fillStyle = '#faf4e2'; ectx.fillRect(x, y, 1, 2);
+          if (Math.random() < .008) kiesel(x, y);
+          continue;
+        }
         ectx.fillStyle = '#2f7a2c'; ectx.fillRect(x, y, 1, 11);
         ectx.fillStyle = '#4fae3f'; ectx.fillRect(x, y - 1, 1, 8);
         ectx.fillStyle = '#86d65a'; ectx.fillRect(x, y - 1, 1, 3);
@@ -480,6 +492,46 @@ function baueLandschaft(startzahl) {
       }
     }
   }
+}
+// Felsen-Welt: Stein mit Platten, Rissen und Löchern
+function malFelsen() {
+  const v = ectx.createLinearGradient(0, 250, 0, H);
+  v.addColorStop(0, '#d6c8a6'); v.addColorStop(.5, '#a6987b'); v.addColorStop(1, '#6c6250');
+  ectx.fillStyle = v; ectx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 300 * W / 2000; i++) {          // Steinplatten: etwas heller oder dunkler
+    const x = rnd(0, W), y = rnd(150, H), r = rnd(30, 90);
+    ectx.fillStyle = i % 2 ? 'rgba(255,248,225,.12)' : 'rgba(60,50,35,.12)';
+    ectx.beginPath();
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + rnd(-.3, .3), d = r * rnd(.6, 1); ectx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d * .7); }
+    ectx.fill();
+  }
+  for (let i = 0; i < 4000 * W / 2000; i++) {         // Körnung
+    ectx.fillStyle = i % 2 ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)'; ectx.fillRect(rnd(0, W), rnd(150, H), 2, 2);
+  }
+  for (let i = 0; i < 170 * W / 2000; i++) {          // Risse: dunkle Zickzack-Linie, daneben hell
+    let x = rnd(0, W), y = rnd(200, H); const a0 = rnd(0, 7), pkt = [[x, y]];
+    for (let k = 0; k < 5; k++) { const a = a0 + rnd(-.7, .7), l = rnd(8, 22); x += Math.cos(a) * l; y += Math.sin(a) * l; pkt.push([x, y]); }
+    for (const [f, d, lw] of [['rgba(255,250,230,.35)', 1, 1.2], ['rgba(40,32,22,.55)', 0, 1.6]]) {
+      ectx.strokeStyle = f; ectx.lineWidth = lw; ectx.beginPath();
+      for (const [px, py] of pkt) ectx.lineTo(px + d, py + d);
+      ectx.stroke();
+    }
+  }
+  for (let i = 0; i < 500 * W / 2000; i++) {          // Löcher im Stein: innen dunkel, unten heller Rand
+    const x = rnd(0, W), y = rnd(200, H), r = rnd(1.5, 5);
+    ectx.fillStyle = 'rgba(255,248,225,.35)'; ectx.beginPath(); ectx.ellipse(x + .8, y + 1, r, r * .7, 0, 0, 7); ectx.fill();
+    ectx.fillStyle = 'rgba(55,45,32,.6)'; ectx.beginPath(); ectx.ellipse(x, y, r, r * .7, 0, 0, 7); ectx.fill();
+  }
+}
+function kiesel(x, y) {                               // kleiner Stein, der oben drauf liegt
+  const r = rnd(2, 4.5);
+  ectx.fillStyle = '#8f8670'; ectx.beginPath(); ectx.ellipse(x, y - r * .5, r, r * .7, 0, 0, 7); ectx.fill();
+  ectx.fillStyle = '#d2c7aa'; ectx.beginPath(); ectx.ellipse(x - r * .3, y - r * .8, r * .5, r * .3, 0, 0, 7); ectx.fill();
+}
+// Farbe für herumfliegende Brocken – passend zur Welt
+function brockenFarbe(i) {
+  const f = welt === 'felsen' ? ['#a6987b', '#d6c8a6', '#6c6250'] : ['#7b4c2a', '#a8713f', '#5d3a20'];
+  return f[i % 3];
 }
 function blume(x, y) {
   ectx.strokeStyle = '#3e9a36'; ectx.lineWidth = 1.5;
@@ -494,7 +546,7 @@ function loch(x, y, r) {
   ectx.globalCompositeOperation = 'destination-out';
   ectx.beginPath(); ectx.arc(x, y, r, 0, 7); ectx.fill();
   ectx.globalCompositeOperation = 'source-atop';      // verbrannter Rand
-  ectx.strokeStyle = 'rgba(45,22,10,.6)'; ectx.lineWidth = 7;
+  ectx.strokeStyle = welt === 'felsen' ? 'rgba(40,34,26,.6)' : 'rgba(45,22,10,.6)'; ectx.lineWidth = 7;
   ectx.beginPath(); ectx.arc(x, y, r + 2, 0, 7); ectx.stroke();
   ectx.globalCompositeOperation = 'source-over';
   for (let yy = Math.max(0, y - r | 0); yy <= Math.min(H - 1, y + r); yy++)
@@ -625,7 +677,7 @@ function explosion(x, y, r, dmg, nurErde) {
   if (spiel) spiel.krater.push([x, y, r]);            // merken – für den Abgleich mit anderen Geräten
   if (nurErde) {                                      // Erdbrecher: nur Erdbrocken und Staub, sonst nichts
     ton.klack(); wackeln = Math.max(wackeln, r * .15);
-    for (let i = 0; i < 30; i++) { const a = rnd(0, 7), sp = rnd(100, 380); teilchen.push({ art: 'brocken', x: x + Math.cos(a) * r * .5, y: y + Math.sin(a) * r * .5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, t: 0, max: rnd(.8, 1.5), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#5d3a20'][i % 3] }); }
+    for (let i = 0; i < 30; i++) { const a = rnd(0, 7), sp = rnd(100, 380); teilchen.push({ art: 'brocken', x: x + Math.cos(a) * r * .5, y: y + Math.sin(a) * r * .5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, t: 0, max: rnd(.8, 1.5), r: rnd(1.5, 4), farbe: brockenFarbe(i) }); }
     for (let i = 0; i < 10; i++) teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .6, y: y + rnd(-r, r) * .6, vx: rnd(-40, 40), vy: rnd(-50, -10), t: 0, max: rnd(.8, 1.5), r: rnd(8, 14) });
     return;
   }
@@ -639,7 +691,7 @@ function explosion(x, y, r, dmg, nurErde) {
   for (let i = 0; i < 16; i++) { const a = rnd(0, 7), s = rnd(250, 600); teilchen.push({ art: 'funke', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 100, t: 0, max: rnd(.3, .6) }); }
   for (let i = 0; i < 22; i++) { const a = rnd(0, 7), s = rnd(40, 260); teilchen.push({ art: 'feuer', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, t: 0, max: rnd(.3, .7), r: rnd(5, 11) }); }
   for (let i = 0; i < 14; i++) { const a = rnd(0, 7), s = rnd(10, 90); teilchen.push({ art: 'rauch', x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0, max: rnd(1, 2), r: rnd(8, 16) }); }
-  for (let i = 0; i < 26; i++) { const a = rnd(Math.PI, Math.PI * 2), s = rnd(150, 450); teilchen.push({ art: 'brocken', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, max: rnd(.8, 1.6), r: rnd(1.5, 4), farbe: ['#7b4c2a', '#a8713f', '#4fae3f', '#5d3a20'][i % 4] }); }
+  for (let i = 0; i < 26; i++) { const a = rnd(Math.PI, Math.PI * 2), s = rnd(150, 450); teilchen.push({ art: 'brocken', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, max: rnd(.8, 1.6), r: rnd(1.5, 4), farbe: welt === 'wiese' && i % 4 === 2 ? '#4fae3f' : brockenFarbe(i) }); }
   for (const m of minen) if (Math.hypot(m.x - x, m.y - y) < r + 8 && (m.zuender < 0 || m.zuender > .15)) m.zuender = .15;   // Kettenreaktion
   for (const k of kisten) if (Math.hypot(k.x - x, k.y - y) < r + 10) {        // Kiste zerplatzt
     k.weg = true;
@@ -1241,7 +1293,7 @@ function updateSpiel(dt) {
     if (g.takt % 4 === 1) {
       const x = w.x + c * 6, y = w.y + s * 6 - 2;
       loch(x, y, 13); spiel.krater.push([x, y, 13]);
-      for (let i = 0; i < 3; i++) teilchen.push({ art: 'brocken', x: x + c * 10, y: y + s * 10, vx: rnd(-120, 120), vy: rnd(-200, -60), t: 0, max: .8, r: rnd(1.5, 3), farbe: i % 2 ? '#7b4c2a' : '#a8713f' });
+      for (let i = 0; i < 3; i++) teilchen.push({ art: 'brocken', x: x + c * 10, y: y + s * 10, vx: rnd(-120, 120), vy: rnd(-200, -60), t: 0, max: .8, r: rnd(1.5, 3), farbe: brockenFarbe(i) });
       if (g.takt % 12 === 1) ton.klack();
     }
     if (g.t <= 0 || w.tot) { spiel.graben = null; freiMachen(w); }
