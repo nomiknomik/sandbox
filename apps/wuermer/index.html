@@ -248,7 +248,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.56';
+const APP_VERSION = '1.57';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -488,15 +488,19 @@ function baueLandschaft(startzahl) {
     }
   }
   ectx.putImageData(bild, 0, 0);
+  const deko = [];                                   // Kiesel und Büsche erst am Ende malen (sonst überdeckt)
   // Gras: überall, wo oben Luft und unten Erde ist
   for (let x = 0; x < W; x++) {
     for (let y = 1; y < H; y++) {
       if (maske[y * W + x] && !maske[(y - 1) * W + x]) {
         if (fels) {                                      // Felsen: helle Steinkante statt Gras
-          ectx.fillStyle = 'rgba(70,60,45,.5)'; ectx.fillRect(x, y + 5, 1, 2);
-          ectx.fillStyle = '#e6dbbe'; ectx.fillRect(x, y, 1, 5);
-          ectx.fillStyle = '#faf4e2'; ectx.fillRect(x, y, 1, 2);
-          if (Math.random() < .008) kiesel(x, y);
+          ectx.fillStyle = 'rgba(60,50,36,.35)'; ectx.fillRect(x, y + 7, 1, 5);   // Schatten unter der Kante
+          ectx.fillStyle = 'rgba(60,50,36,.5)'; ectx.fillRect(x, y + 7, 1, 2);
+          ectx.fillStyle = '#c9bc9c'; ectx.fillRect(x, y + 3, 1, 4);
+          ectx.fillStyle = '#ebe1c6'; ectx.fillRect(x, y, 1, 3);
+          ectx.fillStyle = '#fffaea'; ectx.fillRect(x, y, 1, 1);
+          const z = Math.random();
+          if (z < .01) deko.push([kiesel, x, y]); else if (z < .013) deko.push([busch, x, y]);
           continue;
         }
         ectx.fillStyle = '#2f7a2c'; ectx.fillRect(x, y, 1, 11);
@@ -510,25 +514,14 @@ function baueLandschaft(startzahl) {
       }
     }
   }
+  for (const [f, x, y] of deko) f(x, y);
 }
-// Felsen-Welt: Stein mit Platten, Rissen und Löchern
+// Felsen-Welt: Stein aus vielen Brocken, mit Rissen und Löchern
 function malFelsen() {
   const v = ectx.createLinearGradient(0, 250, 0, H);
   v.addColorStop(0, '#d6c8a6'); v.addColorStop(.5, '#a6987b'); v.addColorStop(1, '#6c6250');
   ectx.fillStyle = v; ectx.fillRect(0, 0, W, H);
-  for (let i = 0; i < 300 * W / 2000; i++) {          // Steinplatten: etwas heller oder dunkler
-    const x = rnd(0, W), y = rnd(150, H), r = rnd(30, 90);
-    ectx.fillStyle = i % 2 ? 'rgba(255,248,225,.12)' : 'rgba(60,50,35,.12)';
-    const ecken = [];
-    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + rnd(-.3, .3), d = r * rnd(.6, 1); ecken.push([x + Math.cos(a) * d, y + Math.sin(a) * d * .7]); }
-    ectx.beginPath(); for (const [ex, ey] of ecken) ectx.lineTo(ex, ey); ectx.fill();
-    ectx.lineWidth = 2;                               // Kanten: oben links hell, unten rechts dunkel – wie ein Klotz
-    for (let k = 0; k < 6; k++) {
-      const [ax, ay] = ecken[k], [bx, by] = ecken[(k + 1) % 6];
-      ectx.strokeStyle = (ax + bx) / 2 - x + (ay + by) / 2 - y < 0 ? 'rgba(255,250,230,.2)' : 'rgba(45,36,24,.2)';
-      ectx.beginPath(); ectx.moveTo(ax, ay); ectx.lineTo(bx, by); ectx.stroke();
-    }
-  }
+  for (let i = 0; i < 260 * W / 2000; i++) felsBrocken(rnd(0, W), rnd(170, H), rnd(14, 46));   // viele Felsbrocken übereinander
   for (let i = 0; i < 4000 * W / 2000; i++) {         // Körnung
     ectx.fillStyle = i % 2 ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)'; ectx.fillRect(rnd(0, W), rnd(150, H), 2, 2);
   }
@@ -546,6 +539,44 @@ function malFelsen() {
     ectx.fillStyle = 'rgba(255,248,225,.35)'; ectx.beginPath(); ectx.ellipse(x + .8, y + 1, r, r * .7, 0, 0, 7); ectx.fill();
     ectx.fillStyle = 'rgba(55,45,32,.6)'; ectx.beginPath(); ectx.ellipse(x, y, r, r * .7, 0, 0, 7); ectx.fill();
   }
+}
+// Ein Felsbrocken mit Licht von oben links: Schatten, Verlauf, helle Kante, Risse – sieht aus wie ein echter Klotz
+function felsBrocken(x, y, r) {
+  const n = 9, pkt = [];
+  for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + rnd(-.2, .2), d = r * rnd(.72, 1.05); pkt.push([x + Math.cos(a) * d, y + Math.sin(a) * d * .78]); }
+  const mitte = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const pfad = (dx, dy) => {                          // runde Form durch die Punkte
+    ectx.beginPath(); const s = mitte(pkt[n - 1], pkt[0]); ectx.moveTo(s[0] + dx, s[1] + dy);
+    for (let k = 0; k < n; k++) { const m = mitte(pkt[k], pkt[(k + 1) % n]); ectx.quadraticCurveTo(pkt[k][0] + dx, pkt[k][1] + dy, m[0] + dx, m[1] + dy); }
+    ectx.closePath();
+  };
+  pfad(r * .12, r * .16); ectx.fillStyle = 'rgba(35,27,18,.35)'; ectx.fill();   // Schatten nach unten rechts
+  const hell = Math.round(rnd(-18, 18)), farbTon = (c, d) => '#' + c.match(/../g).map(h => Math.max(0, Math.min(255, parseInt(h, 16) + d)).toString(16).padStart(2, '0')).join('');
+  const g = ectx.createLinearGradient(x - r, y - r, x + r * .8, y + r * .8);
+  g.addColorStop(0, farbTon('ece1c2', hell)); g.addColorStop(.45, farbTon('bcae8e', hell)); g.addColorStop(1, farbTon('7a6d56', hell));
+  pfad(0, 0); ectx.fillStyle = g; ectx.fill();
+  ectx.strokeStyle = 'rgba(55,44,30,.55)'; ectx.lineWidth = 1.3; ectx.stroke();
+  ectx.save(); pfad(0, 0); ectx.clip();               // Lichtkante oben links (innen)
+  pfad(r * .1, r * .12); ectx.strokeStyle = 'rgba(255,252,238,.55)'; ectx.lineWidth = r * .14; ectx.stroke();
+  if (r > 22 && Math.random() < .7) {                 // Riss im Brocken
+    let cx = x + rnd(-r, r) * .4, cy = y - r * .6; ectx.beginPath(); ectx.moveTo(cx, cy);
+    for (let k = 0; k < 4; k++) { cx += rnd(-6, 6); cy += r * .35; ectx.lineTo(cx, cy); }
+    ectx.strokeStyle = 'rgba(50,40,28,.6)'; ectx.lineWidth = 1.4; ectx.stroke();
+  }
+  for (let k = 0; k < r / 8; k++) {                   // kleine Löcher
+    const lx = x + rnd(-r, r) * .6, ly = y + rnd(-r, r) * .5, lr = rnd(1, 2.6);
+    ectx.fillStyle = 'rgba(255,248,225,.4)'; ectx.beginPath(); ectx.arc(lx + .7, ly + .9, lr, 0, 7); ectx.fill();
+    ectx.fillStyle = 'rgba(60,48,32,.55)'; ectx.beginPath(); ectx.arc(lx, ly, lr, 0, 7); ectx.fill();
+  }
+  ectx.restore();
+}
+// trockener Busch oben auf dem Felsen
+function busch(x, y) {
+  for (let i = 0; i < 7; i++) {
+    ectx.strokeStyle = i % 2 ? '#6f7a3c' : '#8a8a48'; ectx.lineWidth = 1.2;
+    ectx.beginPath(); ectx.moveTo(x, y); ectx.lineTo(x + rnd(-7, 7), y - rnd(5, 12)); ectx.stroke();
+  }
+  ectx.fillStyle = '#7d8a4a'; for (let i = 0; i < 4; i++) { ectx.beginPath(); ectx.arc(x + rnd(-5, 5), y - rnd(6, 11), rnd(2, 3.5), 0, 7); ectx.fill(); }
 }
 function kiesel(x, y) {                               // kleiner Stein, der oben drauf liegt
   const r = rnd(2, 4.5);
@@ -2858,6 +2889,8 @@ function teamWahl(modus) {
       .map(s => `<button data-s="${s}" class="${wahl.stufe === s ? 'an' : ''}">${s}</button>`).join('') + '</span></div>' +
       `<div class="wahl"><b>💨 Wind</b><span>` + [['1', 'an'], ['0', 'aus']]
         .map(([v, txt]) => meinSchwer() >= AB.wind ? (v === '1' ? '<button class="an" disabled>immer an</button>' : '') : `<button data-w="${v}" class="${(wahl.wind !== false) === (v === '1') ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>' +
+      `<div class="wahl"><b>🏔️ Welt</b><span>` + [['zufall', '🎲 Zufall'], ['wiese', '🌿 Wiese'], ['felsen', '🪨 Felsen']]
+        .map(([v, txt]) => `<button data-welt="${v}" class="${(wahl.welt || 'zufall') === v ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>' +
       (modus === 'online' ? `<div class="wahl"><b>⚡ WLAN-Direkt</b><span>` + [['1', 'an'], ['0', 'aus']]
         .map(([d, txt]) => `<button data-d="${d}" class="${(wahl.direkt !== false) === (d === '1') ? 'an' : ''}">${txt}</button>`).join('') + '</span></div>' : '');
     const sw = meinSchwer(), naechstes = sw < AB.wind ? `ab ${AB.wind}: Wind immer an` : sw < AB.schaf ? `ab ${AB.schaf}: Schaf ohne Zünd-Knopf` : sw < AB.trampolinWeg ? `ab ${AB.trampolinWeg}: kein Trampolin` : 'wie das Original!';
@@ -2876,7 +2909,8 @@ function teamWahl(modus) {
         const i = +b.dataset.f; let f = wahl.farben[i];
         do f = (f + 1) % FARBEN.length; while (wahl.farben.some((x, j) => j !== i && x === f));
         wahl.farben[i] = f;
-      } else if (b.dataset.w) wahl.wind = b.dataset.w === '1';
+      } else if (b.dataset.welt) wahl.welt = b.dataset.welt;
+      else if (b.dataset.w) wahl.wind = b.dataset.w === '1';
       else if (b.dataset.s) wahl.stufe = b.dataset.s; else if (b.dataset.d) wahl.direkt = b.dataset.d === '1'; else wahl.art[+b.dataset.t] = b.dataset.a;
       speicher.schreib('wu-wahl-' + modus, wahl);          // sofort merken
       speicher.schreib('wu-farben', wahl.farben);           // Farben gelten lokal und online
@@ -2888,11 +2922,13 @@ function teamWahl(modus) {
   };
   malen();
 }
+// Welt wählen: steckt in Bit 4 der Startzahl – so wissen es alle Geräte
+function mitWelt(z, welt) { return welt === 'felsen' ? (z | 16) >>> 0 : welt === 'wiese' ? (z & ~16) >>> 0 : z; }
 function lokalesSpiel() {
   Online.stop();
   const wahl = wahlLesen('lokal'), art = wahl.art[2] === '-' ? wahl.art.slice(0, 2) : wahl.art.slice();
   teamsSetzen(wahl.farben, wahl.namen);
-  neuesSpiel({ n: art.length, art, stufe: wahl.stufe, mitWind: wahl.wind !== false, anzahl: wahl.anzahl.slice(0, art.length), startzahl: (Math.random() * 2 ** 31) >>> 0, schwer: meinSchwer() });
+  neuesSpiel({ n: art.length, art, stufe: wahl.stufe, mitWind: wahl.wind !== false, anzahl: wahl.anzahl.slice(0, art.length), startzahl: mitWelt((Math.random() * 2 ** 31) >>> 0, wahl.welt), schwer: meinSchwer() });
   naechsterZug();
 }
 
@@ -3209,7 +3245,7 @@ async function neuesOnlineSpiel(art, stufe, ersetzen = false, direkt = true, far
     Online.start();
   }
   const neu = { id: b64(crypto.getRandomValues(new Uint8Array(6))), status: 'wartet', teams: art.length, art, stufe, direkt, farben, namen, wind, anzahl, schwer: meinSchwer(),
-                startzahl: crypto.getRandomValues(new Uint32Array(1))[0], geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
+                startzahl: mitWelt(crypto.getRandomValues(new Uint32Array(1))[0], wahlLesen('online').welt), geraete: [Sync.geraet], zuege: [], zeit: Date.now() };
   if (menschen(neu).length === 1) neu.status = 'laeuft';        // nur ich gegen Computer: sofort los
   lobbyText = ''; lobby('Starte …', []);
   try {
