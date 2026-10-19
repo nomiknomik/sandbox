@@ -220,6 +220,7 @@
           <button class="waffe fach" data-w="seil">🪢<small></small></button>
           <button class="waffe fach" data-w="trampolin"><svg viewBox="0 0 40 40" width="34" height="34" style="vertical-align:middle"><path d="M8 22 L4 35 M32 22 L36 35 M15 25 L13 35 M25 25 L27 35" stroke="#555" stroke-width="3" stroke-linecap="round"/><ellipse cx="20" cy="21" rx="17" ry="6" fill="#e33" stroke="#7a1010" stroke-width="2"/><ellipse cx="20" cy="20.5" rx="12.5" ry="3.6" fill="#1d2b44"/><path d="M20 4 l3 7 h-6z" fill="#ffd84d"/></svg><small></small></button>
           <button class="waffe fach" data-w="teleport">🌀<small></small></button>
+          <button class="waffe fach" data-w="bunker">🛡️<small></small></button>
           <button class="waffe fach" data-w="graben">⛏️<small></small></button>
           <button class="waffe fach" data-w="erdbrecher">🪨<small></small></button>
         </div>
@@ -244,7 +245,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.54';
+const APP_VERSION = '1.55';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -305,6 +306,7 @@ const WAFFEN = {
   seil:       { icon: '🪢', name: 'Ninja-Seil',    sterne: 0, ab: 1, info: 'Seil schießen, mit ◀ ▶ schaukeln, ⤴ = loslassen. Der Zug geht weiter' },
   uboot:      { icon: '', name: 'U-Boot', sterne: 5, radius: 48, schaden: 50, ab: 4, start: 1, info: 'Ziel antippen – ein U-Boot taucht auf und schießt eine Rakete dorthin' },
   panzer:     { icon: '', name: 'Panzer', sterne: 5, ab: 1, start: 0, nurKiste: true, schuesse: 3, info: 'Einsteigen! ◀ ▶ fahren, zielen wie immer – 3 Schüsse. Im Panzer nur halber Schaden.' },
+  bunker:     { icon: '🛡️', name: 'Bunker', sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Ziehen und loslassen – ein Bunker schützt deinen Wurm bis zu seinem nächsten Zug. Der Zug ist danach vorbei.' },
   teleport:   { icon: '🌀', name: 'Teleporter',   sterne: 0, ab: 1, start: 0, nurKiste: true, info: 'Tippe, wohin du willst! – der Zug geht danach weiter' },
 };
 // Statistik dieses Geräts (bleibt nur hier gespeichert)
@@ -465,6 +467,14 @@ function baueLandschaft(startzahl) {
       tiefe++;
       let f = 1.15 - Math.min(tiefe, 180) / 180 * .35;
       if (unten[y] < 10) f *= .6 + unten[y] * .04;
+      if (fels) {                                      // Felsen: Kante oben links hell, unten rechts dunkel = sieht erhaben aus
+        let k = 0;
+        for (const d of [2, 4, 7]) {
+          if (x >= d && y >= d && !maske[i - d * W - d]) k += .09;
+          if (x + d < W && y + d < H && !maske[i + d * W + d]) k -= .12;
+        }
+        f *= 1 + k;
+      }
       if (unten[y] < 3 || (x > 2 && x < W - 3 && (!maske[i - 1] || !maske[i + 1] || !maske[i - 3] || !maske[i + 3]))) f *= .5;   // dunkler Rand
       px[i * 4] *= f; px[i * 4 + 1] *= f; px[i * 4 + 2] *= f;
     }
@@ -501,9 +511,15 @@ function malFelsen() {
   for (let i = 0; i < 300 * W / 2000; i++) {          // Steinplatten: etwas heller oder dunkler
     const x = rnd(0, W), y = rnd(150, H), r = rnd(30, 90);
     ectx.fillStyle = i % 2 ? 'rgba(255,248,225,.12)' : 'rgba(60,50,35,.12)';
-    ectx.beginPath();
-    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + rnd(-.3, .3), d = r * rnd(.6, 1); ectx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d * .7); }
-    ectx.fill();
+    const ecken = [];
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + rnd(-.3, .3), d = r * rnd(.6, 1); ecken.push([x + Math.cos(a) * d, y + Math.sin(a) * d * .7]); }
+    ectx.beginPath(); for (const [ex, ey] of ecken) ectx.lineTo(ex, ey); ectx.fill();
+    ectx.lineWidth = 2;                               // Kanten: oben links hell, unten rechts dunkel – wie ein Klotz
+    for (let k = 0; k < 6; k++) {
+      const [ax, ay] = ecken[k], [bx, by] = ecken[(k + 1) % 6];
+      ectx.strokeStyle = (ax + bx) / 2 - x + (ay + by) / 2 - y < 0 ? 'rgba(255,250,230,.2)' : 'rgba(45,36,24,.2)';
+      ectx.beginPath(); ectx.moveTo(ax, ay); ectx.lineTo(bx, by); ectx.stroke();
+    }
   }
   for (let i = 0; i < 4000 * W / 2000; i++) {         // Körnung
     ectx.fillStyle = i % 2 ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)'; ectx.fillRect(rnd(0, W), rnd(150, H), 2, 2);
@@ -548,6 +564,10 @@ function loch(x, y, r) {
   ectx.globalCompositeOperation = 'source-atop';      // verbrannter Rand
   ectx.strokeStyle = welt === 'felsen' ? 'rgba(40,34,26,.6)' : 'rgba(45,22,10,.6)'; ectx.lineWidth = 7;
   ectx.beginPath(); ectx.arc(x, y, r + 2, 0, 7); ectx.stroke();
+  if (welt === 'felsen') {                            // Felsen: Kraterwand unten rechts bekommt Licht – sieht tief aus
+    ectx.strokeStyle = 'rgba(255,245,215,.3)'; ectx.lineWidth = 4;
+    ectx.beginPath(); ectx.arc(x, y, r + 4, -.3, 1.9); ectx.stroke();
+  }
   ectx.globalCompositeOperation = 'source-over';
   for (let yy = Math.max(0, y - r | 0); yy <= Math.min(H - 1, y + r); yy++)
     for (let xx = Math.max(0, x - r | 0); xx <= Math.min(W - 1, x + r); xx++)
@@ -611,6 +631,7 @@ function aktiver() { return spiel && spiel.wurm; }
 function schaden(w, n) {
   if (w.tot || n <= 0) return;
   if (w.panzer) n = Math.ceil(n / 2);                  // Panzer schützt
+  if (w.bunker) { texte.push({ x: w.x, y: w.y - 30, t: 0, text: '🛡️', farbe: '#fff' }); return; }   // im Bunker: kein Schaden
   w.hp = Math.max(0, w.hp - n); w.aua = 1; w.auaBis = zeit + 1.3;
   if (w.hp > 0) sag(w, 'aua'); else sag(w, 'tschuess', true);
   if (spiel && aktiver() && w.team !== aktiver().team) spiel.trafGegner = true;
@@ -700,7 +721,7 @@ function explosion(x, y, r, dmg, nurErde) {
   kisten = kisten.filter(k => !k.weg);
   // Würmer und Dinge wegschleudern
   for (const o of [...wuermer, ...dinge]) {
-    if (o.tot) continue;
+    if (o.tot || o.bunker) continue;                  // Bunker hält auch die Druckwelle ab
     const dx = o.x - x, dy = o.y - y - 6, d = Math.hypot(dx, dy);
     if (d > r + 16) continue;
     const f = 1 - d / (r + 16), l = d || 1, k = 120 + f * 420;
@@ -789,6 +810,12 @@ function feuern(staerke, zielX, zielY) {
   if (art === 'panzer' && !w.panzer) {                // Panzer: einsteigen – geschossen wird danach
     w.panzer = { schuss: WAFFEN.panzer.schuesse }; spiel.waffe = 'panzer';
     teilchen.push({ art: 'ring', x: w.x, y: w.y, r: 6, gross: 40, t: 0, max: .4 }); ton.klack(); zeigeWaffen(); return;
+  }
+  if (art === 'bunker') {                             // Bunker bauen: eine Runde lang sicher – der Zug ist dann vorbei
+    w.bunker = true; spiel.waffe = 'bazooka';
+    teilchen.push({ art: 'ring', x: w.x, y: w.y, r: 8, gross: 44, t: 0, max: .4 });
+    for (let i = 0; i < 8; i++) teilchen.push({ art: 'rauch', x: w.x + rnd(-24, 24), y: w.y + 6, vx: rnd(-40, 40), vy: rnd(-40, -10), t: 0, max: rnd(.6, 1.1), r: rnd(6, 10) });
+    ton.klack(); spiel.phase = 'warten'; spiel.warte = 0; zeigeWaffen(); return;
   }
   if (art === 'seil') {                               // Ninja-Seil: geradeaus schießen, an der Erde festhaken
     const z = strahl(w.x, w.y - 12, w.ziel, 330, false);
@@ -1037,6 +1064,9 @@ function naechsterZug() {
   const team = spiel.teams[spiel.dran], liste = wuermer.filter(w => w.team === spiel.dran);
   do team.zeiger = (team.zeiger + 1) % liste.length; while (liste[team.zeiger].tot);
   spiel.wurm = liste[team.zeiger];
+  for (const x of wuermer) if (x.bunker && x.team === spiel.dran) {   // Bunker hält nur eine Runde – jetzt ist er weg
+    x.bunker = false; teilchen.push({ art: 'puff', x: x.x, y: x.y - 4, vx: 0, vy: -20, t: 0, max: .8, r: 18 });
+  }
   sag(spiel.wurm, 'dran');
   Object.assign(spiel, { phase: 'zielen', zugzeit: ZUGZEIT, bild: 0, ein: {}, eingaben: [], log: [], krater: [], waffe: 'bazooka', rec: null, ri: 0,
                         versuch: Math.random().toString(36).slice(2, 8), zugBeginn: performance.now(), fortschritt: 0, teilBild: 0, ghBild: 0, ghLog: 0, endeWartet: false, schuss: 0, graben: null });
@@ -1167,7 +1197,7 @@ function schnappschuss() {
   return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
            m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran,
            ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]), x: spiel.teams.map(t => t.extra || 0),
-           mi: minen.map(m => [Math.round(m.x), Math.round(m.y)]) };
+           mi: minen.map(m => [Math.round(m.x), Math.round(m.y)]), bu: wuermer.map(w => w.bunker ? 1 : 0) };
 }
 function standSetzen(s) {
   s.w.forEach(([x, y, hp, tot, ri], i) => {
@@ -1179,6 +1209,7 @@ function standSetzen(s) {
   s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
   spiel.dran = s.d;
   if (s.x) s.x.forEach((x, t) => spiel.teams[t].extra = x);
+  if (s.bu) s.bu.forEach((b, i) => { if (wuermer[i]) wuermer[i].bunker = !!b; });
   if (s.mi) minen = s.mi.map(([x, y]) => neueMine(x, y, true));
   if (s.ki) kisten = s.ki.map(([x, y, art, luft]) => ({ x, y, art, r: 9, luft: !!luft }));
   dinge = [];
@@ -1969,7 +2000,7 @@ function sag(w, art, wichtig = false) {
 function zeichneWurm(w) {
   const f = w.richtung, wipp = Math.sin(zeit * 3 + w.samen) * 1.2, team = TEAMS[w.team], ch = charakter(w);
   const lauf = !w.luft && spiel && (spiel.ein.links || spiel.ein.rechts) && w === aktiver() ? Math.sin(w.schritte * 18) * 1.5 : 0;
-  if (!w.luft) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(w.x, w.y + 9, 11, 3, 0, 0, 7); ctx.fill(); }   // Schatten
+  schattenMalen(w.x, w.y + 9, 11);                   // Schatten – auch beim Fliegen, dann kleiner
   const gemalt = wurmBild(w, wurmVariante(w));
   if (gemalt) {                                       // gemaltes Bild (wenn geladen)
     const B = gemalt.bild;
@@ -2340,6 +2371,36 @@ function zeichneGrab(g) {
   ctx.restore();
 }
 
+// Bunker aus Beton: hinten die dunkle Kuppel, vorne Mauer und Rahmen – der Wurm schaut durchs Fenster
+function bunkerMalen(w, hinten) {
+  const x = w.x, y = w.y + 10;
+  if (hinten) {
+    ctx.fillStyle = '#4e504c'; ctx.beginPath(); ctx.arc(x, y, 46, Math.PI, 0); ctx.fill();
+    return;
+  }
+  ctx.fillStyle = '#a3a49e'; ctx.strokeStyle = '#5c5e59'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.rect(x - 48, y - 16, 96, 16); ctx.fill(); ctx.stroke();          // Mauer vorne
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x - 47, y - 15, 94, 3);         // Licht oben auf der Mauer
+  ctx.strokeStyle = '#7d7f79'; ctx.lineWidth = 1;
+  for (const dx of [-24, 0, 24]) { ctx.beginPath(); ctx.moveTo(x + dx, y - 16); ctx.lineTo(x + dx, y); ctx.stroke(); }
+  ctx.lineWidth = 10; ctx.strokeStyle = '#8e8f8a';                                      // Kuppel-Rahmen
+  ctx.beginPath(); ctx.arc(x, y - 3, 42, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.4)';
+  ctx.beginPath(); ctx.arc(x, y - 3, 45, Math.PI * 1.12, Math.PI * 1.5); ctx.stroke();
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🛡️', x, y - 8);
+}
+// Schatten auf dem Boden – je höher etwas schwebt, desto kleiner und blasser (das sieht nach 3D aus)
+function schattenMalen(x, y, b) {
+  let h = 0; while (h < 260 && !fest(x, y + h)) h += 3;
+  if (h >= 260) return;
+  const s = 1 - h / 300;
+  ctx.fillStyle = `rgba(0,0,0,${.12 * s})`;                                             // langer, weicher Schatten (Sonne rechts)
+  ctx.beginPath(); ctx.ellipse(x - 9 * s, y + h, (b + 9) * s, 3.6 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = `rgba(0,0,0,${.28 * s})`;                                             // dunkler Kern direkt darunter
+  ctx.beginPath(); ctx.ellipse(x - 2 * s, y + h, b * s, 2.8 * s, 0, 0, 7); ctx.fill();
+}
+
 // Panzer um den Wurm herum (der Wurm schaut oben aus der Luke)
 function panzerMalen(w) {
   const f = w.richtung;
@@ -2527,13 +2588,13 @@ function zeichne() {
     ctx.beginPath(); ctx.arc(x, y, i % 3 === 0 ? 3.2 : 2, 0, 7); ctx.fill(); ctx.stroke();
   });
   for (const g of graeber) zeichneGrab(g);
-  for (const k of kisten) zeichneKiste(k);
+  for (const k of kisten) { schattenMalen(k.x, k.y + 9, 10); zeichneKiste(k); }
   for (const m of minen) zeichneMine(m);
   for (const w of wuermer) if (w.seil && !w.tot) {
     ctx.strokeStyle = '#d9c48a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(w.x, w.y - 12); ctx.lineTo(w.seil.x, w.seil.y); ctx.stroke();
     ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(w.seil.x, w.seil.y, 2.5, 0, 7); ctx.fill();
   }
-  for (const w of wuermer) if (!w.tot) zeichneWurm(w);
+  for (const w of wuermer) if (!w.tot) { if (w.bunker) bunkerMalen(w, true); zeichneWurm(w); if (w.bunker) bunkerMalen(w, false); }
   for (const o of dinge) zeichneDing(o);
   welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
   welle(WASSER + 10, 'rgba(30,100,175,.85)', 5, 4, links, rechts, unten);
