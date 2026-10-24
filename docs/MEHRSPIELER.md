@@ -81,3 +81,10 @@ lernt man, wie zwei Geräte miteinander reden.
   Angebot hin (Spieler 1), das zweite Gerät antwortet. Gleichzeitiges Tippen klärt die
   `sha`-Prüfung von GitHub (der Langsamere wird Spieler 2). Braucht kurz Internet;
   ohne Internet bleibt der QR-Tausch.
+- v5.3 gegen Ruckeln beim Gast: **zwei Datenkanäle** – Bewegung über einen
+  unzuverlässigen, ungeordneten Kanal (`maxRetransmits: 0`, verlorene Bilder werden
+  übersprungen statt nachgeschickt → kein Stau), Karte/Töne/Befehle über den
+  zuverlässigen. Der Gast **puffert** ~50–170 ms (je nach Schwankung) und blendet
+  zwischen zwei Bildern über; der eigene Panzer läuft ohne Pufferzeit. Lernthema:
+  *Lieber ein Bild weglassen als auf ein verlorenes warten.*
+  (Würmer-Prinzip „gleiche Eingaben = gleiches Ergebnis“ passt für Runden, nicht für Echtzeit.)

@@ -273,7 +273,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.2';
+const APP_VERSION = '5.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1022,9 +1022,15 @@ function karteMalen(V) {
   }
 }
 // Gast: Bewegungen zwischen zwei Nachrichten weich machen
-function lage(o, a) {
-  if (o.x0 == null || Math.abs(o.x - o.x0) > 12 || Math.abs(o.y - o.y0) > 12) return [Math.round(o.x), Math.round(o.y)];
-  return [Math.round(o.x0 + (o.x - o.x0) * a), Math.round(o.y0 + (o.y - o.y0) * a)];
+function lage(o, a) { const [x, y] = lageGenau(o, a); return [Math.round(x), Math.round(y)]; }
+// ohne Runden (für die 3D-Grafik: so gleiten die Panzer statt in Punkt-Schritten zu hüpfen)
+function lageGenau(o, a) {
+  if (o.a != null) a = o.a;
+  if (o.x0 == null || Math.abs(o.x - o.x0) > 12 || Math.abs(o.y - o.y0) > 12) {
+    if (o.sub && o.r != null && !o.tot) return [o.x + DX[o.r] * o.sub, o.y + DY[o.r] * o.sub];   // Gastgeber: angefangener Schritt
+    return [o.x, o.y];
+  }
+  return [o.x0 + (o.x - o.x0) * a, o.y0 + (o.y - o.y0) * a];
 }
 function spielMalen(V) {
   const a = V.alpha == null ? 1 : V.alpha, blink = n => Math.floor(V.t / n) % 2 === 0;
@@ -2300,6 +2306,8 @@ const Netz = {
   stop() {
     this.offen = false;
     try { this.kanal && this.kanal.close(); } catch {}
+    try { this.schnell && this.schnell.close(); } catch {}
+    this.schnell = null;
     try { this.pc && this.pc.close(); } catch {}
     this.pc = this.kanal = null;
   },
@@ -2326,6 +2334,7 @@ const Netz = {
     const pc = this.neu();
     this.nr = String(1000 + zufall(9000));
     this.kanalSetzen(pc.createDataChannel('tk', { ordered: true }));
+    this.schnellSetzen(pc.createDataChannel('tks', { ordered: false, maxRetransmits: 0 }));   // Bewegung: lieber weglassen als warten
     await pc.setLocalDescription(await pc.createOffer());
     await this.iceFertig(pc);
     return sdpZuCode(pc.localDescription.sdp, 'A', this.nr);
@@ -2336,7 +2345,7 @@ const Netz = {
     await this.kameraKurz();
     const pc = this.neu();
     this.nr = a.nr;
-    pc.ondatachannel = e => this.kanalSetzen(e.channel);
+    pc.ondatachannel = e => e.channel.label === 'tks' ? this.schnellSetzen(e.channel) : this.kanalSetzen(e.channel);
     await pc.setRemoteDescription({ type: 'offer', sdp: codeZuSdp(a) });
     await pc.setLocalDescription(await pc.createAnswer());
     await this.iceFertig(pc);
@@ -2353,7 +2362,16 @@ const Netz = {
     k.onclose = () => { if (k === this.kanal) this.getrennt(); };
     k.onmessage = e => { if (k !== this.kanal) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data)); } catch (f) { console.error(f); } };
   },
+  schnellSetzen(k) {
+    this.schnell = k;
+    k.onmessage = e => { if (k !== this.schnell) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data)); } catch (f) { console.error(f); } };
+  },
   senden(o) { if (this.offen && this.kanal && this.kanal.readyState === 'open') try { this.kanal.send(JSON.stringify(o)); } catch {} },
+  // Bewegungsdaten über den schnellen Kanal (verlorene Pakete werden nicht nachgeschickt → kein Stau)
+  sendenSchnell(o) {
+    if (this.offen && this.schnell && this.schnell.readyState === 'open') { try { this.schnell.send(JSON.stringify(o)); return; } catch {} }
+    this.senden(o);
+  },
   wachen() { if (this.offen && performance.now() - this.letzte > 4500) this.getrennt(); },   // 4,5 s nichts gehört → weg
   getrennt() { if (!this.offen) return; this.offen = false; netzGetrennt(); },
 };
@@ -2368,45 +2386,97 @@ function zuAnsicht(S) {
     E: S.effekte.map(e => [e.art, Math.round(e.x), Math.round(e.y), e.t, e.w || 0]),
     B: S.bonus ? [S.bonus.art, S.bonus.x, S.bonus.y] : 0,
     SP: S.sp.map(s => [s.leben, s.punkte, s.lvl, s.aus ? 1 : 0, ...s.kills]),
-    ton: S.tonNetz.splice(0) };
-  if (S.mapVoll) { a.M = Array.from(S.karte).join(''); S.mapVoll = false; S.md.length = 0; }
+    ack: fernSeq };
+  return a;
+}
+// Änderungen an der Karte und Töne: dürfen nicht verloren gehen → zuverlässiger Kanal
+function kartenNachricht(S) {
+  const a = { k: 'w', ton: S.tonNetz.splice(0) };
+  if (S.mapVoll) { a.M = Array.from(S.karte).join(''); a.id = S.kartenId; S.mapVoll = false; S.md.length = 0; }
   else if (S.md.length) a.m = S.md.splice(0);
   return a;
 }
 let V = null;               // was der Gast gerade sieht
-function ansichtLesen(a) {
-  if (!V) V = { karte: new Uint8Array(NX * NY), kv: 0, kartenId: Math.random(), panzer: [], kugeln: [], effekte: [], sp: [] };
+const leereAnsicht = () => ({ karte: new Uint8Array(NX * NY), kv: 0, kartenId: Math.random(), panzer: [], kugeln: [], effekte: [], sp: [] });
+function karteLesen(a) {
+  if (!V) V = leereAnsicht();
   if (a.M) { for (let i = 0; i < NX * NY; i++) V.karte[i] = a.M.charCodeAt(i) - 48; V.kv++; V.kartenId = Math.random(); }
   if (a.m) { for (let i = 0; i < a.m.length; i += 2) V.karte[a.m[i]] = a.m[i + 1]; V.kv++; }
-  const altP = new Map(V.panzer.map(p => [p.id, p])), altK = new Map(V.kugeln.map(k => [k.id, k]));
+  for (const t of a.ton || []) Ton.spiel(t);
+}
+/* Puffer für den Gast: die Bilder vom Gastgeber kommen im WLAN unregelmäßig an.
+   Darum zeigen wir alles ~0,1 s später und blenden weich zwischen zwei Bildern über –
+   so sieht man kein Ruckeln, auch wenn mal ein Bild fehlt oder zu spät kommt. */
+const TICK = 1000 / 60;
+const Puffer = {
+  liste: [], versatz: null, zappeln: 8, aktuell: null,
+  leeren() { this.liste = []; this.versatz = null; this.zappeln = 8; this.aktuell = null; },
+  neu(a) {
+    const jetzt = performance.now(), letzt0 = this.liste[this.liste.length - 1];
+    if (letzt0 && a.t < letzt0.a.t - 120) this.leeren();        // neues Spiel (Zähler fängt neu an)
+    const l = this.liste, letzt = l[l.length - 1];
+    if (letzt && a.t < letzt.a.t) return;                       // altes Bild (kam zu spät) → weg
+    if (letzt && a.t === letzt.a.t) { letzt.a = a; this.aktuell = null; return; }   // z. B. Pause: gleiches Bild, neuer Zustand
+    const v = jetzt - a.t * TICK;                               // Uhr des Gastgebers schätzen
+    if (this.versatz == null || Math.abs(v - this.versatz) > 400) this.versatz = v;   // Anfang oder nach einer Pause neu einstellen
+    else {
+      this.zappeln = this.zappeln * 0.9 + Math.abs(v - this.versatz) * 0.1;
+      this.versatz = v < this.versatz ? this.versatz * 0.6 + v * 0.4 : this.versatz * 0.985 + v * 0.015;
+    }
+    l.push({ a, ank: jetzt });
+    if (l.length > 16) l.shift();
+  },
+  // jedes Bild: passende zwei Bilder suchen und dazwischen überblenden
+  ansicht() {
+    const l = this.liste; if (!l.length) return;
+    const verzug = begrenze(45 + this.zappeln * 2, 45, 170), zeit = (performance.now() - this.versatz - verzug) / TICK;
+    let i = l.findIndex(e => e.a.t >= zeit);
+    if (i < 0) i = l.length - 1;
+    const s1 = l[i], s0 = l[Math.max(0, i - 1)];
+    if (this.aktuell !== s1) { ansichtLesen(s1.a, s0 === s1 ? null : s0.a); this.aktuell = s1; }
+    V.alpha = s0 === s1 ? 1 : begrenze((zeit - s0.a.t) / (s1.a.t - s0.a.t), 0, 1);
+    // der eigene Panzer: ohne Pufferzeit (sonst reagiert er träge)
+    const neu = l[l.length - 1], vor = l[l.length - 2];
+    const eigen = V.panzer.find(p => p.sp === 1);
+    if (eigen && neu) {
+      const pn = neu.a.P.find(q => q[0] === eigen.id), pv = vor && vor.a.P.find(q => q[0] === eigen.id);
+      if (pn) { eigen.x = pn[3]; eigen.y = pn[4]; eigen.r = pn[5]; eigen.anim = pn[6]; eigen.x0 = pv ? pv[3] : pn[3]; eigen.y0 = pv ? pv[4] : pn[4];
+                eigen.a = begrenze((performance.now() - neu.ank) / (2 * TICK), 0, 1); }
+    }
+  },
+};
+function ansichtLesen(a, vorher) {
+  if (!V) V = leereAnsicht();
+  const altP = new Map((vorher ? vorher.P : []).map(q => [q[0], q])), altK = new Map((vorher ? vorher.K : []).map(q => [q[0], q]));
   V.panzer = a.P.map(([id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, gr, ex]) => {
-    const o = altP.get(id); return { id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, gr, turbo: ex & 1, doppel: ex & 2, x0: o ? o.x : x, y0: o ? o.y : y };
+    const o = altP.get(id); return { id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, gr, turbo: ex & 1, doppel: ex & 2, x0: o ? o[3] : x, y0: o ? o[4] : y };
   });
-  V.kugeln = a.K.map(([id, x, y, r]) => { const o = altK.get(id); return { id, x, y, r, x0: o ? o.x : x, y0: o ? o.y : y }; });
+  V.kugeln = a.K.map(([id, x, y, r]) => { const o = altK.get(id); return { id, x, y, r, x0: o ? o[1] : x, y0: o ? o[2] : y }; });
   V.effekte = a.E.map(([art, x, y, t, w]) => ({ art, x, y, t, w }));
   V.bonus = a.B ? { art: a.B[0], x: a.B[1], y: a.B[2] } : null;
   V.sp = a.SP.map(s => ({ leben: s[0], punkte: s[1], lvl: s[2], aus: !!s[3], kills: s.slice(4, 8) }));
   Object.assign(V, { t: a.t, phase: a.ph, pt: a.pt, level: a.lv, levelName: a.ln, pause: !!a.pa, basisKaputt: !!a.bk, uhr: a.uhr,
                      gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, bossWarn: a.BW, bossMax: a.BM, farben: a.F, empfangen: performance.now(), alpha: 0 });
-  for (const t of a.ton) Ton.spiel(t);
 }
 
-let gastFarbe = null, fern = { r: -1, f: false }, fernVorher = false, gastGesendet = '';
+let gastFarbe = null, fernSeq = 0, gastSeq = 0, fern = { r: -1, f: false }, fernVorher = false, gastGesendet = '';
 function fernEingabe() { const neu = fern.f && !fernVorher; fernVorher = fern.f; return { r: fern.r, f: fern.f, neu }; }
 function netzNachricht(m) {
   if (m.k === 'ping') return Netz.senden({ k: 'pong', t: m.t });
   if (m.k === 'pong') { Netz.ping = Netz.ping ? Netz.ping * 0.7 + (performance.now() - m.t) * 0.3 : performance.now() - m.t; return; }
   if (m.k === 'hallo') { if (m.farbe && SPIELERFARBEN[m.farbe]) gastFarbe = m.farbe; if (m.v !== APP_VERSION) meldung('Achtung: Das andere Gerät hat v' + m.v + ', dieses v' + APP_VERSION + '. Bitte beide aktualisieren (Version antippen).', 7000); return; }
   if (rolle === 'wirt') {
-    if (m.k === 'e') fern = { r: m.r, f: !!m.f };
+    if (m.k === 'e') { fern = { r: m.r, f: !!m.f }; fernSeq = m.n || 0; }
     if (m.k === 'pause' && S) S.pause = !!m.an;
     if (m.k === 'weiter' && S) S.tipp = true;
   } else if (rolle === 'gast') {
+    if (m.k === 'w') karteLesen(m);
     if (m.k === 's') {
-      ansichtLesen(m);
+      Puffer.neu(m);
+      if (!V) { karteLesen({}); Puffer.ansicht(); }
       if (modus !== 'spiel') { modus = 'spiel'; zeigen(null); aufteilen(); wachHalten(); }
     }
-    if (m.k === 'lobby' && modus === 'spiel') { modus = 'menue'; V = null; gastWarten(); }
+    if (m.k === 'lobby' && modus === 'spiel') { modus = 'menue'; V = null; Puffer.leeren(); gastWarten(); }
   }
 }
 function netzVerbunden() {
@@ -2431,7 +2501,7 @@ function netzGetrennt() {
         ['⌂ Menü', () => { rolle = 'lokal'; zumMenue(); }]]);
     } else { meldung('Verbindung getrennt'); rolle = 'lokal'; menueAnpassen(); }
   } else if (rolle === 'gast') {
-    modus = 'menue'; V = null;
+    modus = 'menue'; V = null; Puffer.leeren();
     zeigen('netz');
     netzSchritt('<b>Die Verbindung zum anderen Gerät ist weg.</b><br>Zum Weiterspielen am ersten Gerät „Neu verbinden“ tippen und den neuen Code hier scannen.', null, [
       ['📷 Neu scannen', gastStarten, 'gruen'], ['⌂ Menü', () => { rolle = 'lokal'; Netz.stop(); zumMenue(); }]]);
@@ -2864,7 +2934,7 @@ $('p-weiter').onclick = () => { Ton.start(); pauseSetzen(false); };
 $('p-ton').onclick = () => { einst.ton = !einst.ton; einstSpeichern(); meldung(einst.ton ? 'Ton an 🔊' : 'Ton aus 🔇'); };
 $('p-neu').onclick = () => { if (S && rolle !== 'gast') { levelStart(S); S.pause = false; } };
 $('p-menue').onclick = () => {
-  if (rolle === 'gast') { if (confirm('Verbindung trennen und zum Menü?')) { Netz.stop(); rolle = 'lokal'; V = null; zumMenue(); } return; }
+  if (rolle === 'gast') { if (confirm('Verbindung trennen und zum Menü?')) { Netz.stop(); rolle = 'lokal'; V = null; Puffer.leeren(); zumMenue(); } return; }
   zumMenue();
 };
 // Hilfe: Bilder der Extras
@@ -3003,7 +3073,8 @@ function tick() {
     for (const t of S.ton) Ton.spiel(t);
     if (rolle === 'wirt' && Netz.offen) {
       S.tonNetz.push(...S.ton);
-      if ((!S.pause && ticks % 2 === 0) || ticks % 10 === 0) Netz.senden(zuAnsicht(S));
+      if (S.mapVoll || S.md.length || S.tonNetz.length) Netz.senden(kartenNachricht(S));
+      if ((!S.pause && ticks % 2 === 0) || ticks % 10 === 0) Netz.sendenSchnell(zuAnsicht(S));
     } else { S.md.length = 0; S.tonNetz.length = 0; if (rolle === 'wirt') S.mapVoll = true; }
     S.ton.length = 0;
     if (S.ende) spielEnde();
@@ -3011,7 +3082,7 @@ function tick() {
   }
   if (rolle === 'gast' && Netz.offen && modus === 'spiel') {
     const e = eingabe(0), s = e.r + '/' + e.f;
-    if (s !== gastGesendet || ticks % 6 === 0) { Netz.senden({ k: 'e', r: e.r, f: e.f }); gastGesendet = s; }
+    if (s !== gastGesendet || ticks % 6 === 0) { Netz.senden({ k: 'e', r: e.r, f: e.f, n: ++gastSeq }); gastGesendet = s; }
   }
   if (rolle === 'wirt' && Netz.offen && modus !== 'spiel' && ticks % 30 === 0) Netz.senden({ k: 'lobby' });
   if (Netz.offen && ticks % 60 === 0) Netz.senden({ k: 'ping', t: performance.now() });
@@ -3042,7 +3113,7 @@ function schleife(jetzt) {
   ruckelWaechter(jetzt - letzte);
   rest += Math.min(100, jetzt - letzte); letzte = jetzt;
   while (rest >= 1000 / 60) { rest -= 1000 / 60; try { tick(); } catch (e) { console.error(e); } }
-  if (V) V.alpha = begrenze((performance.now() - V.empfangen) / 34, 0, 1);
+  if (V && rolle === 'gast') Puffer.ansicht();
   oberflaeche();
   allesMalen();
 }

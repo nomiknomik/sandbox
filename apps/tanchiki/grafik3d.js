@@ -485,7 +485,7 @@ const D3 = {
         this.szene.add(o.eis);
         this.panzer.set(p.id, o);
       }
-      const [gx, gy] = lage(p, a), gr = GROESSE(p), x = gx + gr / 2, z = gy + gr / 2, sk = gr / 16;
+      const [gx, gy] = lageGenau(p, a), gr = GROESSE(p), x = gx + gr / 2, z = gy + gr / 2, sk = gr / 16;
       const spawn = p.spawn > 0;
       o.g.visible = !spawn;
       o.strahl.visible = spawn;
@@ -527,7 +527,7 @@ const D3 = {
       kda.add(k.id);
       let o = this.kugeln.get(k.id);
       if (!o) { o = { m: new T.Mesh(new T.BoxGeometry(1.4, 1.4, 1.4), this.mat.leuchten), glut: new T.Sprite(this.glut.gelb) }; o.glut.scale.set(11, 11, 1); this.szene.add(o.m, o.glut); this.kugeln.set(k.id, o); }
-      const [x, z] = lage(k, a);
+      const [x, z] = lageGenau(k, a);
       o.m.position.set(x, 6.2, z); o.glut.position.set(x, 6.2, z); o.m.rotation.y = this.zeit * 0.3;
       if (dt > 0 && Math.random() < 0.6) this.teil('feuer', { x: x - DX[k.r] * 1.5, y: 6.2, z: z - DY[k.r] * 1.5, gr: 0.6, farbe: [255, 170, 60], l: 6, reib: 1 });
     }
@@ -565,7 +565,7 @@ const D3 = {
         if (q.staerke > 1 && Math.random() < 0.15 * dt) this.teil('feuer', { x: q.x + (Math.random() - 0.5) * 10, y: 3, z: q.z + (Math.random() - 0.5) * 8, vy: 0.2, gr: 1.2, farbe: [255, 140, 40], l: 18, reib: 0.98 });
       }
       for (const p of V.panzer) if (p.sp < 0 && p.typ === 3 && p.hp <= 2 && p.spawn === 0 && Math.random() < 0.12 * dt) {
-        const [gx, gy] = lage(p, a);
+        const [gx, gy] = lageGenau(p, a);
         this.teil('rauch', { x: gx + 8 - DX[p.r] * 5, y: 5, z: gy + 8 - DY[p.r] * 5, vy: 0.12, gr: 1.4, wachs: 0.04, farbe: [70, 68, 66], l: 60, reib: 0.99 });
       }
     }
