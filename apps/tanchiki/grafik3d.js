@@ -629,11 +629,20 @@ const D3 = {
     if (!immer && w === this.w && h === this.h && x === this.x && y === this.y) return;
     Object.assign(this, { w, h, x, y });
     this.r.setSize(Math.round(w), Math.round(h), false);
-    // Ausschnitt: das Feld nutzt die ganze Höhe (die Anzeigen liegen oben über dem Rand)
+    // Ausschnitt: das Feld nutzt die ganze Höhe.
+    // Breiter Bildschirm (iPhone): Anzeigen schmal an den Seiten. Sonst (iPad): oben ein schmaler Streifen für die Anzeigen.
     const halbB = FB / 2 + 6, halbH = (FH * Math.cos(30 * Math.PI / 180)) / 2 + 9, a = w / h;
     let hh = halbH, hb = hh * a;
     if (hb < halbB) { hb = halbB; hh = hb / a; }
-    const oben = 3;
+    let oben = 3;
+    this.hudModus = a > 1.75 ? 'seite' : 'band';
+    if (this.hudModus === 'band') {
+      const f = 0.075; hh = Math.max(hh, halbH / (1 - f)); hb = hh * a;
+      if (hb < halbB) { hb = halbB; hh = hb / a; }
+      oben = hh - halbH;                                     // Feld unten bündig, oben bleibt der Streifen frei
+    }
+    this.luecke = w / 2 * (1 - halbB / hb);                  // freier Platz links/rechts neben dem Feld (Bildpunkte)
+    this.streifen = h * (hh + oben - halbH) / (2 * hh);      // freier Platz oben (Bildpunkte)
     Object.assign(this.cam, { left: -hb, right: hb, top: hh + oben, bottom: -hh + oben });
     this.cam.updateProjectionMatrix();
     Object.assign(this.cv.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });

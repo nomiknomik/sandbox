@@ -273,7 +273,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.1';
+const APP_VERSION = '5.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1148,8 +1148,9 @@ function aufteilen() {
     Object.assign(L, { s: 1, gx: 0, gy: 0, gw: W, gh: H });
     const r = Math.min(W, H), li = { x: 0, y: 0, w: W / 2, h: H }, re = { x: W / 2, y: 0, w: W / 2, h: H };
     const ecke = (x, y) => ({ ax: x, ay: y });
-    if (zwei) L.zonen.push({ sp: 0, art: 'feuer', ...teil(li, 0, 0.45), ...ecke(rand.l + r * 0.17, H * 0.3) }, { sp: 0, art: 'joy', ...teil(li, 0.45, 1), ...ecke(rand.l + r * 0.2, H - rand.b - r * 0.22) },
-                           { sp: 1, art: 'feuer', ...teil(re, 0, 0.45), ...ecke(W - rand.r - r * 0.17, H * 0.3) }, { sp: 1, art: 'joy', ...teil(re, 0.45, 1), ...ecke(W - rand.r - r * 0.2, H - rand.b - r * 0.22) });
+    const breitBild = W / H > 1.75, fy = breitBild ? H * 0.5 : H * 0.3, ts = breitBild ? 0.64 : 0.45;   // breiter Bildschirm: oben stehen die Anzeigen
+    if (zwei) L.zonen.push({ sp: 0, art: 'feuer', ...teil(li, 0, ts), ...ecke(rand.l + r * 0.17, fy) }, { sp: 0, art: 'joy', ...teil(li, ts, 1), ...ecke(rand.l + r * 0.2, H - rand.b - r * 0.22) },
+                           { sp: 1, art: 'feuer', ...teil(re, 0, ts), ...ecke(W - rand.r - r * 0.17, fy) }, { sp: 1, art: 'joy', ...teil(re, ts, 1), ...ecke(W - rand.r - r * 0.2, H - rand.b - r * 0.22) });
     else L.zonen.push({ sp: 0, art: 'joy', ...li, ...ecke(rand.l + r * 0.2, H - rand.b - r * 0.22) }, { sp: 0, art: 'feuer', ...re, ...ecke(W - rand.r - r * 0.2, H - rand.b - r * 0.22) });
     L.werkzeug = { x: W, y: 0, w: 0, h: H, quer: true };
     Object.assign($('ingame').style, { left: (rand.l + 8) + 'px', transform: 'none' });
@@ -2048,32 +2049,62 @@ function randAnzeigen(V) {
   HD.zeit = D3.zeit;
   const blink = n => Math.floor(V.t / n) % 2 === 0;
   D3.texte(c, V, W, H);
-  if (V.phase !== 'bilanz' && V.sp && V.sp.length) {
-    // oben: Spieler 1 links, Level + Zeit + Gegner in der Mitte, Spieler 2 rechts
-    const oben = (rand.t + 6) * k, hoch = 70;
-    const knopf = $('ingame').getBoundingClientRect(), x1 = Math.max((rand.l + 60) * k, (knopf.right + 8) * k);
-    const spieler = (s, i, x) => {
-      pille(c, x, oben, 300, hoch);
-      c.drawImage(panzerHD('s' + (s.lvl || 0), (V.farben || ['p1', 'p2'])[i] || 'p1', 0, 0).bild, x + 8, oben + 4, 62, 62);
-      schrift(c, (i + 1) + 'P', x + 76, oben + 10, 3, i ? '#47D7E8' : '#FF9A4A');
-      schrift(c, '♥', x + 140, oben + 10, 3, '#FF5050'); schrift(c, s.aus ? '-' : Math.min(9, s.leben), x + 164, oben + 10, 3, '#fff');
-      schrift(c, String(s.punkte).padStart(6, '0'), x + 76, oben + 40, 3, '#D8C49A');
-    };
-    spieler(V.sp[0], 0, x1);
-    if (V.sp[1]) spieler(V.sp[1], 1, W - (rand.r + 12) * k - 300);
-    const mx = W / 2, sek = Math.floor(((V.phase === 'spiel' || V.phase === 'gameover') ? V.pt || 0 : 0) / 60);
-    pille(c, mx - 170, oben, 340, hoch);
-    schrift(c, 'LEVEL ' + V.level, mx - 150, oben + 10, 3, '#fff');
-    schrift(c, String(Math.floor(sek / 60)).padStart(2, '0') + ':' + String(sek % 60).padStart(2, '0'), mx - 150, oben + 40, 3, '#bbb');
-    const boss = V.panzer.find(p => p.typ === 4 && p.spawn === 0);
-    if (boss) { schrift(c, 'BOSS', mx + 30, oben + 10, 3, '#E8C8FF'); lebensBalken(c, mx + 30, oben + 42, 120, 14, boss.hp / (V.bossMax || boss.hp)); }   // statt Gegnerzahl
-    else {
-      c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, mx + 40, oben + 8, 54, 54);
-      schrift(c, '×' + (20 - (V.gegnerIdx || 0)), mx + 98, oben + 24, 3, '#fff');
-    }
-  }
+  if (V.phase !== 'bilanz' && V.sp && V.sp.length) hudZeichnen(c, V, W, H, k);
   einblendungenHD(V, blink, c, W, H);
   g.drawImage(randBild, 0, 0, L.W, L.H);
+}
+// Anzeigen: Spieler, Level, Zeit, Gegner, Boss – je nach Bildschirm oben in einem schmalen Streifen oder an den Seiten
+function hudZeichnen(c, V, W, H, k) {
+  const farben = V.farben || ['p1', 'p2'], sek = Math.floor(((V.phase === 'spiel' || V.phase === 'gameover') ? V.pt || 0 : 0) / 60);
+  const zeit = String(Math.floor(sek / 60)).padStart(2, '0') + ':' + String(sek % 60).padStart(2, '0');
+  const boss = V.panzer.find(p => p.typ === 4 && p.spawn === 0), rest = 20 - (V.gegnerIdx || 0);
+  const knopf = $('ingame').getBoundingClientRect();
+  const spielerFarbe = i => i ? '#47D7E8' : '#FF9A4A';
+  if (D3.hudModus === 'seite') {
+    // schmal in den Spalten links und rechts (oben, über Joystick und Feuerknopf)
+    const sp = Math.min(D3.luecke * k - 16, 230), y0 = (knopf.bottom + 8) * k;
+    const block = (x, y, i) => {
+      const s = V.sp[i];
+      pille(c, x, y, sp, 96);
+      c.drawImage(panzerHD('s' + (s.lvl || 0), farben[i] || 'p1', 0, 0).bild, x + 6, y + 6, 46, 46);
+      schrift(c, (i + 1) + 'P', x + 58, y + 10, 3, spielerFarbe(i));
+      schrift(c, '♥' + (s.aus ? '-' : Math.min(9, s.leben)), x + 58, y + 36, 3, '#fff');
+      schrift(c, String(s.punkte).padStart(6, '0'), x + 10, y + 66, 3, '#D8C49A');
+    };
+    const xl = (rand.l + 8) * k, xr = W - (rand.r + 8) * k - sp;
+    block(xl, y0, 0);
+    if (V.sp[1]) block(xr, y0, 1);
+    const yl = y0 + 108, xs = V.sp[1] ? xl : xr;           // Level-Kästchen: links (oder rechts, wenn nur 1 Spieler)
+    pille(c, xs, V.sp[1] ? yl : y0, sp, 96);
+    const ys = V.sp[1] ? yl : y0;
+    schrift(c, 'LEVEL ' + V.level, xs + 10, ys + 10, 3, '#fff');
+    schrift(c, zeit, xs + 10, ys + 38, 3, '#bbb');
+    if (boss) lebensBalken(c, xs + 10, ys + 70, sp - 20, 14, boss.hp / (V.bossMax || boss.hp));
+    else { c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, xs + 8, ys + 60, 30, 30); schrift(c, '×' + rest, xs + 44, ys + 66, 3, '#fff'); }
+  } else {
+    // oben ein schmaler Streifen, alles einzeilig
+    let hoch = Math.max(40, Math.min(58, D3.streifen * k - 10)), gr = hoch > 50 ? 3 : 2;
+    const x1 = (knopf.right + 8) * k, platz = W - x1 - (rand.r + 10) * k;
+    const passt = g => (46 * g + 160 + hoch - 50) * (V.sp[1] ? 2 : 1) + 24 + 22 * 6 * g + 40 * g + 24 <= platz;
+    if (gr === 3 && !passt(3)) { gr = 2; hoch = Math.min(hoch, 44); }        // zu eng? kleinere Schrift
+    const y = Math.max(4, (D3.streifen * k - hoch) / 2), breit = 46 * gr + 160 + hoch - 50;
+    const zeile = (x, i) => {
+      const s = V.sp[i];
+      pille(c, x, y, breit, hoch);
+      c.drawImage(panzerHD('s' + (s.lvl || 0), farben[i] || 'p1', 0, 0).bild, x + 4, y + 2, hoch - 4, hoch - 4);
+      const ty = y + (hoch - 7 * gr) / 2;
+      schrift(c, (i + 1) + 'P', x + hoch + 2, ty, gr, spielerFarbe(i));
+      schrift(c, '♥' + (s.aus ? '-' : Math.min(9, s.leben)), x + hoch + 6 + 13 * gr, ty, gr, '#fff');
+      schrift(c, String(s.punkte).padStart(6, '0'), x + hoch + 10 + 26 * gr, ty, gr, '#D8C49A');
+    };
+    zeile(x1, 0);
+    if (V.sp[1]) zeile(W - (rand.r + 10) * k - breit, 1);
+    const mb = 24 + 22 * 6 * gr + 40 * gr, mx = W / 2 - mb / 2, ty = y + (hoch - 7 * gr) / 2;
+    pille(c, mx, y, mb, hoch);
+    schrift(c, 'LEVEL ' + V.level + '  ' + zeit, mx + 12, ty, gr, '#fff');
+    if (boss) { schrift(c, 'BOSS', mx + 12 + 17 * 6 * gr, ty, gr, '#E8C8FF'); lebensBalken(c, mx + 12 + 22 * 6 * gr, ty, mb - 24 - 22 * 6 * gr, 7 * gr, boss.hp / (V.bossMax || boss.hp)); }
+    else { c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, mx + 12 + 16 * 6 * gr, y + 4, hoch - 8, hoch - 8); schrift(c, '×' + rest, mx + 12 + 16 * 6 * gr + hoch - 4, ty, gr, '#fff'); }
+  }
 }
 function einblendungenHD(V, blink, c = bg, W = W2D * GR, H = 224 * GR) {
   if (V.phase === 'intro') {
