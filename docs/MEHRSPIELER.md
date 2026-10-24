@@ -59,3 +59,18 @@ lernt man, wie zwei Geräte miteinander reden.
   Zuschauer sind ca. 0,1 s hinterher; GitHub bekommt nur noch alle 10 s ein Stück
   und den Endstand (Reserve + Neustart). Bei 3 Geräten reicht der Gastgeber weiter.
   Safari zeigt die eigene WLAN-Adresse evtl. erst nach Kamera-Erlaubnis → Knopf ⚡.
+
+## Umgesetzt in Танчики (v1.0) – Echtzeit, ganz ohne Internet
+- Echtzeit-Actionspiel (60 Bilder/s) → GitHub als Zwischenstation viel zu langsam.
+  Darum nur **WebRTC direkt** Gerät ↔ Gerät, Handschlag per **QR-Code-Tausch**:
+  A zeigt Angebot → B scannt (in der App, jsQR) → B zeigt Antwort → A scannt.
+- Der QR-Code enthält nur das Nötigste aus der SDP (ufrag, pwd, Fingerabdruck,
+  Adressen) – ca. 100 Zeichen statt ~600. Die SDP wird auf der anderen Seite
+  wieder zusammengebaut. Kein STUN/TURN, keine fremden Server.
+- Gastgeber (A) rechnet das Spiel und schickt 30×/s, was zu sehen ist; B schickt
+  nur seine Knöpfe. B glättet die Bewegungen zwischen zwei Nachrichten.
+  Lernthema: *Wer hat recht? – ein Gerät ist der Schiedsrichter.*
+- Bluetooth geht nicht: Safari auf iPhone/iPad hat kein Web-Bluetooth. Beide Geräte
+  brauchen ein gemeinsames WLAN (Bord-WLAN, Hotel, Hotspot). Im Flugzeug
+  zuverlässig: **2 Spieler auf einem iPad** (geteilte Touch-Steuerung) oder
+  Bluetooth-Gamecontroller (Gamepad-API).
