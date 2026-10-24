@@ -116,6 +116,7 @@
     <div class="unter">Panzer-Duell · verteidige die Basis!</div>
     <div id="m-netz" class="karte versteckt"><p class="ok" style="margin:0">✓ Verbunden mit dem anderen Gerät – du bist Spieler 1 (gelb).</p></div>
     <button class="gross blau versteckt" id="b-netzstart"><span class="sym">▶</span><span>SPIEL STARTEN<small>2 Spieler · zwei Geräte</small></span></button>
+    <button class="gross gruen normal-start versteckt" id="b-fortsetzen"><span class="sym">⏯</span><span>WEITERSPIELEN<small id="fortsetzen-text"></small></span></button>
     <button class="gross normal-start" data-start="solo"><span class="sym">▶</span><span>1 SPIELER<small>gegen die Computer-Panzer</small></span></button>
     <button class="gross gruen normal-start" data-start="lokal"><span class="sym">👥</span><span>2 SPIELER · EIN GERÄT<small>zusammen auf dem iPad – klappt immer, auch im Flugzeug</small></span></button>
     <button class="gross blau normal-start" id="b-netz"><span class="sym">📶</span><span>2 SPIELER · ZWEI GERÄTE<small>iPhone + iPad im selben WLAN / Hotspot</small></span></button>
@@ -167,6 +168,12 @@
         <li>A scannt den Code von B → fertig! Danach geht alles direkt von Gerät zu Gerät, kein Internet nötig.</li>
       </ol>
       <p class="warn">Bluetooth allein geht leider nicht: Safari auf iPhone/iPad darf kein Bluetooth benutzen. Im Flugmodus geht der Hotspot meist nicht, und manche Bord-WLANs sperren Verbindungen zwischen Geräten. Dann einfach „2 Spieler · ein Gerät“ nehmen.</p></div>
+    <div class="karte"><h3>Vor der Reise</h3>
+      <ol>
+        <li>Spiel auf <b>beiden</b> Geräten einmal mit Internet öffnen und in Safari über Teilen → „Zum Home-Bildschirm“ legen. Dann geht es offline.</li>
+        <li>Beide auf dieselbe Version bringen (Version unten rechts antippen).</li>
+        <li>„Zwei Geräte“ einmal zu Hause ausprobieren – dann klappt es unterwegs schneller.</li>
+      </ol></div>
     <button class="gross grau" data-zurueck><span class="sym">←</span><span>Zurück</span></button>
   </div>
 </div>
@@ -221,7 +228,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -798,7 +805,9 @@ function gegnerTreffer(S, p, von) {
 /* ---------- Extras ---------- */
 function bonusSetzen(S) {
   let x, y;
-  do { x = zufall(25) * 8; y = zufall(23) * 8; } while (ueber(x, y, 16, 16, BX - 16, BY - 16, 48, 32));
+  const schlecht = (x, y) => { for (let r = y >> 2; r < (y + 16) >> 2; r++) for (let c = x >> 2; c < (x + 16) >> 2; c++) { const t = S.karte[r * N + c]; if (t === STAHL || t === WASSER) return true; } return false; };
+  let n = 0;
+  do { x = zufall(25) * 8; y = zufall(23) * 8; } while ((ueber(x, y, 16, 16, BX - 16, BY - 16, 48, 32) || schlecht(x, y)) && ++n < 60);
   S.bonus = { art: BONUS_ARTEN[zufall(BONUS_ARTEN.length)], x, y, t: 0 };
   S.ton.push('bonus');
 }
@@ -879,7 +888,7 @@ function bilanzStart(S) {
   if (best > rekord) { rekord = best; speicher.schreib('rekord', rekord); }
 }
 function bilanzWeiter(S) {
-  if (S.vorbei) { S.ende = true; return; }
+  if (S.vorbei) { S.ende = true; if (S.level <= alleLevel().length) { einst.level = S.level; einstSpeichern(); } return; }
   S.level++; levelStart(S);
 }
 
@@ -1015,12 +1024,13 @@ function aufteilen() {
     const aw = W - 2 * seite, ah = H - rand.t - rand.b - 8;
     const s = Math.min(aw / 256, ah / 224);
     Object.assign(L, { s, gw: 256 * s, gh: 224 * s }); L.gx = (W - L.gw) / 2; L.gy = rand.t + 4 + (ah - L.gh) / 2;
-    const li = { x: 0, y: 0, w: L.gx, h: H }, re = { x: L.gx + L.gw, y: 0, w: W - L.gx - L.gw, h: H };
+    const li = { x: rand.l, y: 0, w: L.gx - rand.l, h: H }, re = { x: L.gx + L.gw, y: 0, w: W - L.gx - L.gw - rand.r, h: H };
     if (zwei) {
       L.zonen.push({ sp: 0, art: 'feuer', ...teil(li, 0, 0.4) }, { sp: 0, art: 'joy', ...teil(li, 0.4, 1) },
                    { sp: 1, art: 'feuer', ...teil(re, 0, 0.4) }, { sp: 1, art: 'joy', ...teil(re, 0.4, 1) });
     } else L.zonen.push({ sp: 0, art: 'joy', ...li }, { sp: 0, art: 'feuer', ...re });
     L.werkzeug = { x: L.gx + L.gw, y: 0, w: W - L.gx - L.gw, h: H, quer: true };
+    Object.assign($('ingame').style, { left: (rand.l + 8) + 'px', transform: 'none' });
   } else {                                                  // hochkant
     const oben = rand.t + 52;
     const s = Math.min((W - rand.l - rand.r) / 256, (steuern || ed ? H * 0.56 : H - oben) / 224);
@@ -1031,6 +1041,7 @@ function aufteilen() {
                            { sp: 1, art: 'feuer', ...teil(rh, 0, 0.4) }, { sp: 1, art: 'joy', ...teil(rh, 0.4, 1) });
     else L.zonen.push({ sp: 0, art: 'joy', ...lh }, { sp: 0, art: 'feuer', ...rh });
     L.werkzeug = { ...unten, quer: false };
+    Object.assign($('ingame').style, { left: '50%', transform: 'translateX(-50%)' });
   }
 }
 const teil = (z, a, b) => ({ x: z.x, y: z.y + z.h * a, w: z.w, h: z.h * (b - a) });
@@ -1101,6 +1112,9 @@ bild.addEventListener('pointermove', e => {
 const loslassen = e => { zeiger.delete(e.pointerId); if (modus === 'editor') editorZeiger = false; };
 bild.addEventListener('pointerup', loslassen); bild.addEventListener('pointercancel', loslassen);
 document.addEventListener('gesturestart', e => e.preventDefault());
+for (const el of [bild, $('ingame')]) for (const ev of ['touchstart', 'touchmove', 'touchend']) el.addEventListener(ev, e => { if (e.target === bild) e.preventDefault(); }, { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault());
+for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => Ton.start(), { passive: true });
 
 const tasten = { 0: [], 1: [] }, feuerTaste = [false, false];
 const RICHTUNG_TASTE = { w: [0, 0], d: [0, 1], s: [0, 2], a: [0, 3], ArrowUp: [1, 0], ArrowRight: [1, 1], ArrowDown: [1, 2], ArrowLeft: [1, 3] };
@@ -1768,13 +1782,30 @@ function menueAnpassen() {
   const netz = rolle === 'wirt' && Netz.offen;
   for (const b of document.querySelectorAll('.normal-start')) b.classList.toggle('versteckt', netz);
   for (const id of ['m-netz', 'b-netzstart', 'b-trennen']) $(id).classList.toggle('versteckt', !netz);
+  const stand = speicher.lies('stand', null);
+  $('b-fortsetzen').classList.toggle('versteckt', netz || !stand);
+  if (stand) $('fortsetzen-text').textContent = 'Level ' + stand.level + ' · ' + (stand.spieler === 2 ? '2 Spieler' : '1 Spieler') + ' · ' + stand.sp.map(s => s.punkte).join(' / ') + ' Punkte';
   einstZeigen();
 }
 function spielStarten(spieler) {
   neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund });
   modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
 }
+// Spielstand sichern: iPhone/iPad beenden Apps im Hintergrund manchmal einfach
+function spielSichern() {
+  if (!S || rolle !== 'lokal' || S.vorbei || S.ende) return;
+  speicher.schreib('stand', { ...S, karte: Array.from(S.karte).join(''), md: [], ton: [], tonNetz: [], pause: true });
+}
+function spielLaden() {
+  const k = speicher.lies('stand', null); if (!k) return false;
+  S = { ...k, karte: Uint8Array.from(k.karte, c => +c), kartenId: Math.random(), kv: (k.kv || 0) + 1, pause: true };
+  rolle = 'lokal'; modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
+  return true;
+}
+$('b-fortsetzen').onclick = () => { Ton.start(); if (!spielLaden()) menueAnpassen(); };
+addEventListener('pagehide', spielSichern);
 function zumMenue() {
+  speicher.schreib('stand', null);
   S = null; modus = 'menue'; zeiger.clear();
   if (rolle === 'gast' && Netz.offen) { gastWarten(); return; }
   zeigen('menue'); menueAnpassen(); aufteilen();
@@ -1809,7 +1840,7 @@ async function wachHalten() {
   try { if ('wakeLock' in navigator && !sperre) { sperre = await navigator.wakeLock.request('screen'); sperre.addEventListener('release', () => sperre = null); } } catch {}
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { if (modus === 'spiel' && S && rolle !== 'gast' && S.phase !== 'bilanz') S.pause = true; zeiger.clear(); }
+  if (document.hidden) { if (modus === 'spiel' && S && rolle !== 'gast' && S.phase !== 'bilanz') S.pause = true; zeiger.clear(); spielSichern(); }
   else { if (modus === 'spiel') wachHalten(); antwortAusSpeicher(); }
 });
 
@@ -1829,6 +1860,7 @@ function tick() {
     } else { S.md.length = 0; S.tonNetz.length = 0; if (rolle === 'wirt') S.mapVoll = true; }
     S.ton.length = 0;
     if (S.ende) zumMenue();
+    else if (ticks % 900 === 0) spielSichern();
   }
   if (rolle === 'gast' && Netz.offen && modus === 'spiel') {
     const e = eingabe(0), s = e.r + '/' + e.f;
