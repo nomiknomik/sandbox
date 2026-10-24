@@ -26,6 +26,8 @@ den Prompt, baut das Ergebnis ein. Regeln: siehe `CLAUDE.md` → „Design-Bilde
 ## Logo-Regeln (Schriftzüge)
 - Breit, z. B. **1536 × 512**, **transparenter Hintergrund**.
 - Buchstaben genau wie angegeben (vor allem kyrillisch) – nach dem Erzeugen prüfen!
+- In den Prompt schreiben: „leave a generous transparent margin around everything, nothing cut off“
+  (beim Танчики-Logo waren die Buchstaben oben angeschnitten).
 
 ---
 
@@ -53,10 +55,11 @@ small voxel pixel accents. Below it a smaller orange banner with the text exactl
 Arcade, kid-friendly, clean edges, no other text, no background scenery.
 ```
 
-## Танчики – App-Icon
+## Танчики – App-Icon  ✅ eingebaut (Танчики v3.3)
 ```
 Create a square 1024x1024 app icon, full-bleed background, no rounded corners, no text.
-Style: high-quality voxel / 3D pixel-art (Minecraft-like), toy-like, chunky, dramatic but friendly.
+Style: high-quality voxel / 3D pixel-art (Minecraft-like), toy-like, chunky, dramatic but friendly,
+same look as a voxel arcade game controller icon with soft studio lighting from the top left.
 Subject: one big olive-green (#527A45) voxel tank with orange (#FF7A24) accent stripes, seen from
 a 3/4 top-down angle, cannon pointing up-right, a bright muzzle flash and a small glowing shell.
 Around it: a few red voxel brick blocks and one steel block, dark grass voxel ground.
@@ -64,7 +67,7 @@ Background: midnight blue (#151923) with a warm orange explosion glow in the cor
 One clear silhouette, readable at 60 px, no letters, no real military insignia.
 ```
 
-## Танчики – Logo (Titel im Menü)
+## Танчики – Logo (Titel im Menü)  ✅ eingebaut (Танчики v3.3, `logo.webp`)
 ```
 Create a wide game logo, 1536x512, transparent background.
 Text exactly in Cyrillic: "ТАНЧИКИ" (letters Т-А-Н-Ч-И-К-И), all caps.

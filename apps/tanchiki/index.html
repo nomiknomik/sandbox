@@ -37,6 +37,9 @@
          font-family:Impact,'Arial Black',sans-serif;color:#E4E8EC;
          background:linear-gradient(180deg,#FFFFFF 0%,#C9D0D6 38%,#7E8790 52%,#B9C1C8 70%,#EEF1F4 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
          filter:drop-shadow(0 2px 0 #8a3a10) drop-shadow(0 2px 0 #6b2a08) drop-shadow(0 2px 0 #3a1604) drop-shadow(0 0 16px rgba(255,122,36,.55))}
+  /* Logo aus ChatGPT (docs/BILD-PROMPTS.md) */
+  .logo{margin:0 auto;width:min(100%,560px);filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+  .logo img{display:block;width:100%;height:auto}
   .unter{text-align:center;margin:-2px 0 8px;font:900 15px/1 Impact,'Arial Black',sans-serif;letter-spacing:5px;color:var(--accent);text-shadow:0 2px 0 #5a2206}
   .gross{padding:14px 16px;font-size:19px;background:linear-gradient(180deg,#FF9440,#E0601A);border:2px solid #FFB070;box-shadow:0 4px 0 #7a3510,0 0 14px rgba(255,122,36,.25);text-align:left;display:flex;align-items:center;gap:12px;text-shadow:0 2px 0 rgba(0,0,0,.35)}
   .gross small{display:block;font-weight:600;font-size:13px;opacity:.85}
@@ -95,6 +98,7 @@
   @media (orientation:landscape) and (max-height:540px){
     #menue > .innen{max-width:860px;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;align-items:start}
     #menue .titel{font-size:36px;grid-column:1/-1;margin:0}
+    #menue .logo{grid-column:1/-1;width:min(60%,380px)}
     #menue .unter{display:none}
     #menue .einst{gap:2px;padding:6px 10px}
     #menue .wahl button{padding:5px 10px}
@@ -117,8 +121,7 @@
 <!-- Hauptmenü -->
 <div id="menue" class="schicht">
   <div class="innen">
-    <div class="titel">ТАНЧИКИ</div>
-    <div class="unter">PIXEL WARFARE</div>
+    <h1 class="logo"><img src="logo.webp" alt="ТАНЧИКИ – Pixel Warfare" width="960" height="230"></h1>
     <div id="m-netz" class="karte versteckt"><p class="ok" style="margin:0">✓ Verbunden mit dem anderen Gerät – du bist Spieler 1.</p></div>
     <button class="gross blau versteckt" id="b-netzstart"><span class="sym">▶</span><span>SPIEL STARTEN<small>2 Spieler · zwei Geräte</small></span></button>
     <button class="gross gruen normal-start versteckt" id="b-fortsetzen"><span class="sym">⏯</span><span>WEITERSPIELEN<small id="fortsetzen-text"></small></span></button>
@@ -256,7 +259,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '3.2';
+const APP_VERSION = '3.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
