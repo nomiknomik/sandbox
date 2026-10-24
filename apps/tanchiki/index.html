@@ -139,7 +139,7 @@
       <div class="reihe"><span>Partner treffen</span>
         <div class="wahl" id="w-freund"><button data-w="1">friert ein</button><button data-w="0">nichts</button></div></div>
       <div class="reihe"><span>Grafik</span>
-        <div class="wahl" id="w-grafik"><button data-w="block">Block ✨</button><button data-w="klassisch">Klassisch</button></div></div>
+        <div class="wahl" id="w-grafik"><button data-w="3d">3D ✨</button><button data-w="block">Block</button><button data-w="klassisch">Klassisch</button></div></div>
       <div class="reihe"><span>Ton</span>
         <div class="wahl" id="w-ton"><button data-w="1">An</button><button data-w="0">Aus</button></div></div>
     </div>
@@ -257,9 +257,10 @@
 <div id="meldung"></div>
 <div id="version"></div>
 
+<script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '3.3';
+const APP_VERSION = '4.0';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1082,16 +1083,21 @@ function aufteilen() {
     Object.assign($('ingame').style, { left: '50%', transform: 'translateX(-50%)' });
   }
 }
+function dreiLage() { if (D3.bereit) D3.groesse(208 * L.s, D3_HOEHE * L.s, L.gx + 16 * L.s, L.gy + (8 + D3_OBEN) * L.s); }
 const teil = (z, a, b) => ({ x: z.x, y: z.y + z.h * a, w: z.w, h: z.h * (b - a) });
-addEventListener('resize', () => { aufteilen(); editorLeiste(); });
+addEventListener('resize', () => { aufteilen(); editorLeiste(); dreiLage(); });
 
 function allesMalen() {
   const V = ansicht();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.fillStyle = '#000'; g.fillRect(0, 0, bild.width, bild.height);
+  const drei = einst.grafik === '3d' && D3.bereit && modus !== 'editor' && !!V;
+  D3.zeigen(drei);
+  if (drei) g.clearRect(0, 0, bild.width, bild.height);
+  else { g.fillStyle = '#000'; g.fillRect(0, 0, bild.width, bild.height); }
   if (!V) return;
   const block = einst.grafik !== 'klassisch';
-  if (block) blockMalen(V); else spielMalen(V);
+  if (drei) { dreiLage(); D3.malen(V); blockMalen(V, true); }        // 3D-Feld unten, Rahmen + Anzeigen darüber
+  else if (block) blockMalen(V); else spielMalen(V);
   g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
   g.imageSmoothingEnabled = false;
   g.drawImage(block ? blockBild : spielBild, L.gx, L.gy, L.gw, L.gh);
@@ -1715,11 +1721,11 @@ function teilchenBewegen(dt) {
 
 /* ---------- Ein Bild in Block-Grafik ---------- */
 let hdLetzte = performance.now();
-function blockMalen(V) {
+function blockMalen(V, nurRahmen) {
   const jetzt = performance.now(), dt = V.pause ? 0 : Math.min(3, (jetzt - hdLetzte) / 16.67); hdLetzte = jetzt;
   HD.zeit += dt;
   const a = V.alpha == null ? 1 : V.alpha, blink = n => Math.floor(V.t / n) % 2 === 0, c = bg;
-  ereignisse(V); teilchenBewegen(dt);
+  if (!nurRahmen) { ereignisse(V); teilchenBewegen(dt); }
   // Rahmen aus Pflasterstein
   c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
   if (!blockMalen.muster) blockMalen.muster = c.createPattern(PFLASTER, 'repeat');
@@ -1727,6 +1733,12 @@ function blockMalen(V) {
   c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, 0, blockBild.width, blockBild.height);
   const ox = 16 * GR, oy = 8 * GR;
   c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox - 8, oy - 8, FR + 16, FR + 16);
+  if (nurRahmen) {                                       // 3D: Feld frei lassen, dort scheint das 3D-Bild durch
+    c.clearRect(ox, oy + D3_OBEN * GR, FR, D3_HOEHE * GR);
+    D3.texte(c, V, ox, oy);
+    seitenleisteHD(V); einblendungenHD(V, blink);
+    return;
+  }
   // Feld (mit Wackeln)
   const wx = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0, wy = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0;
   c.save(); c.beginPath(); c.rect(ox, oy, FR, FR); c.clip(); c.translate(ox + wx, oy + wy);
@@ -2620,7 +2632,8 @@ function editorLoeschen() {
    MENÜ & EINSTELLUNGEN
    ===================================================================== */
 let modus = 'menue', rolle = 'lokal', ticks = 0;
-const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true, grafik: 'block' }, speicher.lies('einst', {}));
+const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true, grafik: '3d' }, speicher.lies('einst', {}));
+if (!einst.grafik3d) { einst.grafik3d = 1; einst.grafik = '3d'; }        // einmalig: alle bekommen die neue 3D-Grafik
 function einstSpeichern() { speicher.schreib('einst', einst); einstZeigen(); }
 function zeigen(id) {
   for (const s of document.querySelectorAll('.schicht')) s.classList.toggle('versteckt', s.id !== id);
@@ -2636,7 +2649,7 @@ function einstZeigen() {
   wahlSetzen('w-stufe', einst.stufe, w => einst.stufe = w);
   wahlSetzen('w-auto', einst.auto ? 1 : 0, w => einst.auto = w === '1');
   wahlSetzen('w-freund', einst.freund ? 1 : 0, w => einst.freund = w === '1');
-  wahlSetzen('w-grafik', einst.grafik, w => einst.grafik = w);
+  wahlSetzen('w-grafik', einst.grafik, w => { einst.grafik = w; if (w === '3d') D3.laden(); });
   wahlSetzen('w-ton', einst.ton ? 1 : 0, w => { einst.ton = w === '1'; if (einst.ton) { Ton.start(); setTimeout(() => Ton.spiel('nehmen'), 50); } });
   const l = levelHolen(einst.level);
   $('l-zahl').innerHTML = einst.level + '<br><small style="font-weight:600;color:#aaa;font-size:11px">' + l.n + '</small>';
@@ -2835,6 +2848,7 @@ function schleife(jetzt) {
 
 // Los geht's
 einstZeigen(); menueAnpassen(); aufteilen();
+if (einst.grafik === '3d') D3.laden();
 requestAnimationFrame(schleife);
 codeAusLink();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
