@@ -1,7 +1,7 @@
 // Service Worker des Spieleportals: macht nur das Portal selbst offline-fähig.
 // Die Spiele haben eigene Service Worker (in apps/<name>/sw.js).
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und PORTAL_VERSION in index.html).
-const CACHE = 'portal-v1';
+const CACHE = 'portal-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 const PORTAL = new Set(SHELL.map(u => new URL(u, self.registration.scope).pathname));
 

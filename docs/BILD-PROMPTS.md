@@ -29,7 +29,7 @@ den Prompt, baut das Ergebnis ein. Regeln: siehe `CLAUDE.md` → „Design-Bilde
 
 ---
 
-## Spieleportal – App-Icon
+## Spieleportal – App-Icon  ✅ eingebaut (Portal v1.1)
 ```
 Create a square 1024x1024 app icon, full-bleed background, no rounded corners, no text.
 Style: high-quality voxel / 3D pixel-art (Minecraft-like cubes), toy-like and chunky,
