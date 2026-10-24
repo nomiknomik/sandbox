@@ -127,7 +127,7 @@
     <button class="gross grau versteckt" id="b-trennen"><span class="sym">✕</span><span>Verbindung trennen</span></button>
     <div class="einst">
       <div class="reihe"><span>Schwierigkeit</span>
-        <div class="wahl" id="w-stufe"><button data-w="leicht">Leicht</button><button data-w="normal">Normal</button><button data-w="schwer">Schwer</button></div></div>
+        <div class="wahl" id="w-stufe"><button data-w="leicht">Leicht 🛡</button><button data-w="normal">Normal</button><button data-w="schwer">Schwer</button></div></div>
       <div class="reihe"><span>Start-Level</span>
         <div class="zahl"><button id="l-minus">‹</button><b id="l-zahl">1</b><button id="l-plus">›</button></div></div>
       <div class="reihe"><span>Auto-Feuer (Touch)</span>
@@ -152,7 +152,8 @@
   <div class="innen">
     <div class="titel" style="font-size:40px">SO GEHT'S</div>
     <div class="karte"><h3>Ziel</h3>
-      <p>Zerstöre alle 20 Gegner-Panzer eines Levels. Beschütze dabei den <b>Adler</b> unten in der Mitte – wird er getroffen, ist das Spiel aus.</p></div>
+      <p>Zerstöre alle 20 Gegner-Panzer eines Levels. Beschütze dabei den <b>Adler</b> unten in der Mitte – wird er getroffen, ist das Spiel aus.</p>
+      <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen selten, 6 Leben.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
         <li><b>Touch:</b> Links irgendwo hinlegen und schieben = fahren. Rechts tippen/halten = schießen.</li>
@@ -236,7 +237,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -557,7 +558,8 @@ function levelHolen(nr) { const a = alleLevel(); return nr <= a.length ? a[nr - 
    ===================================================================== */
 const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];      // Richtungen: 0 hoch, 1 rechts, 2 runter, 3 links
 const STUFEN = {
-  leicht: { leben: 5, tempo: 0.8, feuer: 0.55, ziel: 0.3, maxG: 3, pause: 50, bonus: [2, 6, 10, 14, 18] },
+  // Leicht = fürs Kind: Adler hinter Stahl, Gegner langsam, schießen selten, Kugeln langsamer, viele Extras
+  leicht: { leben: 6, tempo: 0.65, feuer: 0.35, ziel: 0.15, maxG: 2, pause: 110, kugel: 0.75, stahl: true, bonus: [1, 4, 7, 10, 13, 16, 19] },
   normal: { leben: 3, tempo: 1, feuer: 1, ziel: 0.45, maxG: 4, pause: 0, bonus: [3, 10, 17] },
   schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17] },
 };
@@ -600,6 +602,7 @@ function levelStart(S) {
     maxG: S.st.maxG + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
     phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false });
   S.md.length = 0; S.kv++;
+  if (S.st.stahl) ring(S, STAHL);                          // Leicht: Adler von Anfang an hinter Stahl
   S.sp.forEach((p, i) => {
     p.kills = [0, 0, 0, 0]; p.warte = 0;
     if (p.aus) { p.aus = false; p.leben = 0; p.lvl = 0; }    // wer raus war, darf im neuen Level mit einem Panzer wieder mitmachen
@@ -693,7 +696,7 @@ function gegnerZug(S, p) {
     let w = 0.022 * S.st.feuer;
     if (inLinie(S, p)) w *= 5;
     if (!ok) w *= 2;
-    if (Math.random() < w) schiessen(S, p, g.kugel, false);
+    if (Math.random() < w) schiessen(S, p, g.kugel * (S.st.kugel || 1), false);
   }
 }
 function zielPunkt(S, p) {
@@ -857,8 +860,8 @@ function schritt(S, ein) {
   if (S.uhr > 0) S.uhr--;
   if (S.schaufel > 0) {                                   // Stahlmauer hält 20 s, am Ende blinkt sie
     S.schaufel--;
-    if (S.schaufel === 0) ring(S, ZIEGEL);
-    else if (S.schaufel < 180 && S.schaufel % 15 === 0) ring(S, (S.schaufel / 15) % 2 ? ZIEGEL : STAHL);
+    if (S.schaufel === 0) ring(S, S.st.stahl ? STAHL : ZIEGEL);
+    else if (S.schaufel < 180 && S.schaufel % 15 === 0 && !S.st.stahl) ring(S, (S.schaufel / 15) % 2 ? ZIEGEL : STAHL);
   }
   if (S.phase === 'spiel') {
     // neue Gegner
