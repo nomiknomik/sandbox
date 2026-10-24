@@ -177,6 +177,7 @@
     <div class="karte"><h3>Zwei Geräte – auch ohne Internet</h3>
       <ol>
         <li>Beide Geräte ins <b>selbe WLAN</b> (Bord-WLAN, Hotel, Zuhause) – oder ein iPhone macht einen <b>persönlichen Hotspot</b>.</li>
+        <li><b>Mit Internet:</b> auf beiden Geräten „Automatisch finden“ tippen – fertig (wie bei Würmer). Ohne Internet geht es so:</li>
         <li>Gerät A: „Spiel erstellen“ → QR-Code erscheint.</li>
         <li>Gerät B: „Mitspielen“ → QR-Code von A scannen → B zeigt einen Antwort-Code.</li>
         <li>A scannt den Code von B → fertig! Danach geht alles direkt von Gerät zu Gerät, kein Internet nötig.</li>
@@ -197,11 +198,14 @@
   <div class="innen">
     <div class="titel" style="font-size:36px">ZWEI GERÄTE</div>
     <div id="n-wahl">
-      <div class="karte" style="margin-bottom:10px"><p>Beide Geräte müssen im <b>selben WLAN</b> sein (oder eins macht einen Hotspot). Internet braucht man nicht.</p></div>
+      <div class="karte" style="margin-bottom:10px"><p>Beide Geräte müssen im <b>selben WLAN</b> sein (oder eins macht einen Hotspot).</p></div>
       <div style="display:grid;gap:10px">
+        <button class="gross blau" id="n-finden"><span class="sym">🔎</span><span>AUTOMATISCH FINDEN<small>auf beiden Geräten tippen – braucht kurz Internet (wie bei Würmer)</small></span></button>
+        <div class="klein" style="margin:4px 0 -2px">– oder ohne Internet, mit QR-Code –</div>
         <button class="gross" id="n-wirt"><span class="sym">📡</span><span>SPIEL ERSTELLEN<small>dieses Gerät ist Spieler 1</small></span></button>
         <button class="gross gruen" id="n-gast"><span class="sym">📷</span><span>MITSPIELEN<small>QR-Code vom anderen Gerät scannen – Spieler 2</small></span></button>
         <button class="gross grau" id="n-einfuegen-start"><span class="sym">📋</span><span>Code einfügen<small>falls die Kamera nicht geht</small></span></button>
+        <button class="gross grau" id="n-einladung"><span class="sym">🔑</span><span>Einladung zeigen<small>ein neues Gerät fürs automatische Finden einrichten</small></span></button>
       </div>
     </div>
     <div id="n-schritt" class="versteckt" style="display:flex;flex-direction:column;gap:10px">
@@ -252,7 +256,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2205,6 +2209,7 @@ function netzNachricht(m) {
   }
 }
 function netzVerbunden() {
+  if (Finder.aktiv) { Finder.stop(); if (rolle === 'wirt' && Ablage.cfg()) Ablage.aendern(() => ({ fertig: Date.now() })).catch(() => {}); }
   clearTimeout(verbindTimer);
   Netz.senden({ k: 'hallo', v: APP_VERSION });
   Netz.ping = 0;
@@ -2230,6 +2235,148 @@ function netzGetrennt() {
     netzSchritt('<b>Die Verbindung zum anderen Gerät ist weg.</b><br>Zum Weiterspielen am ersten Gerät „Neu verbinden“ tippen und den neuen Code hier scannen.', null, [
       ['📷 Neu scannen', gastStarten, 'gruen'], ['⌂ Menü', () => { rolle = 'lokal'; Netz.stop(); zumMenue(); }]]);
   }
+}
+
+/* =====================================================================
+   AUTOMATISCH FINDEN – wie bei Würmer: über eine verschlüsselte Datei
+   im privaten GitHub-Repo (tanchiki/signal.json). Zugang und Schlüssel
+   kommen von der Einrichtung aus Würmer/Морской бой (gleiche Adresse →
+   gleicher Gerätespeicher) oder aus der Einladung (MB1~…).
+   Wer zuerst sucht, wird Spieler 1 und legt ein Angebot hin; das zweite
+   Gerät findet es und antwortet. Danach geht alles direkt übers WLAN.
+   ===================================================================== */
+const b64 = u8 => { let s = ''; u8.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); };
+const warte = ms => new Promise(r => setTimeout(r, ms));
+const geraetId = speicher.lies('geraet', null) || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('geraet', id); return id; })();
+function einladungLesen(text) {
+  text = decodeURIComponent(String(text || '').trim()).replace(/^.*einladung=/, '').replace(/\s/g, '');
+  const t = text.split('~');
+  if (t.length !== 5 || t[0] !== 'MB1') return null;
+  try { if (unb64(t[4]).length !== 32) return null; } catch { return null; }
+  return { o: t[1], r: t[2], t: t[3], k: t[4] };
+}
+const Ablage = {
+  pfad: 'tanchiki/signal.json', sha: null, schluessel: null, schluesselVon: null,
+  cfg() {
+    for (const k of ['tk-sync', 'wu-sync', 'mb-sync']) { try { const c = JSON.parse(localStorage.getItem(k)); if (c && c.t && c.k && c.o && c.r) return c; } catch {} }
+    return null;
+  },
+  url() { const c = this.cfg(); return `https://api.github.com/repos/${c.o}/${c.r}/contents/${this.pfad}`; },
+  kopf() { return { Authorization: 'Bearer ' + this.cfg().t, Accept: 'application/vnd.github+json' }; },
+  async key() {
+    const k = this.cfg().k;
+    if (this.schluesselVon !== k) { this.schluessel = await crypto.subtle.importKey('raw', unb64(k), 'AES-GCM', false, ['encrypt', 'decrypt']); this.schluesselVon = k; }
+    return this.schluessel;
+  },
+  async lesen() {
+    const res = await fetch(this.url() + '?t=' + Date.now(), { headers: this.kopf(), cache: 'no-store' });
+    if (res.status === 404) { this.sha = null; return null; }
+    if (res.status === 401) throw new Error('Der Zugang (Token) ist ungültig oder abgelaufen.');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json(); this.sha = j.sha;
+    try {
+      const roh = JSON.parse(atob(j.content.replace(/\s/g, '')));
+      const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(roh.iv) }, await this.key(), unb64(roh.d));
+      return JSON.parse(new TextDecoder().decode(d));
+    } catch { return null; }                       // anderer Schlüssel / kaputt → wie leer behandeln
+  },
+  async schreiben(stand) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const d = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.key(), new TextEncoder().encode(JSON.stringify(stand)));
+    const body = { message: 'Танчики: Verbindung', content: btoa(JSON.stringify({ v: 1, iv: b64(iv), d: b64(new Uint8Array(d)) })) };
+    if (this.sha) body.sha = this.sha;
+    const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.status === 409 || res.status === 422) return false;              // das andere Gerät war schneller
+    if (res.status === 403 || res.status === 404) throw new Error('Der Zugang darf nicht schreiben.');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    this.sha = (await res.json()).content.sha; return true;
+  },
+  // lesen → ändern → schreiben; war jemand schneller, nochmal
+  async aendern(fn) {
+    for (let i = 0; i < 6; i++) {
+      const neu = fn(await this.lesen());
+      if (!neu) return false;
+      if (await this.schreiben(neu)) return true;
+      await warte(200 + Math.random() * 500);
+    }
+    throw new Error('Das andere Gerät schreibt gerade – bitte nochmal.');
+  },
+};
+const FRISCH = 45000;                                  // so lange gilt ein Angebot
+const Finder = {
+  lauf: 0,
+  stop() { this.lauf++; this.aktiv = false; clearInterval(this.timer); this.timer = null; },
+  async start() {
+    this.stop(); this.aktiv = true; const lauf = this.lauf, weiter = () => lauf === this.lauf && !Netz.offen;
+    zeigen('netz');
+    if (!Ablage.cfg()) return einladungFehlt();
+    netzSchritt('<b>Suche das andere Gerät …</b><br>Auf dem anderen Gerät auch „Automatisch finden“ tippen.', null, [['Abbrechen', () => { this.stop(); Netz.stop(); rolle = 'lokal'; netzWahl(); }]], '🔎 suche …');
+    try {
+      const fremd = s => s && s.a && s.a.von !== geraetId && Date.now() - s.a.zeit < FRISCH && !s.b ? s.a : null;
+      let angebot = fremd(await Ablage.lesen());
+      if (!angebot) {
+        // Ich bin zuerst da → Spieler 1: Angebot hinlegen (falls das andere Gerät nicht gleichzeitig schneller war)
+        netzStatus('🔎 Warte auf das andere Gerät …');
+        rolle = 'wirt';
+        const code = await Netz.erstellen();
+        if (!weiter()) return;
+        await Ablage.aendern(s => { angebot = fremd(s); return angebot ? null : { a: { von: geraetId, code, zeit: Date.now() } }; });
+        if (!angebot) return this.warteAufAntwort(code, lauf);
+        Netz.stop();
+      }
+      // Es gibt schon ein Angebot → ich bin Spieler 2 und antworte
+      rolle = 'gast';
+      netzStatus('🔎 Gefunden! Verbinde …');
+      const antwort = await Netz.beitreten(angebot.code);
+      if (!weiter()) return;
+      await Ablage.aendern(s => s && s.a && s.a.code === angebot.code ? { ...s, b: { von: geraetId, code: antwort, zeit: Date.now() } } : null);
+      this.nichtsGeklappt(lauf, 20000);
+    } catch (e) { if (weiter()) netzSchritt('Automatisch finden ging nicht: ' + e.message, null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]); }
+  },
+  warteAufAntwort(code, lauf) {
+    const beginn = Date.now(); let auffrischen = Date.now(), fertig = false;
+    this.timer = setInterval(async () => {
+      if (lauf !== this.lauf || Netz.offen || fertig) return clearInterval(this.timer);
+      try {
+        const s = await Ablage.lesen();
+        if (s && s.a && s.a.code === code && s.b && !fertig) {
+          fertig = true; clearInterval(this.timer);
+          netzStatus('🔎 Gefunden! Verbinde …');
+          await Netz.antwort(s.b.code);
+          return this.nichtsGeklappt(lauf, 15000);
+        }
+        if (Date.now() - auffrischen > 25000) {             // Angebot frisch halten
+          auffrischen = Date.now();
+          await Ablage.aendern(t => t && t.a && t.a.code === code && !t.b ? { ...t, a: { ...t.a, zeit: Date.now() } } : null);
+        }
+        if (Date.now() - beginn > 180000) { clearInterval(this.timer); netzSchritt('Kein anderes Gerät gefunden.', null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]); }
+      } catch {}
+    }, 1500);
+  },
+  nichtsGeklappt(lauf, ms) {
+    setTimeout(() => {
+      if (lauf === this.lauf && !Netz.offen) netzSchritt('<b>Gefunden, aber keine Verbindung.</b><br>Sind beide Geräte im <b>selben WLAN</b>? (Mit Mobilfunk allein geht es nicht.)', null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]);
+    }, ms);
+  },
+};
+// Noch nicht eingerichtet? Einladung (MB1~…) von Würmer/Морской бой scannen – oder von einem anderen Танчики zeigen lassen
+function einladungFehlt() {
+  netzSchritt('<b>Dieses Gerät ist noch nicht eingerichtet.</b><br>Einmal die <b>Einladung</b> scannen – auf dem eingerichteten Gerät in Танчики unter „Zwei Geräte → Einladung zeigen“ (oder in Würmer/Морской бой).', null, [
+    ['📷 Einladung scannen', () => Scanner.start(t => einladungLesen(t) ? null : 'Das ist keine Einladung (MB1~…).', t => { einladungSpeichern(einladungLesen(t)); }), 'blau'],
+    ['📋 Einfügen', einfuegenZeigen]]);
+}
+function einladungSpeichern(cfg) {
+  try { localStorage.setItem('tk-sync', JSON.stringify(cfg)); } catch {}
+  meldung('✓ Eingerichtet – jetzt automatisch finden');
+  Finder.start();
+}
+function einladungZeigen() {
+  const c = Ablage.cfg();
+  if (!c) return einladungFehlt();
+  const link = location.origin + location.pathname + '#einladung=' + ['MB1', c.o, c.r, c.t, c.k].join('~');
+  zeigen('netz');
+  netzSchritt('<b>Einladung für ein neues Gerät</b><br>Mit dem anderen Gerät scannen (Kamera-App oder „Automatisch finden → Einladung scannen“). Danach finden sich die Geräte von selbst.<br><span class="warn">Nur eigenen Geräten zeigen – darin steckt der Zugang.</span>', link, [['← Zurück', netzWahl]]);
 }
 
 /* ---------- Netzwerk-Bildschirm ---------- */
@@ -2303,6 +2450,7 @@ function gastWarten() {
 function einfuegenZeigen() { $('n-paste').classList.remove('versteckt'); $('n-feld').value = ''; $('n-feld').focus(); }
 $('n-feld-ok').onclick = () => {
   const text = $('n-feld').value, a = codeLesen(codeFinden(text));
+  if (!a && einladungLesen(text)) { $('n-paste').classList.add('versteckt'); return einladungSpeichern(einladungLesen(text)); }
   if (!a) return meldung('Kein gültiger Code');
   if (a.typ === 'A') return angebotBenutzen(text);
   const f = pruefeAntwort(text); if (f) return meldung(f, 4000);
@@ -2313,10 +2461,13 @@ async function teilen(link) {
   try { await navigator.clipboard.writeText(link); meldung('Code kopiert'); } catch { meldung('Kopieren ging nicht'); }
 }
 $('b-netz').onclick = netzWahl;
-$('n-wirt').onclick = wirtStarten;
-$('n-gast').onclick = gastStarten;
+$('n-wirt').onclick = () => { Finder.stop(); wirtStarten(); };
+$('n-finden').onclick = () => Finder.start();
+$('n-einladung').onclick = einladungZeigen;
+$('n-gast').onclick = () => { Finder.stop(); gastStarten(); };
 $('n-einfuegen-start').onclick = () => { netzSchritt('Code vom anderen Gerät hier einfügen:', null, []); einfuegenZeigen(); };
 $('n-zurueck').onclick = () => {
+  Finder.stop();
   if (!Netz.offen) { Netz.stop(); rolle = 'lokal'; }
   if (rolle === 'gast' && Netz.offen) return gastWarten();
   if (S && modus === 'spiel') { rolle = 'lokal'; S.sp.length = 1; S.spieler = 1; S.panzer = S.panzer.filter(p => p.sp !== 1); zeigen(null); aufteilen(); return; }
@@ -2324,6 +2475,8 @@ $('n-zurueck').onclick = () => {
 };
 // Wurde ein Code mit der iPhone-Kamera-App gescannt, öffnet sich Safari mit #TK1~…
 function codeAusLink() {
+  const ein = /einladung=/.test(location.hash) && einladungLesen(location.hash);
+  if (ein) { history.replaceState(null, '', location.pathname); return einladungSpeichern(ein); }
   const code = codeFinden(decodeURIComponent(location.hash));
   if (!code) return;
   history.replaceState(null, '', location.pathname);
@@ -2340,6 +2493,7 @@ function antwortAusSpeicher() {
   speicher.schreib('antwort', null); antwortBenutzen(a.code);
 }
 addEventListener('storage', antwortAusSpeicher);
+addEventListener('hashchange', codeAusLink);
 
 /* ---------- QR-Code mit der Kamera lesen (jsQR wird erst hier geladen) ---------- */
 const Scanner = {

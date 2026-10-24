@@ -74,3 +74,10 @@ lernt man, wie zwei Geräte miteinander reden.
   brauchen ein gemeinsames WLAN (Bord-WLAN, Hotel, Hotspot). Im Flugzeug
   zuverlässig: **2 Spieler auf einem iPad** (geteilte Touch-Steuerung) oder
   Bluetooth-Gamecontroller (Gamepad-API).
+- v3.2 „🔎 Automatisch finden“ (wie Würmer): Handschlag über `tanchiki/signal.json` im
+  privaten Repo (AES-GCM). Zugang/Schlüssel werden aus `tk-sync`, `wu-sync` oder `mb-sync`
+  gelesen – alle Spiele liegen unter derselben Adresse und teilen sich den Gerätespeicher,
+  darum ist ein in Würmer eingerichtetes Gerät sofort bereit. Wer zuerst sucht, legt ein
+  Angebot hin (Spieler 1), das zweite Gerät antwortet. Gleichzeitiges Tippen klärt die
+  `sha`-Prüfung von GitHub (der Langsamere wird Spieler 2). Braucht kurz Internet;
+  ohne Internet bleibt der QR-Tausch.
