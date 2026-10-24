@@ -55,6 +55,9 @@
   .wahl{display:flex;background:#0D1018;border-radius:10px;padding:3px;gap:3px}
   .wahl button{padding:7px 11px;font-size:15px;background:transparent;color:#bbb;border-radius:8px}
   .wahl button.an{background:var(--accent);color:#fff}
+  .farben{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;max-width:260px}
+  .farben button{width:30px;height:30px;padding:0;border-radius:8px;border:3px solid transparent;box-shadow:inset 0 -6px 0 rgba(0,0,0,.25)}
+  .farben button.an{border-color:#fff;transform:scale(1.1)}
   .zahl{display:flex;align-items:center;gap:6px}
   .zahl button{width:38px;height:36px;padding:0;background:#333;font-size:20px}
   .zahl b{min-width:64px;text-align:center;font-size:16px}
@@ -143,6 +146,8 @@
         <div class="wahl" id="w-auto"><button data-w="0">Aus</button><button data-w="1">An</button></div></div>
       <div class="reihe"><span>Partner treffen</span>
         <div class="wahl" id="w-freund"><button data-w="1">friert ein</button><button data-w="0">nichts</button></div></div>
+      <div class="reihe"><span>Farbe Spieler 1</span><div class="farben" id="w-farbe1"></div></div>
+      <div class="reihe"><span>Farbe Spieler 2</span><div class="farben" id="w-farbe2"></div></div>
       <div class="reihe"><span>Grafik</span>
         <div class="wahl" id="w-grafik"><button data-w="3d">3D ✨</button><button data-w="block">Block</button><button data-w="klassisch">Klassisch</button></div></div>
       <div class="reihe"><span>Ton</span>
@@ -174,6 +179,8 @@
         <li><b>Gamecontroller</b> (per Bluetooth am iPad/iPhone): Steuerkreuz + A/B. Start = Pause.</li>
         <li><b>Tastatur:</b> Spieler 1: W A S D + Leertaste · Spieler 2: Pfeile + Enter · P = Pause</li>
       </ul></div>
+    <div class="karte"><h3>Boss</h3>
+      <p>Sind alle 20 Gegner weg, bricht oben ein riesiger <b>Boss-Panzer</b> herein. Er schießt doppelt und hält viele Treffer aus (Balken oben). Bei jedem Drittel lässt er ein Extra fallen. Erst wenn er besiegt ist, ist das Level geschafft – 2000 Punkte!</p></div>
     <div class="karte"><h3>Besondere Level</h3>
       <p>Jedes 4. Level spielt <b>nachts</b> – nur Scheinwerfer, Kugeln und Feuer leuchten. Auf Eis-Leveln <b>schneit</b> es. Nach Level 20 geht es mit Zufalls-Leveln endlos weiter.</p></div>
     <div class="karte"><h3>Gelände</h3>
@@ -266,7 +273,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.0';
+const APP_VERSION = '5.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -392,6 +399,7 @@ const FARBEN = {
   oliv: ['#D8E890', '#7C9C20', '#3C4C08'],
   gold: ['#FCF0B0', '#D8B000', '#6C5000'],
   hgruen: ['#D0FCC8', '#58C868', '#1C6C2C'],
+  boss: ['#E8C8FF', '#8A40C8', '#3A1060'],
 };
 function panzerBild(form, bild, pal) {
   const d = FORMEN[form], c = leinwand(16, 16), g = c.getContext('2d');
@@ -435,10 +443,11 @@ const ADLER_KAPUTT = ausText([
   '..dww.ww.wwdd...', '.dddwwddwwwddd..', '...dddddddddd...', '..dddddddddddd..'], { w: '#8C8C8C', l: '#BCBCBC', d: '#4C4C4C' });
 
 // --- Extras (Bonus) ---
-const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer'];
+const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer', 'turbo', 'doppel'];
 const BONUS_TEXT = {
   helm: 'Helm: 10 Sekunden unverwundbar', uhr: 'Uhr: alle Gegner frieren ein', schaufel: 'Schaufel: Stahlmauer um den Adler',
   stern: 'Stern: stärkerer Panzer (3 Sterne = Stahl kaputt)', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
+  turbo: 'Turbo: 15 Sekunden viel schneller fahren', doppel: 'Doppelschuss: 20 Sekunden zwei Kugeln auf einmal',
 };
 const BONUS_BILD = {
   helm: ['............', '....yyyy....', '..yyyyyyyy..', '.yyywwyyyyy.', '.yywwyyyyyy.', 'yyywyyyyyyyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', 'dddddddddddd', 'yyy......yyy', '............'],
@@ -446,9 +455,11 @@ const BONUS_BILD = {
   schaufel: ['.......ww...', '......w..w..', '.......ww...', '........b...', '.......b....', '......b.....', '....gg......', '...gwgg.....', '..gwggg.....', '..gggg......', '..ggg.......', '...g........'],
   stern: ['.....yy.....', '.....yy.....', '....yyyy....', 'yyyyyyyyyyyy', '.yyyywwyyyy.', '..yyyyyyyy..', '...yyyyyy...', '...yyyyyy...', '..yyy..yyy..', '..yy....yy..', '.yy......yy.'],
   granate: ['.....ggg....', '....g..dd...', '.....dddd...', '...GGGGGG...', '..GGhGGhGG..', '..GGGGGGGG..', '..GhGGhGGG..', '..GGGGGGGG..', '..GGhGGhGG..', '..GGGGGGGG..', '...GGGGGG...'],
+  turbo: ['.....yyyy...', '....yyyy....', '...yyyy.....', '..yyyy......', '.yyyyyyyyy..', '.yyyyyyyyy..', '......yyyy..', '.....yyyy...', '....yyyy....', '...yyy......', '..yy........'],
+  doppel: ['..ww....ww..', '.wwww..wwww.', '.wwww..wwww.', '.oooo..oooo.', '.oooo..oooo.', '.oooo..oooo.', '.oooo..oooo.', '.dddd..dddd.', '.dddd..dddd.', '............'],
   panzer: ['.....ww.....', '.....ww.....', '.....ww.....', '.ww.wwww.ww.', '.wwwwyywwww.', '.ww.wyyw.ww.', '.wwwwyywwww.', '.ww.wwww.ww.', '.wwwwwwwwww.', '.ww......ww.'],
 };
-const BONUS_FARBEN = { y: '#F8D030', w: '#FCFCFC', d: '#404040', g: '#9C9C9C', b: '#8C5020', G: '#2C7C2C', h: '#6CC86C' };
+const BONUS_FARBEN = { o: '#F08020', y: '#F8D030', w: '#FCFCFC', d: '#404040', g: '#9C9C9C', b: '#8C5020', G: '#2C7C2C', h: '#6CC86C' };
 const bonusBilder = {};
 for (const art of BONUS_ARTEN) {
   const c = leinwand(16, 16), g = c.getContext('2d');
@@ -610,9 +621,9 @@ function levelHolen(nr) { const a = alleLevel(); return nr <= a.length ? a[nr - 
 const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];      // Richtungen: 0 hoch, 1 rechts, 2 runter, 3 links
 const STUFEN = {
   // Leicht = fürs Kind: Adler hinter Stahl, Gegner langsam, schießen selten, Kugeln langsamer, viele Extras
-  leicht: { leben: 6, tempo: 0.65, feuer: 0.35, ziel: 0.15, maxG: 2, pause: 110, kugel: 0.75, stahl: true, bonus: [1, 4, 7, 10, 13, 16, 19] },
+  leicht: { leben: 6, tempo: 0.65, feuer: 0.35, ziel: 0.15, maxG: 2, pause: 110, kugel: 0.75, stahl: true, bonus: [1, 4, 7, 10, 13, 16, 19], bossHp: 8 },
   normal: { leben: 3, tempo: 1, feuer: 1, ziel: 0.45, maxG: 4, pause: 0, bonus: [3, 10, 17] },
-  schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17] },
+  schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17], bossHp: 20 },
 };
 // Gegner-Arten: normal, flink, Kanone, schwer gepanzert
 const GEGNER = [
@@ -620,6 +631,7 @@ const GEGNER = [
   { tempo: 1.0, kugel: 2.5, hp: 1, pkt: 200 },
   { tempo: 0.6, kugel: 4.5, hp: 1, pkt: 300 },
   { tempo: 0.5, kugel: 3, hp: 4, pkt: 400 },
+  { tempo: 0.42, kugel: 3.2, hp: 14, pkt: 2000 },   // Boss
 ];
 const SP_TEMPO = 0.75;
 const ueber = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
@@ -642,7 +654,7 @@ function gegnerMix(level) {
 
 function neuesSpiel(opt) {
   const st = STUFEN[opt.stufe] || STUFEN.normal;
-  S = { opt, st, spieler: opt.spieler, level: opt.level, t: 0, pt: 0, nid: 1, kid: 1, kv: 0, ton: [], tonNetz: [], md: [], pause: false,
+  S = { opt, st, farben: opt.farben || ['p1', 'p2'], spieler: opt.spieler, level: opt.level, t: 0, pt: 0, nid: 1, kid: 1, kv: 0, ton: [], tonNetz: [], md: [], pause: false,
         sp: [...Array(opt.spieler)].map(() => ({ leben: st.leben - 1, punkte: 0, lvl: 0, aus: false, kills: [0, 0, 0, 0], warte: 0, extra: 0 })) };
   levelStart(S);
 }
@@ -651,7 +663,7 @@ function levelStart(S) {
   Object.assign(S, { levelName: L.n, karte: basisVorbereiten(viertelZuKarte(L.v)), mapVoll: true, panzer: [], kugeln: [], effekte: [], bonus: null,
     basisKaputt: false, schaufel: 0, uhr: 0, liste: gegnerMix(S.level), gegnerIdx: 0, spawnT: 30, spawnOrt: 0,
     maxG: S.st.maxG + 1 + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
-    phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false });
+    phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false, boss: 0, bossWarn: 0, bossMax: 0 });
   S.md.length = 0; S.kv++;
   if (S.st.stahl) ring(S, STAHL);                          // Leicht: Adler von Anfang an hinter Stahl
   S.sp.forEach((p, i) => {
@@ -677,26 +689,28 @@ function gegnerSetzen(S, x, y) {
 function setze(S, i, t) { if (S.karte[i] !== t) { S.karte[i] = t; S.md.push(i, t); S.kv++; } }
 
 // Darf ein Panzer hier stehen? (Ziegel, Stahl, Wasser und der Adler sind im Weg)
-function frei(S, x, y) {
-  if (x < 0 || y < 0 || x > FB - 16 || y > FH - 16) return false;
-  for (let r = y >> 2; r <= (y + 15) >> 2; r++) for (let c = x >> 2; c <= (x + 15) >> 2; c++) {
+const GROESSE = p => p.gr || 16;                   // normale Panzer 16, der Boss 32
+function frei(S, x, y, gr = 16) {
+  if (x < 0 || y < 0 || x > FB - gr || y > FH - gr) return false;
+  for (let r = y >> 2; r <= (y + gr - 1) >> 2; r++) for (let c = x >> 2; c <= (x + gr - 1) >> 2; c++) {
     const t = S.karte[r * NX + c]; if (t === ZIEGEL || t === STAHL || t === WASSER) return false;
   }
-  return !ueber(x, y, 16, 16, BX, BY, 16, 16);
+  return !ueber(x, y, gr, gr, BX, BY, 16, 16);
 }
 // Steht ein anderer Panzer im Weg? (Wer schon überlappt, darf sich wegbewegen)
 function imWeg(S, p, x, y) {
-  for (const q of S.panzer) if (q !== p && !q.tot && ueber(x, y, 16, 16, q.x, q.y, 16, 16) && !ueber(p.x, p.y, 16, 16, q.x, q.y, 16, 16)) return true;
+  const g = GROESSE(p);
+  for (const q of S.panzer) { const h = GROESSE(q); if (q !== p && !q.tot && ueber(x, y, g, g, q.x, q.y, h, h) && !ueber(p.x, p.y, g, g, q.x, q.y, h, h)) return true; }
   return false;
 }
-const aufEis = (S, p) => S.karte[((p.y + 8) >> 2) * NX + ((p.x + 8) >> 2)] === EIS;
+const aufEis = (S, p) => S.karte[((p.y + GROESSE(p) / 2) >> 2) * NX + ((p.x + GROESSE(p) / 2) >> 2)] === EIS;
 
 // Drehen: quer zur alten Richtung rastet der Panzer auf ein 8er-Gitter ein – so passt er leichter durch Lücken
 function drehen(S, p, r) {
   if (r === p.r) return;
   if ((r & 1) !== (p.r & 1)) {
-    if (p.r & 1) { const nx = Math.round(p.x / 8) * 8; if (frei(S, nx, p.y) && !imWeg(S, p, nx, p.y)) p.x = nx; }
-    else { const ny = Math.round(p.y / 8) * 8; if (frei(S, p.x, ny) && !imWeg(S, p, p.x, ny)) p.y = ny; }
+    if (p.r & 1) { const nx = Math.round(p.x / 8) * 8; if (frei(S, nx, p.y, GROESSE(p)) && !imWeg(S, p, nx, p.y)) p.x = nx; }
+    else { const ny = Math.round(p.y / 8) * 8; if (frei(S, p.x, ny, GROESSE(p)) && !imWeg(S, p, p.x, ny)) p.y = ny; }
   }
   p.r = r;
 }
@@ -707,13 +721,14 @@ function fahren(S, p, tempo) {
   while (p.sub >= 1) {
     p.sub -= 1;
     const nx = p.x + DX[p.r], ny = p.y + DY[p.r];
-    if (!frei(S, nx, ny) || imWeg(S, p, nx, ny)) { p.sub = 0; return false; }
+    if (!frei(S, nx, ny, GROESSE(p)) || imWeg(S, p, nx, ny)) { p.sub = 0; return false; }
     p.x = nx; p.y = ny;
   }
   return true;
 }
-function schiessen(S, p, v, kraft) {
-  S.kugeln.push({ id: S.kid++, x: p.x + 8 + DX[p.r] * 8, y: p.y + 8 + DY[p.r] * 8, r: p.r, v, kraft, von: p.id, sp: p.sp });
+function schiessen(S, p, v, kraft, versatz = 0) {
+  const h = GROESSE(p) / 2, qx = DY[p.r] * versatz, qy = DX[p.r] * versatz;     // versatz: seitlich verschoben (Doppelschuss)
+  S.kugeln.push({ id: S.kid++, x: p.x + h + DX[p.r] * h + qx, y: p.y + h + DY[p.r] * h + qy, r: p.r, v, kraft, von: p.id, sp: p.sp });
   p.kugeln++; p.feuerT = p.sp >= 0 ? 10 : 25;
   if (p.sp >= 0) S.ton.push('schuss');
 }
@@ -721,15 +736,21 @@ function schiessen(S, p, v, kraft) {
 function spielerZug(S, p, e) {
   if (p.starr > 0) { p.starr--; return; }
   if (S.phase !== 'spiel' || !e) e = { r: -1, f: false };
-  const sp = S.sp[p.sp];
+  const sp = S.sp[p.sp], tempo = SP_TEMPO * (p.turbo > 0 ? 1.6 : 1);
+  if (p.turbo > 0) p.turbo--;
+  if (p.doppel > 0) p.doppel--;
   if (e.r >= 0) {
     drehen(S, p, e.r);
-    fahren(S, p, SP_TEMPO);
+    fahren(S, p, tempo);
     p.rutsch = aufEis(S, p) ? 28 : 0;
   } else if (p.rutsch > 0) {                               // auf dem Eis rutscht man noch ein Stück weiter
-    p.rutsch--; if (!fahren(S, p, SP_TEMPO) || !aufEis(S, p)) p.rutsch = 0;
+    p.rutsch--; if (!fahren(S, p, tempo) || !aufEis(S, p)) p.rutsch = 0;
   }
-  if (e.f && p.feuerT === 0 && p.kugeln < (sp.lvl >= 2 ? 2 : 1)) schiessen(S, p, sp.lvl >= 1 ? 4.5 : 3, sp.lvl >= 3);
+  const max = (sp.lvl >= 2 ? 2 : 1) * (p.doppel > 0 ? 2 : 1), v = sp.lvl >= 1 ? 4.5 : 3;
+  if (e.f && p.feuerT === 0 && p.kugeln < max) {
+    if (p.doppel > 0) { schiessen(S, p, v, sp.lvl >= 3, -4); schiessen(S, p, v, sp.lvl >= 3, 4); }   // Doppelschuss: zwei Kugeln nebeneinander
+    else schiessen(S, p, v, sp.lvl >= 3);
+  }
   if (S.bonus && ueber(p.x, p.y, 16, 16, S.bonus.x, S.bonus.y, 16, 16)) bonusNehmen(S, p);
 }
 
@@ -744,10 +765,13 @@ function gegnerZug(S, p) {
     if ((p.x !== ax || p.y !== ay) && p.x % 8 === 0 && p.y % 8 === 0 && Math.random() < 0.07) kiNeu(S, p, false);
   }
   if (p.kugeln === 0 && p.feuerT === 0) {
-    let w = 0.022 * S.st.feuer;
+    let w = 0.022 * S.st.feuer * (p.typ === 4 ? 1.6 : 1);
     if (inLinie(S, p)) w *= 5;
     if (!ok) w *= 2;
-    if (Math.random() < w) schiessen(S, p, g.kugel * (S.st.kugel || 1), false);
+    if (Math.random() < w) {
+      if (p.typ === 4) { schiessen(S, p, g.kugel * (S.st.kugel || 1), false, -7); schiessen(S, p, g.kugel * (S.st.kugel || 1), false, 7); S.ton.push('boss'); }
+      else schiessen(S, p, g.kugel * (S.st.kugel || 1), false);
+    }
   }
 }
 function zielPunkt(S, p) {
@@ -770,8 +794,9 @@ function kiNeu(S, p, blockiert) {
 }
 // Ist ein Spieler oder der Adler genau vor dem Rohr?
 function inLinie(S, p) {
-  const vor = (x, y) => p.r === 0 ? Math.abs(x - p.x) < 8 && y < p.y : p.r === 2 ? Math.abs(x - p.x) < 8 && y > p.y
-                      : p.r === 1 ? Math.abs(y - p.y) < 8 && x > p.x : Math.abs(y - p.y) < 8 && x < p.x;
+  const px = p.x + (GROESSE(p) - 16) / 2, py = p.y + (GROESSE(p) - 16) / 2, b = GROESSE(p) / 2;
+  const vor = (x, y) => p.r === 0 ? Math.abs(x - px) < b && y < py : p.r === 2 ? Math.abs(x - px) < b && y > py
+                      : p.r === 1 ? Math.abs(y - py) < b && x > px : Math.abs(y - py) < b && x < px;
   if (vor(BX, BY)) return true;
   return S.panzer.some(q => q.sp >= 0 && !q.tot && vor(q.x, q.y));
 }
@@ -822,7 +847,7 @@ function kugelTrifft(S, k) {
   }
   // Panzer?
   for (const p of S.panzer) {
-    if (p.tot || p.id === k.von || p.spawn > 0 || !ueber(x0, y0, 4, 4, p.x, p.y, 16, 16)) continue;
+    if (p.tot || p.id === k.von || p.spawn > 0 || !ueber(x0, y0, 4, 4, p.x, p.y, GROESSE(p), GROESSE(p))) continue;
     if (k.sp < 0 && p.sp < 0) continue;              // Gegner schießen sich nicht gegenseitig ab
     kugelWeg(S, k);
     if (p.sp >= 0 && k.sp >= 0) { if (S.opt.freund && !p.schild) { p.starr = 150; S.ton.push('starr'); } return; }   // Partner getroffen: friert kurz ein
@@ -857,11 +882,25 @@ function spielerTreffer(S, p) {
   if (sp.leben > 0) { sp.leben--; sp.warte = 70; }
   else { sp.aus = true; if (S.sp.every(s => s.aus) && S.phase === 'spiel') spielVorbei(S); }
 }
-function gegnerTreffer(S, p, von) {
+function gegnerTreffer(S, p, von, schaden = 1) {
   if (p.bonus) { p.bonus = false; bonusSetzen(S); }
-  if (--p.hp > 0) { S.ton.push('panzerung'); return; }
-  p.tot = true; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('explosion');
-  if (von >= 0) { const pkt = GEGNER[p.typ].pkt; punkte(S, von, pkt); S.sp[von].kills[p.typ]++; S.effekte.push({ art: 'p', x: p.x + 8, y: p.y + 8, t: 0, w: pkt }); }
+  const vorher = p.hp; p.hp -= schaden;
+  if (p.typ === 4 && p.hp > 0 && Math.floor(vorher / (p.maxHp / 3)) !== Math.floor(p.hp / (p.maxHp / 3))) bonusSetzen(S);   // Boss lässt Extras fallen
+  if (p.hp > 0) { S.ton.push('panzerung'); return; }
+  const m = GROESSE(p) / 2;
+  p.tot = true; knall(S, 'g', p.x + m, p.y + m); S.ton.push('explosion');
+  if (p.typ === 4) { S.boss = 2; for (const [dx, dy] of [[-12, -8], [12, 6], [-4, 12]]) knall(S, 'g', p.x + m + dx, p.y + m + dy); S.ton.push('adler'); }
+  if (von >= 0) { const pkt = GEGNER[p.typ].pkt; punkte(S, von, pkt); if (p.typ < 4) S.sp[von].kills[p.typ]++; S.effekte.push({ art: 'p', x: p.x + m, y: p.y + m, t: 0, w: pkt }); }
+}
+// Der Boss kommt, wenn alle 20 Gegner weg sind: oben in der Mitte, er rammt die Mauern dort weg
+function bossSetzen(S) {
+  const x = BX - 8, y = 0;
+  for (let r = 0; r < 8; r++) for (let c = x >> 2; c < (x >> 2) + 8; c++) setze(S, r * NX + c, LEER);
+  for (const [dx, dy] of [[8, 8], [24, 8], [16, 24]]) knall(S, 'g', x + dx, y + dy);
+  const hp = S.st.bossHp || 14;
+  S.panzer.push({ id: S.nid++, sp: -1, typ: 4, gr: 32, x, y, r: 2, spawn: 60, schild: 0, starr: 0, sub: 0, anim: 0, animT: 0, feuerT: 40, kugeln: 0,
+    hp, maxHp: hp, bonus: false, blockiert: 0, ziel: 'basis' });
+  S.bossMax = hp; S.ton.push('explosion');
 }
 
 /* ---------- Extras ---------- */
@@ -875,7 +914,7 @@ function bonusSetzen(S) {
 }
 function ring(S, typ) {
   ringZellen((x, y) => {
-    if (S.panzer.some(p => !p.tot && ueber(p.x, p.y, 16, 16, x * 4, y * 4, 4, 4))) return;   // niemanden einmauern
+    if (S.panzer.some(p => !p.tot && ueber(p.x, p.y, GROESSE(p), GROESSE(p), x * 4, y * 4, 4, 4))) return;   // niemanden einmauern
     setze(S, y * NX + x, typ);
   });
 }
@@ -884,13 +923,15 @@ function bonusNehmen(S, p) {
   S.effekte.push({ art: 'p', x: S.bonus.x + 8, y: S.bonus.y + 8, t: 18, w: 500 });
   S.bonus = null; punkte(S, p.sp, 500);
   S.ton.push(art === 'panzer' ? 'leben' : 'nehmen');
-  if (art === 'helm') p.schild = 600;
+  if (art === 'helm') p.schild = Math.max(p.schild, 600);
   if (art === 'uhr') S.uhr = 600;
   if (art === 'schaufel') { S.schaufel = 1200; ring(S, STAHL); }
   if (art === 'stern') sp.lvl = Math.min(3, sp.lvl + 1);
   if (art === 'panzer') sp.leben++;
+  if (art === 'turbo') p.turbo = 900;          // 15 s schneller fahren
+  if (art === 'doppel') p.doppel = 1200;       // 20 s Doppelschuss
   if (art === 'granate') {
-    for (const q of S.panzer) if (q.sp < 0 && !q.tot && q.spawn === 0) { q.tot = true; knall(S, 'g', q.x + 8, q.y + 8); }
+    for (const q of S.panzer) if (q.sp < 0 && !q.tot && q.spawn === 0) { if (q.typ === 4) gegnerTreffer(S, q, -1, 4); else { q.tot = true; knall(S, 'g', q.x + 8, q.y + 8); } }
     S.ton.push('explosion');
   }
 }
@@ -920,14 +961,14 @@ function schritt(S, ein) {
     if (S.gegnerIdx < 20 && aktiv < S.maxG && --S.spawnT <= 0) {
       for (let v = 0; v < START_GEG.length && S.spawnT <= 0; v++) {
         const [x, y] = START_GEG[S.spawnOrt++ % START_GEG.length];
-        if (!S.panzer.some(q => !q.tot && ueber(x, y, 16, 16, q.x, q.y, 16, 16))) { gegnerSetzen(S, x, y); S.spawnT = S.spawnPause; }
+        if (!S.panzer.some(q => !q.tot && ueber(x, y, 16, 16, q.x, q.y, GROESSE(q), GROESSE(q)))) { gegnerSetzen(S, x, y); S.spawnT = S.spawnPause; }
       }
       if (S.spawnT <= 0) S.spawnT = 20;
     }
     // Spieler kommen nach einem Treffer wieder
     S.sp.forEach((sp, i) => {
       if (sp.warte > 1) sp.warte--;
-      else if (sp.warte === 1 && !S.panzer.some(q => !q.tot && ueber(START_SP[i][0], START_SP[i][1], 16, 16, q.x, q.y, 16, 16))) { sp.warte = 0; spielerSetzen(S, i); }   // erst wenn der Platz frei ist
+      else if (sp.warte === 1 && !S.panzer.some(q => !q.tot && ueber(START_SP[i][0], START_SP[i][1], 16, 16, q.x, q.y, GROESSE(q), GROESSE(q)))) { sp.warte = 0; spielerSetzen(S, i); }   // erst wenn der Platz frei ist
     });
   }
   for (const p of S.panzer) {
@@ -940,8 +981,11 @@ function schritt(S, ein) {
   kugelnZug(S);
   S.panzer = S.panzer.filter(p => !p.tot);
   if (S.bonus) S.bonus.t++;
+  // Alle 20 weg? Dann kommt der Boss (erst eine Warnung, dann bricht er herein)
+  if (S.phase === 'spiel' && S.gegnerIdx >= 20 && !S.boss && !S.panzer.some(p => p.sp < 0)) { S.boss = 1; S.bossWarn = 120; S.ton.push('warnung'); }
+  if (S.bossWarn > 0 && --S.bossWarn === 0) bossSetzen(S);
   // Level geschafft?
-  if (S.phase === 'spiel' && S.gegnerIdx >= 20 && !S.panzer.some(p => p.sp < 0)) {
+  if (S.phase === 'spiel' && S.gegnerIdx >= 20 && S.boss === 2 && !S.panzer.some(p => p.sp < 0)) {
     if (++S.endeT === 1) S.ton.push('geschafft');
     if (S.endeT > 170) bilanzStart(S);
   }
@@ -999,11 +1043,13 @@ function spielMalen(V) {
       if (p.starr > 0 && blink(6)) continue;
       form = 's' + ((V.sp[p.sp] || {}).lvl || 0); farbe = p.sp ? 'gruen' : 'gelb';
     } else {
-      form = 'g' + p.typ;
-      farbe = p.typ === 3 ? ['silber', 'hgruen', 'gold', 'oliv'][begrenze(p.hp, 1, 4) - 1] : 'silber';
+      form = 'g' + Math.min(3, p.typ);
+      farbe = p.typ === 4 ? 'boss' : p.typ === 3 ? ['silber', 'hgruen', 'gold', 'oliv'][begrenze(p.hp, 1, 4) - 1] : 'silber';
       if (p.bonus && blink(8)) farbe = 'rot';
     }
-    sg.drawImage(panzerSprite(form, farbe, p.r, p.anim), x, y);
+    const gr = GROESSE(p);
+    sg.drawImage(panzerSprite(form, farbe, p.r, p.anim), x, y, gr, gr);
+    if (p.typ === 4) lebensBalken(sg, x, y - 4, gr, 2, p.hp / (V.bossMax || p.hp));
     if (p.schild > 0) sg.drawImage(SCHILD[Math.floor(V.t / 2) % 2], x, y);
   }
   sg.fillStyle = '#E0E0E0';
@@ -1032,7 +1078,12 @@ function spielMalen(V) {
   }
   if (V.pause && V.phase !== 'bilanz' && blink(30)) { sg.fillStyle = '#000'; sg.fillRect(MX - 28, 101, 56, 13); schreibe(sg, 'PAUSE', MX, 104, '#F83800', true); }
   if (V.uhr > 0 && V.uhr < 120 && blink(10)) schreibe(sg, 'UHR', PX + 8, 4, '#fff', true);
+  if (V.bossWarn > 0 && blink(12)) { sg.fillStyle = '#000'; sg.fillRect(MX - 54, 98, 108, 13); schreibe(sg, 'ACHTUNG BOSS!', MX, 101, '#F83800', true); }
   if (V.phase === 'bilanz') bilanzMalen(V);
+}
+function lebensBalken(c, x, y, b, h, anteil) {
+  c.fillStyle = '#000'; c.fillRect(x - 1, y - 1, b + 2, h + 2);
+  c.fillStyle = anteil > 0.5 ? '#5CE05C' : anteil > 0.25 ? '#F8C838' : '#F84030'; c.fillRect(x, y, Math.max(0, b * anteil), h);
 }
 function seitenleiste(V) {
   const rest = 20 - (V.gegnerIdx || 0);
@@ -1330,6 +1381,8 @@ const Ton = {
         case 'start': this.noten([[392, 0.11], [523, 0.11], [659, 0.11], [784, 0.22], [0, 0.05], [659, 0.11], [784, 0.33]], 'square', 0.09);
                       this.noten([[131, 0.22], [196, 0.22], [262, 0.44], [196, 0.44]], 'triangle', 0.18); break;
         case 'knall': this.krach(0.35, 0.25, 3000, 200); this.osz('square', 900, 1400, 0.1, 0.03); break;
+        case 'boss': this.osz('sawtooth', 220, 60, 0.25, 0.14); this.krach(0.2, 0.3, 1200, 200); break;
+        case 'warnung': this.noten([[440, 0.18], [330, 0.18], [440, 0.18], [330, 0.18], [440, 0.18], [330, 0.3]], 'square', 0.1); break;
         case 'geschafft': this.noten([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], 'square', 0.1); break;
         case 'gameover': this.noten([[392, 0.2], [330, 0.2], [262, 0.2], [196, 0.5]], 'triangle', 0.25); break;
       }
@@ -1515,8 +1568,17 @@ const VIGNETTE = (() => {
 })();
 
 // --- Panzer in Block-Optik: 32 × 32 Minecraft-Pixel, Licht kommt immer von oben links ---
-const AKZENT = { p1: [255, 122, 36], p2: [71, 215, 232] };
-const HD_FARBEN = { p1: [92, 134, 72], p2: [64, 112, 172], gelb: [224, 170, 36], gruen: [62, 162, 56], silber: [158, 168, 176], rot: [206, 56, 38], oliv: [116, 140, 44], gold: [214, 168, 24], hgruen: [96, 192, 110] };
+// Spielerfarben zum Aussuchen (Name, Grundfarbe, Streifen)
+const SPIELERFARBEN = {
+  p1: ['Oliv', [92, 134, 72], [255, 122, 36]], p2: ['Stahlblau', [64, 112, 172], [71, 215, 232]],
+  prot: ['Rot', [178, 58, 46], [232, 210, 160]], pviolett: ['Violett', [118, 72, 164], [230, 230, 240]],
+  pgold: ['Gold', [206, 160, 40], [70, 52, 30]], pschwarz: ['Schwarz', [58, 62, 72], [235, 64, 48]],
+  psand: ['Wüste', [188, 160, 108], [120, 84, 44]], ptuerkis: ['Türkis', [40, 150, 140], [250, 220, 90]],
+};
+const AKZENT = { boss: [255, 196, 40] };
+for (const [k, [, , a]] of Object.entries(SPIELERFARBEN)) AKZENT[k] = a;
+const HD_FARBEN = { boss: [96, 52, 130], gelb: [224, 170, 36], gruen: [62, 162, 56], silber: [158, 168, 176], rot: [206, 56, 38], oliv: [116, 140, 44], gold: [214, 168, 24], hgruen: [96, 192, 110] };
+for (const [k, [, b]] of Object.entries(SPIELERFARBEN)) HD_FARBEN[k] = b;
 const KETTE = [58, 56, 52];
 function panzerHDBild(form, farbe, r, anim) {
   const d = FORMEN[form], T = 32, c = leinwand(T * TP, T * TP), t = c.getContext('2d'), basis = HD_FARBEN[farbe];
@@ -1824,20 +1886,22 @@ function blockMalen(V) {
   if (!V.basisKaputt && modus === 'spiel') { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18 + 0.08 * Math.sin(HD.zeit * 0.08); c.drawImage(GLUT.gelb, BX * GR - 16, BY * GR - 16, 96, 96); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; }
   if (V.zeigeStart) for (const [x, y] of START_SP.concat(START_GEG)) { c.globalAlpha = 0.35; c.drawImage(GLUT.blau, x * GR, y * GR, 64, 64); c.globalAlpha = 1; }
   // Panzer: erst alle Schatten, dann die Panzer
-  const liste = V.panzer.map(p => { const [x, y] = lage(p, a); return { p, x: x * GR, y: y * GR }; });
-  for (const { p, x, y } of liste) {
+  const liste = V.panzer.map(p => { const [x, y] = lage(p, a); return { p, x: x * GR, y: y * GR, g: GROESSE(p) * GR }; });
+  for (const { p, x, y, g } of liste) {
     if (p.spawn > 0) continue;
     const s = panzerHD(panzerForm(V, p), 'silber', p.r, 0).schatten;
-    c.globalAlpha = 0.4; c.drawImage(s, x + 8, y + 14); c.globalAlpha = 1;
+    c.globalAlpha = 0.4; c.drawImage(s, x + 8, y + 14, g, g); c.globalAlpha = 1;
   }
-  for (const { p, x, y } of liste) {
-    const mx = x + 32, my = y + 32;
+  for (const { p, x, y, g } of liste) {
+    const mx = x + g / 2, my = y + g / 2;
     if (p.spawn > 0) { erscheinen(c, mx, my, p.spawn); continue; }
     if (p.sp >= 0 && p.starr > 0 && blink(6)) continue;
     const farbe = panzerFarbe(V, p, blink), rk = HD.rueck.get(p.id) || 0, rx = -DX[p.r] * Math.round(rk / 2) * 2, ry = -DY[p.r] * Math.round(rk / 2) * 2;
     const bild = panzerHD(panzerForm(V, p), farbe, p.r, p.anim), wipp = HD.bewegt.get(p.id) && Math.floor(HD.zeit / 3) % 2 ? -2 : 0;
-    c.drawImage(bild.seite, x + rx, y + ry + 6);
-    c.drawImage(bild.bild, x + rx, y + ry + wipp);
+    c.drawImage(bild.seite, x + rx, y + ry + 6, g, g);
+    c.drawImage(bild.bild, x + rx, y + ry + wipp, g, g);
+    if (p.typ === 4) lebensBalken(c, x + 8, y - 14, g - 16, 8, p.hp / (V.bossMax || p.hp));
+    if (p.turbo && dt > 0 && Math.random() < 0.5) teilchen({ x: mx - DX[p.r] * 30, y: my - DY[p.r] * 30, vx: -DX[p.r] * 2, vy: -DY[p.r] * 2, l: 10, gr: 4, farbe: [255, 150, 40], add: true });
     if (p.sp < 0 && p.bonus && farbe === 'rot') licht(mx, my, 90, 'rot', 1, 0.5);
     if (p.sp >= 0 && p.starr > 0) { c.fillStyle = 'rgba(150,220,255,0.35)'; c.fillRect(x + 4, y + 4, 56, 56); }
     if (p.schild > 0) schildMalen(c, mx, my);
@@ -1923,9 +1987,10 @@ function blockMalen(V) {
   seitenleisteHD(V);
   einblendungenHD(V, blink);
 }
-function panzerForm(V, p) { return p.sp >= 0 ? 's' + ((V.sp[p.sp] || {}).lvl || 0) : 'g' + p.typ; }
+function panzerForm(V, p) { return p.sp >= 0 ? 's' + ((V.sp[p.sp] || {}).lvl || 0) : 'g' + Math.min(3, p.typ); }
 function panzerFarbe(V, p, blink) {
-  if (p.sp >= 0) return p.sp ? 'p2' : 'p1';
+  if (p.sp >= 0) return (V.farben || ['p1', 'p2'])[p.sp] || 'p1';
+  if (p.typ === 4) return 'boss';
   if (p.bonus && blink(8)) return 'rot';
   return p.typ === 3 ? ['silber', 'hgruen', 'gold', 'oliv'][begrenze(p.hp, 1, 4) - 1] : 'silber';
 }
@@ -1960,7 +2025,7 @@ function seitenleisteHD(V) {
   V.sp.forEach((s, i) => {
     const y = (124 + i * 26) * GR;
     schrift(c, (i + 1) + 'P', x0 + 12, y, 4, i ? '#47D7E8' : '#FF9A4A');
-    c.drawImage(panzerHD('s0', i ? 'p2' : 'p1', 0, 0).bild, x0 + 8, y + 34, 40, 40);
+    c.drawImage(panzerHD('s0', (V.farben || ['p1', 'p2'])[i] || 'p1', 0, 0).bild, x0 + 8, y + 34, 40, 40);
     schrift(c, s.aus ? '-' : Math.min(9, s.leben), x0 + 56, y + 40, 4, '#fff');
     schrift(c, String(s.punkte).padStart(6, '0'), x0 + 12, y + 80, 2, '#D8C49A');
   });
@@ -1989,7 +2054,7 @@ function randAnzeigen(V) {
     const knopf = $('ingame').getBoundingClientRect(), x1 = Math.max((rand.l + 60) * k, (knopf.right + 8) * k);
     const spieler = (s, i, x) => {
       pille(c, x, oben, 300, hoch);
-      c.drawImage(panzerHD('s' + (s.lvl || 0), i ? 'p2' : 'p1', 0, 0).bild, x + 8, oben + 4, 62, 62);
+      c.drawImage(panzerHD('s' + (s.lvl || 0), (V.farben || ['p1', 'p2'])[i] || 'p1', 0, 0).bild, x + 8, oben + 4, 62, 62);
       schrift(c, (i + 1) + 'P', x + 76, oben + 10, 3, i ? '#47D7E8' : '#FF9A4A');
       schrift(c, '♥', x + 140, oben + 10, 3, '#FF5050'); schrift(c, s.aus ? '-' : Math.min(9, s.leben), x + 164, oben + 10, 3, '#fff');
       schrift(c, String(s.punkte).padStart(6, '0'), x + 76, oben + 40, 3, '#D8C49A');
@@ -2000,8 +2065,12 @@ function randAnzeigen(V) {
     pille(c, mx - 170, oben, 340, hoch);
     schrift(c, 'LEVEL ' + V.level, mx - 150, oben + 10, 3, '#fff');
     schrift(c, String(Math.floor(sek / 60)).padStart(2, '0') + ':' + String(sek % 60).padStart(2, '0'), mx - 150, oben + 40, 3, '#bbb');
-    c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, mx + 40, oben + 8, 54, 54);
-    schrift(c, '×' + (20 - (V.gegnerIdx || 0)), mx + 98, oben + 24, 3, '#fff');
+    const boss = V.panzer.find(p => p.typ === 4 && p.spawn === 0);
+    if (boss) { schrift(c, 'BOSS', mx + 30, oben + 10, 3, '#E8C8FF'); lebensBalken(c, mx + 30, oben + 42, 120, 14, boss.hp / (V.bossMax || boss.hp)); }   // statt Gegnerzahl
+    else {
+      c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, mx + 40, oben + 8, 54, 54);
+      schrift(c, '×' + (20 - (V.gegnerIdx || 0)), mx + 98, oben + 24, 3, '#fff');
+    }
   }
   einblendungenHD(V, blink, c, W, H);
   g.drawImage(randBild, 0, 0, L.W, L.H);
@@ -2029,6 +2098,7 @@ function einblendungenHD(V, blink, c = bg, W = W2D * GR, H = 224 * GR) {
     schrift(c, 'GAME', W / 2, y, 16, '#FF4020', true); schrift(c, 'OVER', W / 2, y + 130, 16, '#FF4020', true);
   }
   if (V.pause && V.phase !== 'bilanz' && blink(30)) schrift(c, 'PAUSE', W / 2, 400, 12, '#FF6030', true);
+  if (V.bossWarn > 0) { const s = 10 + (blink(12) ? 1 : 0); schrift(c, 'ACHTUNG', W / 2, 300, s, '#FF4020', true); schrift(c, 'BOSS!', W / 2, 400, s + 4, '#FFE040', true); }
   if (V.phase === 'bilanz') bilanzHD(V, c, W, H);
 }
 function bilanzHD(V, c, W, H) {
@@ -2261,7 +2331,8 @@ const Netz = {
 function zuAnsicht(S) {
   const a = { k: 's', t: S.t, ph: S.phase, pt: S.pt, lv: S.level, ln: S.levelName, pa: S.pause ? 1 : 0, bk: S.basisKaputt ? 1 : 0,
     uhr: S.uhr, gi: S.gegnerIdx, vb: S.vorbei ? 1 : 0, rek: rekord,
-    P: S.panzer.map(p => [p.id, p.sp, p.typ, p.x, p.y, p.r, p.anim, p.spawn, p.schild > 0 ? 1 : 0, p.starr > 0 ? 1 : 0, p.hp, p.bonus ? 1 : 0]),
+    P: S.panzer.map(p => [p.id, p.sp, p.typ, p.x, p.y, p.r, p.anim, p.spawn, p.schild > 0 ? 1 : 0, p.starr > 0 ? 1 : 0, p.hp, p.bonus ? 1 : 0, GROESSE(p), (p.turbo > 0 ? 1 : 0) + (p.doppel > 0 ? 2 : 0)]),
+    BW: S.bossWarn || 0, BM: S.bossMax || 0, F: S.farben,
     K: S.kugeln.map(k => [k.id, Math.round(k.x), Math.round(k.y), k.r]),
     E: S.effekte.map(e => [e.art, Math.round(e.x), Math.round(e.y), e.t, e.w || 0]),
     B: S.bonus ? [S.bonus.art, S.bonus.x, S.bonus.y] : 0,
@@ -2277,24 +2348,24 @@ function ansichtLesen(a) {
   if (a.M) { for (let i = 0; i < NX * NY; i++) V.karte[i] = a.M.charCodeAt(i) - 48; V.kv++; V.kartenId = Math.random(); }
   if (a.m) { for (let i = 0; i < a.m.length; i += 2) V.karte[a.m[i]] = a.m[i + 1]; V.kv++; }
   const altP = new Map(V.panzer.map(p => [p.id, p])), altK = new Map(V.kugeln.map(k => [k.id, k]));
-  V.panzer = a.P.map(([id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus]) => {
-    const o = altP.get(id); return { id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, x0: o ? o.x : x, y0: o ? o.y : y };
+  V.panzer = a.P.map(([id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, gr, ex]) => {
+    const o = altP.get(id); return { id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus, gr, turbo: ex & 1, doppel: ex & 2, x0: o ? o.x : x, y0: o ? o.y : y };
   });
   V.kugeln = a.K.map(([id, x, y, r]) => { const o = altK.get(id); return { id, x, y, r, x0: o ? o.x : x, y0: o ? o.y : y }; });
   V.effekte = a.E.map(([art, x, y, t, w]) => ({ art, x, y, t, w }));
   V.bonus = a.B ? { art: a.B[0], x: a.B[1], y: a.B[2] } : null;
   V.sp = a.SP.map(s => ({ leben: s[0], punkte: s[1], lvl: s[2], aus: !!s[3], kills: s.slice(4, 8) }));
   Object.assign(V, { t: a.t, phase: a.ph, pt: a.pt, level: a.lv, levelName: a.ln, pause: !!a.pa, basisKaputt: !!a.bk, uhr: a.uhr,
-                     gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, empfangen: performance.now(), alpha: 0 });
+                     gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, bossWarn: a.BW, bossMax: a.BM, farben: a.F, empfangen: performance.now(), alpha: 0 });
   for (const t of a.ton) Ton.spiel(t);
 }
 
-let fern = { r: -1, f: false }, fernVorher = false, gastGesendet = '';
+let gastFarbe = null, fern = { r: -1, f: false }, fernVorher = false, gastGesendet = '';
 function fernEingabe() { const neu = fern.f && !fernVorher; fernVorher = fern.f; return { r: fern.r, f: fern.f, neu }; }
 function netzNachricht(m) {
   if (m.k === 'ping') return Netz.senden({ k: 'pong', t: m.t });
   if (m.k === 'pong') { Netz.ping = Netz.ping ? Netz.ping * 0.7 + (performance.now() - m.t) * 0.3 : performance.now() - m.t; return; }
-  if (m.k === 'hallo') { if (m.v !== APP_VERSION) meldung('Achtung: Das andere Gerät hat v' + m.v + ', dieses v' + APP_VERSION + '. Bitte beide aktualisieren (Version antippen).', 7000); return; }
+  if (m.k === 'hallo') { if (m.farbe && SPIELERFARBEN[m.farbe]) gastFarbe = m.farbe; if (m.v !== APP_VERSION) meldung('Achtung: Das andere Gerät hat v' + m.v + ', dieses v' + APP_VERSION + '. Bitte beide aktualisieren (Version antippen).', 7000); return; }
   if (rolle === 'wirt') {
     if (m.k === 'e') fern = { r: m.r, f: !!m.f };
     if (m.k === 'pause' && S) S.pause = !!m.an;
@@ -2310,7 +2381,7 @@ function netzNachricht(m) {
 function netzVerbunden() {
   if (Finder.aktiv) { Finder.stop(); if (rolle === 'wirt' && Ablage.cfg()) Ablage.aendern(() => ({ fertig: Date.now() })).catch(() => {}); }
   clearTimeout(verbindTimer);
-  Netz.senden({ k: 'hallo', v: APP_VERSION });
+  Netz.senden({ k: 'hallo', v: APP_VERSION, farbe: einst.farbe1 });
   Netz.ping = 0;
   meldung('✓ Verbunden!');
   if (rolle === 'wirt') {
@@ -2716,7 +2787,7 @@ function editorLoeschen() {
    MENÜ & EINSTELLUNGEN
    ===================================================================== */
 let modus = 'menue', rolle = 'lokal', ticks = 0;
-const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true, grafik: '3d' }, speicher.lies('einst', {}));
+const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true, grafik: '3d', farbe1: 'p1', farbe2: 'p2' }, speicher.lies('einst', {}));
 if (!einst.grafik3d) { einst.grafik3d = 1; einst.grafik = '3d'; }        // einmalig: alle bekommen die neue 3D-Grafik
 function einstSpeichern() { speicher.schreib('einst', einst); einstZeigen(); }
 function zeigen(id) {
@@ -2733,6 +2804,16 @@ function einstZeigen() {
   wahlSetzen('w-stufe', einst.stufe, w => einst.stufe = w);
   wahlSetzen('w-auto', einst.auto ? 1 : 0, w => einst.auto = w === '1');
   wahlSetzen('w-freund', einst.freund ? 1 : 0, w => einst.freund = w === '1');
+  for (const n of [1, 2]) {                                // Panzerfarben: Kästchen in Grundfarbe mit Streifenfarbe
+    const box = $('w-farbe' + n); box.innerHTML = '';
+    for (const [k, [name, b, a]] of Object.entries(SPIELERFARBEN)) {
+      const knopf = document.createElement('button'); knopf.title = name;
+      knopf.style.background = `linear-gradient(180deg, rgb(${b}) 0 55%, rgb(${a}) 55% 75%, rgb(${b}) 75%)`;
+      knopf.classList.toggle('an', einst['farbe' + n] === k);
+      knopf.onclick = () => { einst['farbe' + n] = k; einstSpeichern(); };
+      box.appendChild(knopf);
+    }
+  }
   wahlSetzen('w-grafik', einst.grafik, w => { einst.grafik = w; if (w === '3d') D3.laden(); aufteilen(); });
   wahlSetzen('w-ton', einst.ton ? 1 : 0, w => { einst.ton = w === '1'; if (einst.ton) { Ton.start(); setTimeout(() => Ton.spiel('nehmen'), 50); } });
   const l = levelHolen(einst.level);
@@ -2773,7 +2854,9 @@ function menueAnpassen() {
   einstZeigen();
 }
 function spielStarten(spieler) {
-  neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund });
+  let f2 = rolle === 'wirt' ? (gastFarbe || 'p2') : einst.farbe2;
+  if (f2 === einst.farbe1) f2 = einst.farbe1 === 'p2' ? 'p1' : 'p2';           // zwei gleiche Farben? Dann eine andere
+  neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund, farben: [einst.farbe1, f2] });
   modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
 }
 // Spielstand sichern: iPhone/iPad beenden Apps im Hintergrund manchmal einfach

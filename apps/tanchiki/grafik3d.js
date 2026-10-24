@@ -485,7 +485,7 @@ const D3 = {
         this.szene.add(o.eis);
         this.panzer.set(p.id, o);
       }
-      const [gx, gy] = lage(p, a), x = gx + 8, z = gy + 8;
+      const [gx, gy] = lage(p, a), gr = GROESSE(p), x = gx + gr / 2, z = gy + gr / 2, sk = gr / 16;
       const spawn = p.spawn > 0;
       o.g.visible = !spawn;
       o.strahl.visible = spawn;
@@ -509,7 +509,9 @@ const D3 = {
       o.bewegt = Math.max(0, (o.bewegt || 0) - dt);
       const wipp = o.bewegt > 0 && Math.floor(this.zeit / 3) % 2 ? 0.25 : 0;
       o.g.position.set(x, wipp, z);
-      o.g.rotation.y = -p.r * Math.PI / 2;
+      o.g.rotation.y = -p.r * Math.PI / 2; o.g.scale.setScalar(sk);
+      o.schild.scale.setScalar(sk); o.eis.scale.setScalar(sk); o.strahl.scale.set(30 * sk, 30 * sk, 1);
+      if (p.turbo && dt > 0 && Math.random() < 0.6) this.teil('feuer', { x: x - DX[p.r] * 9, y: 2.5, z: z - DY[p.r] * 9, vx: -DX[p.r] * 0.5 + (Math.random() - 0.5) * 0.2, vz: -DY[p.r] * 0.5 + (Math.random() - 0.5) * 0.2, vy: 0.05, gr: 1.1, farbe: [255, 150, 40], l: 10, reib: 0.9 });
       const rk = this.rueck.get(p.id) || 0; o.oben.position.z = rk * 0.25;
       if (rk) this.rueck.set(p.id, Math.max(0, rk - dt));
       o.schild.visible = !spawn && p.schild > 0;
