@@ -29,6 +29,10 @@
   .schicht{position:fixed;inset:0;z-index:20;background:#000e;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;
            padding:calc(14px + var(--oben)) calc(14px + var(--rechts)) calc(18px + var(--unten)) calc(14px + var(--links));
            display:flex;flex-direction:column;align-items:center}
+  #menue{background:radial-gradient(ellipse at center,rgba(0,0,0,.25),rgba(0,0,0,.72))}
+  #menue .einst{background:#141414e8}
+  .titel{animation:gluehen 2.4s ease-in-out infinite}
+  @keyframes gluehen{50%{text-shadow:4px 4px 0 #6b2a08,0 0 34px #ffb050aa}}
   .schicht > .innen{width:100%;max-width:560px;margin:auto 0;display:flex;flex-direction:column;gap:10px}
   .titel{font-size:clamp(40px,11vw,64px);font-weight:900;letter-spacing:4px;text-align:center;margin:4px 0 0;
          color:var(--accent);text-shadow:4px 4px 0 #6b2a08,0 0 18px #e8702a55;font-family:Impact,'Arial Black',sans-serif}
@@ -130,6 +134,8 @@
         <div class="wahl" id="w-auto"><button data-w="0">Aus</button><button data-w="1">An</button></div></div>
       <div class="reihe"><span>Partner treffen</span>
         <div class="wahl" id="w-freund"><button data-w="1">friert ein</button><button data-w="0">nichts</button></div></div>
+      <div class="reihe"><span>Grafik</span>
+        <div class="wahl" id="w-grafik"><button data-w="block">Block ✨</button><button data-w="klassisch">Klassisch</button></div></div>
       <div class="reihe"><span>Ton</span>
         <div class="wahl" id="w-ton"><button data-w="1">An</button><button data-w="0">Aus</button></div></div>
     </div>
@@ -154,6 +160,8 @@
         <li><b>Gamecontroller</b> (per Bluetooth am iPad/iPhone): Steuerkreuz + A/B. Start = Pause.</li>
         <li><b>Tastatur:</b> Spieler 1: W A S D + Leertaste · Spieler 2: Pfeile + Enter · P = Pause</li>
       </ul></div>
+    <div class="karte"><h3>Besondere Level</h3>
+      <p>Jedes 4. Level spielt <b>nachts</b> – nur Scheinwerfer, Kugeln und Feuer leuchten. Auf Eis-Leveln <b>schneit</b> es. Nach Level 20 geht es mit Zufalls-Leveln endlos weiter.</p></div>
     <div class="karte"><h3>Gelände</h3>
       <ul><li><b>Ziegel</b> kann man wegschießen. <b>Stahl</b> nur mit 3 Sternen.</li>
         <li><b>Wasser</b>: Kugeln fliegen drüber, Panzer nicht. <b>Wald</b> versteckt. Auf <b>Eis</b> rutscht man.</li></ul></div>
@@ -228,7 +236,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.2';
+const APP_VERSION = '2.0';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -598,7 +606,7 @@ function levelStart(S) {
     spielerSetzen(S, i);
   });
   S.ton.push('start');
-  speicher.schreib('weit', Math.max(speicher.lies('weit', 1), S.level));
+  if (!S.opt.demo) speicher.schreib('weit', Math.max(speicher.lies('weit', 1), S.level));
 }
 function spielerSetzen(S, i) {
   const [x, y] = START_SP[i];
@@ -888,7 +896,7 @@ function schritt(S, ein) {
 function bilanzStart(S) {
   S.phase = 'bilanz'; S.pt = 0;
   const best = Math.max(...S.sp.map(s => s.punkte));
-  if (best > rekord) { rekord = best; speicher.schreib('rekord', rekord); }
+  if (best > rekord && !S.opt.demo) { rekord = best; speicher.schreib('rekord', rekord); }
 }
 function bilanzWeiter(S) {
   if (S.vorbei) { S.ende = true; if (S.level <= alleLevel().length) { einst.level = S.level; einstSpeichern(); } return; }
@@ -1057,10 +1065,11 @@ function allesMalen() {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = '#000'; g.fillRect(0, 0, bild.width, bild.height);
   if (!V) return;
-  spielMalen(V);
+  const block = einst.grafik !== 'klassisch';
+  if (block) blockMalen(V); else spielMalen(V);
   g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
   g.imageSmoothingEnabled = false;
-  g.drawImage(spielBild, L.gx, L.gy, L.gw, L.gh);
+  g.drawImage(block ? blockBild : spielBild, L.gx, L.gy, L.gw, L.gh);
   if (modus === 'spiel' && V.phase !== 'bilanz') steuerMalen();
 }
 function steuerMalen() {
@@ -1151,7 +1160,7 @@ function padLesen(i) {
   padStart[i] = b(9);
   return { r, f: b(0) || b(1) || b(2) || b(3) || b(7) };
 }
-const vorherFeuer = [false, false];
+const vorherFeuer = [false, false], eingabeZuletzt = [-1, -1];
 // Was will Spieler sp gerade? (r = Richtung oder -1, f = Feuer, neu = gerade erst gedrückt)
 function eingabe(sp) {
   const allein = rolle !== 'lokal' || !S || S.spieler === 1;
@@ -1169,7 +1178,7 @@ function eingabe(sp) {
   }
   const pads = allein ? [0, 1, 2, 3] : [sp];
   for (const i of pads) { const p = padLesen(i); if (r < 0) r = p.r; if (p.f) f = true; }
-  const neu = f && !vorherFeuer[sp]; vorherFeuer[sp] = f;
+  const neu = f && !vorherFeuer[sp]; vorherFeuer[sp] = f; eingabeZuletzt[sp] = r;
   return { r, f, neu };
 }
 
@@ -1203,6 +1212,23 @@ const Ton = {
   },
   noten(liste, typ = 'square', laut = 0.12) { let ab = 0; for (const [f, d] of liste) { if (f) this.osz(typ, f, f, d * 0.95, laut, ab); ab += d; } },
   zuletzt: {},
+  // Motorbrummen, solange ein eigener Panzer fährt
+  motor(an) {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (!this.mo) {
+      const c = this.ctx, o = c.createOscillator(), lfo = c.createOscillator(), tiefe = c.createGain(), f = c.createBiquadFilter(), v = c.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 46; lfo.frequency.value = 9; tiefe.gain.value = 6;
+      lfo.connect(tiefe); tiefe.connect(o.frequency); f.type = 'lowpass'; f.frequency.value = 260; v.gain.value = 0;
+      o.connect(f); f.connect(v); v.connect(this.haupt); o.start(); lfo.start();
+      this.mo = { o, v, an: false };
+    }
+    an = an && einst.ton;
+    if (an === this.mo.an) return;
+    this.mo.an = an;
+    const t = this.ctx.currentTime;
+    this.mo.v.gain.setTargetAtTime(an ? 0.07 : 0, t, 0.06);
+    this.mo.o.frequency.setTargetAtTime(an ? 58 : 46, t, 0.15);
+  },
   spiel(name) {
     if (!einst.ton || !this.ctx || this.ctx.state !== 'running') return;
     const jetzt = performance.now(); if (jetzt - (this.zuletzt[name] || 0) < 40) return; this.zuletzt[name] = jetzt;
@@ -1221,12 +1247,646 @@ const Ton = {
         case 'starr': this.osz('triangle', 300, 1200, 0.25, 0.15); break;
         case 'start': this.noten([[392, 0.11], [523, 0.11], [659, 0.11], [784, 0.22], [0, 0.05], [659, 0.11], [784, 0.33]], 'square', 0.09);
                       this.noten([[131, 0.22], [196, 0.22], [262, 0.44], [196, 0.44]], 'triangle', 0.18); break;
+        case 'knall': this.krach(0.35, 0.25, 3000, 200); this.osz('square', 900, 1400, 0.1, 0.03); break;
         case 'geschafft': this.noten([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], 'square', 0.1); break;
         case 'gameover': this.noten([[392, 0.2], [330, 0.2], [262, 0.2], [196, 0.5]], 'triangle', 0.25); break;
       }
     } catch {}
   },
 };
+
+/* =====================================================================
+   BLOCK-GRAFIK – „wie Minecraft“: man sieht noch die Pixel, aber jeder
+   Block hat Struktur, Licht von oben links, Schatten, Kanten.
+   Dazu Funken, Rauch, Trümmer, Lichtblitze und wackelnder Bildschirm.
+   Ein Spiel-Punkt = 4 Bild-Punkte, ein „Minecraft-Pixel“ = 2 Bild-Punkte.
+   ===================================================================== */
+const GR = 4, TP = 2, FR = FELD * GR;
+const blockBild = leinwand(256 * GR, 224 * GR), bg = blockBild.getContext('2d');
+const hdLeinwand = () => { const c = leinwand(FR, FR); return [c, c.getContext('2d')]; };
+const [bodenHD, bodenG] = hdLeinwand();      // Boden, Wasser, Eis, Mauern, Schatten (Zwischenspeicher)
+const [waldHD, waldG] = hdLeinwand();        // Blätterdach (über den Panzern)
+const [maskeHD, maskeG] = hdLeinwand();      // Hilfsbild für Schatten
+const [wasserMaske, wasserMaskeG] = hdLeinwand();
+const [wasserTmp, wasserTmpG] = hdLeinwand();
+const [spurenHD, spurenG] = hdLeinwand();    // Kettenspuren im Boden
+const [lichtHD, lichtG] = hdLeinwand();      // Licht von Explosionen
+
+// Zufall, der immer gleich ausfällt (damit Texturen nicht flackern)
+function hash(x, y, s) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 2147483587);
+  h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const kanal = v => Math.max(0, Math.min(255, Math.round(v)));
+const rgb = (c, f = 1, a = 1) => a < 1 ? `rgba(${kanal(c[0] * f)},${kanal(c[1] * f)},${kanal(c[2] * f)},${a})` : `rgb(${kanal(c[0] * f)},${kanal(c[1] * f)},${kanal(c[2] * f)})`;
+const mische = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+// Textur malen: fn(x, y) gibt [r, g, b] (oder [r, g, b, alpha]) oder null zurück
+function textur(fn, n = 16, tp = TP) {
+  const c = leinwand(n * tp, n * tp), t = c.getContext('2d');
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const f = fn(x, y); if (!f) continue;
+    t.fillStyle = rgb(f, 1, f[3] == null ? 1 : f[3]); t.fillRect(x * tp, y * tp, tp, tp);
+  }
+  return c;
+}
+const rausch = (c, x, y, s, st = 0.12) => { const f = 1 - st / 2 + st * hash(x, y, s); return [c[0] * f, c[1] * f, c[2] * f]; };
+
+// --- Blöcke (16 × 16 Minecraft-Pixel = 8 Spiel-Punkte) ---
+const TEX = {};
+TEX[ZIEGEL] = textur((x, y) => {
+  const band = y >> 2, innen = y & 3, xs = x + (band & 1) * 4;
+  if (innen === 3 || xs % 8 === 7) return rausch([176, 168, 156], x, y, 3, 0.2);          // Mörtel
+  const stein = Math.floor(xs / 8);
+  let c = rausch([150, 62, 42], stein, band, 1, 0.3);
+  c = rausch(c, x, y, 2, 0.16);
+  if (innen === 0) c = mische(c, [214, 120, 84], 0.45);                                       // Licht oben
+  if (innen === 2) c = mische(c, [70, 26, 18], 0.3);                                          // Schatten unten
+  if (xs % 8 === 0) c = mische(c, [200, 104, 70], 0.25);
+  return c;
+});
+TEX[STAHL] = textur((x, y) => {
+  let c = rausch([186, 192, 200], x, y, 4, 0.1);
+  if (x === 0 || y === 0) c = [238, 242, 246];
+  else if (x === 15 || y === 15) c = [88, 94, 104];
+  else if (x === 1 || y === 1) c = mische(c, [255, 255, 255], 0.35);
+  else if (x === 14 || y === 14) c = mische(c, [70, 76, 86], 0.4);
+  for (const [nx, ny] of [[3, 3], [12, 3], [3, 12], [12, 12]]) {                             // Nieten
+    if (x === nx && y === ny) c = [96, 102, 112];
+    if (x === nx - 1 && y === ny - 1) c = [250, 252, 255];
+    if (x === nx + 1 && y === ny + 1) c = [120, 126, 136];
+  }
+  const d = x - y; if (x > 4 && x < 12 && (d === 0 || d === 1)) c = mische(c, [255, 255, 255], 0.3);   // Glanz
+  return c;
+});
+TEX[WASSER] = textur((x, y) => {
+  let c = rausch([34, 82, 186], x, y, 5, 0.14);
+  const w = Math.sin(x * 0.7 + y * 1.3) + Math.sin(x * 0.3 - y * 0.8);
+  if (w > 1.3) c = mische(c, [70, 130, 230], 0.6); else if (w < -1.4) c = mische(c, [20, 50, 140], 0.5);
+  return c;
+});
+TEX[EIS] = textur((x, y) => {
+  let c = rausch([164, 202, 244], x, y, 6, 0.08);
+  if ((x + y * 2) % 11 === 0) c = [232, 246, 255];
+  if ((x * 3 + y) % 13 === 0 && hash(x, y, 7) < 0.6) c = mische(c, [110, 150, 210], 0.5);
+  if (x === 0 || y === 0) c = mische(c, [255, 255, 255], 0.25);
+  return c;
+});
+TEX[WALD] = textur((x, y) => {
+  const h = hash(x, y, 8);
+  if (h < 0.1) return null;                                                                   // Lücken im Laub
+  let c = rausch([58, 132, 38], x, y, 9, 0.2);
+  if (h < 0.35) c = mische(c, [24, 70, 18], 0.55);
+  else if (h > 0.86) c = mische(c, [150, 210, 70], 0.55);
+  return c;
+});
+const BODEN = [0, 1, 2, 3].map(v => textur((x, y) => {
+  let c = rausch([48, 42, 36], x >> 1, y >> 1, 20 + v, 0.2);
+  c = rausch(c, x, y, 25 + v, 0.1);
+  const h = hash(x >> 1, y >> 1, 30 + v);
+  if (h < 0.05) c = mische(c, [80, 70, 58], 0.6); else if (h > 0.96) c = mische(c, [22, 19, 16], 0.7);
+  if (hash(x, y, 35 + v) < 0.012) c = [56, 74, 36];            // ein paar Grashalme
+  return c;
+}));
+// Pflasterstein für Rahmen und Seitenleiste
+const PFLASTER = textur((x, y) => {
+  const zeile = y >> 2, vers = Math.floor(hash(zeile, 0, 40) * 4), sp = Math.floor((x + vers) / 5);
+  if ((y & 3) === 3 || (x + vers) % 5 === 4) return rausch([62, 62, 64], x, y, 41, 0.2);
+  let c = rausch([128, 128, 132], sp, zeile, 42, 0.35); c = rausch(c, x, y, 43, 0.12);
+  if ((y & 3) === 0) c = mische(c, [200, 200, 205], 0.25);
+  return c;
+}, 16, 6);
+// Wellen, die sich über das Wasser bewegen
+const WELLEN = textur((x, y) => {
+  const v = Math.sin((x / 32) * Math.PI * 4 + Math.floor(y / 4) * 1.7);
+  return (y % 4 === 0 && v > 0.75) || (y % 4 === 1 && v > 0.93) ? [210, 235, 255, 0.85] : null;
+}, 32);
+
+// Kleines Bild „veredeln“: jeder Pixel wird 2 × 2 Minecraft-Pixel mit Struktur, Lichtkante und Umriss
+function veredeln(src) {
+  const w = src.width, h = src.height, d = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const voll = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 0;
+  const c = leinwand(w * 2 * TP, h * 2 * TP), t = c.getContext('2d');
+  for (let y = 0; y < h * 2; y++) for (let x = 0; x < w * 2; x++) {
+    const sx = x >> 1, sy = y >> 1;
+    if (!voll(sx, sy)) {
+      if (voll(sx - 1, sy) || voll(sx + 1, sy) || voll(sx, sy - 1) || voll(sx, sy + 1)) { t.fillStyle = 'rgba(0,0,0,0.45)'; t.fillRect(x * TP, y * TP, TP, TP); }
+      continue;
+    }
+    const i = (sy * w + sx) * 4; let col = [d[i], d[i + 1], d[i + 2]];
+    col = rausch(col, x, y, 50, 0.14);
+    if ((!voll(sx, sy - 1) && (y & 1) === 0) || (!voll(sx - 1, sy) && (x & 1) === 0)) col = mische(col, [255, 255, 255], 0.3);
+    if ((!voll(sx, sy + 1) && (y & 1) === 1) || (!voll(sx + 1, sy) && (x & 1) === 1)) col = mische(col, [0, 0, 0], 0.35);
+    t.fillStyle = rgb(col); t.fillRect(x * TP, y * TP, TP, TP);
+  }
+  return c;
+}
+const ADLER_HD = veredeln(ausText([
+  '................', 'g..............g', 'gg....dddd....gg', 'ggg..dyyyyd..ggg', 'gggg.dydyyy.gggg', 'gggggdyyyydggggg',
+  '.gggggdyydggggg.', '..ggggyyyygggg..', '...ggggyyggggg..', '....gggggggg....', '.....gggggg.....', '......gggg......',
+  '.....gg..gg.....', '....gg.gg.gg....', '...ssssssssss...', '..ssssssssssss..'], { g: '#D8A830', y: '#F8E8B0', d: '#6C4810', s: '#808088' }));
+const ADLER_KAPUTT_HD = veredeln(ADLER_KAPUTT);
+const BONUS_HD = {}; for (const a of BONUS_ARTEN) BONUS_HD[a] = veredeln(ausText(BONUS_BILD[a], BONUS_FARBEN, 14));
+const FAHNE_HD = veredeln(FAHNE);
+const KNALL_GROSS_HD = KNALL_GROSS.map(veredeln), KNALL_KLEIN_HD = KNALL_KLEIN.map(veredeln);
+
+// Leuchten (weicher Kreis), für Licht und Glühen
+function glut(farbe) {
+  const c = leinwand(128, 128), t = c.getContext('2d'), gr = t.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, rgb(farbe, 1, 1)); gr.addColorStop(0.25, rgb(farbe, 1, 0.55)); gr.addColorStop(1, rgb(farbe, 1, 0));
+  t.fillStyle = gr; t.fillRect(0, 0, 128, 128); return c;
+}
+const GLUT = { feuer: glut([255, 150, 50]), gelb: glut([255, 230, 140]), blau: glut([120, 200, 255]), rot: glut([255, 60, 40]), weiss: glut([255, 255, 255]), gruen: glut([120, 255, 120]) };
+const nachtLevel = lv => typeof lv === 'number' && lv % 4 === 0;
+const KEGEL = (() => {                       // Lichtkegel eines Scheinwerfers (zeigt nach oben)
+  const c = leinwand(220, 300), t = c.getContext('2d'), gr = t.createRadialGradient(110, 300, 10, 110, 300, 300);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  t.beginPath(); t.moveTo(100, 300); t.lineTo(120, 300); t.lineTo(220, 0); t.lineTo(0, 0); t.closePath(); t.fillStyle = gr; t.fill(); return c;
+})();
+const VIGNETTE = (() => {
+  const c = leinwand(FR, FR), t = c.getContext('2d'), gr = t.createRadialGradient(FR / 2, FR / 2, FR * 0.35, FR / 2, FR / 2, FR * 0.75);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.45)'); t.fillStyle = gr; t.fillRect(0, 0, FR, FR); return c;
+})();
+
+// --- Panzer in Block-Optik: 32 × 32 Minecraft-Pixel, Licht kommt immer von oben links ---
+const HD_FARBEN = { gelb: [224, 170, 36], gruen: [62, 162, 56], silber: [158, 168, 176], rot: [206, 56, 38], oliv: [116, 140, 44], gold: [214, 168, 24], hgruen: [96, 192, 110] };
+const KETTE = [58, 56, 52];
+function panzerHDBild(form, farbe, r, anim) {
+  const d = FORMEN[form], T = 32, c = leinwand(T * TP, T * TP), t = c.getContext('2d'), basis = HD_FARBEN[farbe];
+  // Lichtrichtung im ungedrehten Bild, damit es nach dem Drehen wieder von oben links kommt
+  const w = -r * Math.PI / 2, lx = -0.55 * Math.cos(w) + 0.83 * Math.sin(w), ly = -0.55 * Math.sin(w) - 0.83 * Math.cos(w);
+  const px = (x, y, col, f = 1) => { t.fillStyle = rgb(col, f); t.fillRect(x * TP, y * TP, TP, TP); };
+  const kante = (nx, ny) => 1 + 0.38 * (nx * lx + ny * ly);
+  // Ketten mit Gliedern
+  const [kx, kb, ky0, ky1] = d.k.map(v => v * 2);
+  for (const sx of [kx, T - kx - kb]) for (let y = ky0; y < ky1; y++) for (let x = sx; x < sx + kb; x++) {
+    const glied = (y + anim * 2) % 4;
+    let f = glied === 0 ? 0.45 : glied === 1 ? 1.9 : 1.25;
+    if (x === sx) f *= kante(-1, 0); if (x === sx + kb - 1) f *= kante(1, 0);
+    if (y === ky0) f *= kante(0, -1) * 0.9; if (y === ky1 - 1) f *= kante(0, 1) * 0.9;
+    if ((y === ky0 + 1 || y === ky1 - 2) && x === sx + (kb >> 1)) f *= 1.6;           // Antriebsrad
+    px(x, y, KETTE, f * (0.9 + 0.15 * hash(x, y, 60)));
+  }
+  // Rumpf
+  const [rx, ry, rb, rh] = d.r.map(v => v * 2);
+  for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rb; x++) {
+    let f = 0.92 + 0.12 * hash(x, y, 61);
+    if (x === rx) f *= kante(-1, 0); if (x === rx + rb - 1) f *= kante(1, 0);
+    if (y === ry) f *= kante(0, -1); if (y === ry + rh - 1) f *= kante(0, 1);
+    if (y === ry + Math.floor(rh * 0.22)) f *= 0.78;                                          // Naht
+    if (y > ry + rh - 5 && y < ry + rh - 1 && x > rx + 2 && x < rx + rb - 3 && (x & 1)) f *= 0.62;   // Lüftungsgitter
+    if ((x === rx + 1 || x === rx + rb - 2) && (y === ry + 2 || y === ry + rh - 3)) f *= 0.6;          // Nieten
+    px(x, y, basis, f);
+  }
+  if (d.p) for (const sx of [rx - 1, rx + rb]) for (let y = ry + 3; y < ry + rh - 3; y++) px(sx, y, mische(basis, [90, 90, 90], 0.5), 0.9 + 0.2 * ((y >> 1) & 1));   // Panzerplatten
+  if (d.n) for (let x = rx + 2; x < rx + rb - 2; x++) px(x, ry - 1, basis, kante(0, -1));
+  // Rohr (Zylinder-Schattierung)
+  const rohr = mische(basis, [140, 140, 140], 0.45), [ox, oy, ob, oh] = d.l.map(v => v * 2);
+  for (let y = oy; y < oy + oh + 6; y++) for (let x = ox; x < ox + ob; x++) {
+    const u = (x - ox + 0.5) / ob * 2 - 1, nz = Math.sqrt(Math.max(0, 1 - u * u));
+    let f = 0.55 + 0.75 * Math.max(0, u * lx + nz * 0.55);
+    if (y < oy + 2) f *= 0.8;
+    px(x, y, rohr, f);
+  }
+  for (let x = ox - 1; x < ox + ob + 1; x++) for (let y = oy; y < oy + 3; y++) if (x < ox || x >= ox + ob) px(x, y, rohr, 0.7);   // Mündungsbremse
+  if (d.m) { const [mx, my, mb, mh] = d.m.map(v => v * 2); for (let y = my; y < my + mh; y++) for (let x = mx; x < mx + mb; x++) px(x, y, rohr, 1.1); }
+  // Turm (Kugel-Schattierung)
+  const tx = d.t[0] * 2 + 1, ty = d.t[1] * 2 + 1, tr = d.t[2] * 2, turm = mische(basis, [255, 255, 255], 0.08);
+  if (d.q) {
+    for (let y = Math.round(ty - 6); y < ty + 6; y++) for (let x = 10; x < 22; x++) {
+      let f = 0.95 + 0.1 * hash(x, y, 62);
+      if (x === 10) f *= kante(-1, 0); if (x === 21) f *= kante(1, 0); if (y === Math.round(ty - 6)) f *= kante(0, -1); if (y >= ty + 5) f *= kante(0, 1);
+      px(x, y, turm, f);
+    }
+  } else for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const nx = (x + 0.5 - tx) / tr, ny = (y + 0.5 - ty) / tr, a = nx * nx + ny * ny;
+    if (a > 1) continue;
+    const nz = Math.sqrt(1 - a);
+    let f = 0.5 + 0.75 * Math.max(0, -(nx * lx + ny * ly) * -1 + nz * 0.55);
+    if (a > 0.72) f *= 0.82;
+    const hx = (x + 0.5 - tx - tr * 0.35), hy = (y + 0.5 - ty - tr * 0.3); if (hx * hx + hy * hy < 2.2) f *= 0.72;   // Luke
+    px(x, y, turm, f * (0.95 + 0.1 * hash(x, y, 63)));
+  }
+  return gedreht(c, r);
+}
+const hdCache = {};
+function panzerHD(form, farbe, r, anim) {
+  const k = form + farbe + r + anim;
+  if (!hdCache[k]) {
+    const bild = panzerHDBild(form, farbe, r, anim), schatten = leinwand(bild.width, bild.height), s = schatten.getContext('2d');
+    s.drawImage(bild, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = '#000'; s.fillRect(0, 0, bild.width, bild.height);
+    hdCache[k] = { bild, schatten };
+  }
+  return hdCache[k];
+}
+
+// --- Pixel-Schrift in beliebiger Größe, mit Schatten wie bei Minecraft ---
+function schrift(c, text, x, y, gr, farbe = '#fff', mitte = false, schatten = true) {
+  text = String(text).toUpperCase();
+  if (mitte) x -= Math.round((text.length * 6 - 1) * gr / 2);
+  const malen = (ox, oy, f) => {
+    c.fillStyle = f; let cx = x + ox;
+    for (const ch of text) {
+      const z = SCHRIFT[ch] || SCHRIFT['?'];
+      for (let r = 0; r < 7; r++) for (let s = 0; s < 5; s++) if (z[r] & (16 >> s)) c.fillRect(cx + s * gr, y + oy + r * gr, gr, gr);
+      cx += 6 * gr;
+    }
+  };
+  if (schatten) malen(gr, gr, 'rgba(0,0,0,0.6)');
+  malen(0, 0, farbe);
+}
+
+/* ---------- Boden + Mauern zeichnen (nur neu, wenn sich etwas ändert) ---------- */
+const istMauer = t => t === ZIEGEL || t === STAHL;
+function bodenZeichnen(k, x0, y0, x1, y1) {
+  // Bereich in Zellen (inklusive), etwas Rand für Schatten
+  const zx0 = Math.max(0, x0 - 2), zy0 = Math.max(0, y0 - 2), zx1 = Math.min(N - 1, x1 + 1), zy1 = Math.min(N - 1, y1 + 1);
+  const Z = 4 * GR, b = bodenG;
+  b.save(); b.beginPath(); b.rect(x0 * Z, y0 * Z, (x1 - x0 + 1) * Z, (y1 - y0 + 1) * Z); b.clip();
+  const zelle = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? STAHL : k[y * N + x];
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) {
+    const t = k[y * N + x], sx = (x & 1) * 16, sy = (y & 1) * 16, dx = x * Z, dy = y * Z;
+    const quelle = t === WASSER ? TEX[WASSER] : t === EIS ? TEX[EIS] : BODEN[Math.floor(hash(x >> 1, y >> 1, 70) * 4)];
+    b.drawImage(quelle, sx, sy, 16, 16, dx, dy, 16, 16);
+    if (t === WASSER) {                                       // Ufer: Schatten oben, Schaum an den Rändern
+      if (zelle(x, y - 1) !== WASSER) { b.fillStyle = 'rgba(0,10,40,0.45)'; b.fillRect(dx, dy, 16, 5); }
+      for (const [nx, ny, rx, ry, rw, rh] of [[-1, 0, 0, 0, 2, 16], [1, 0, 14, 0, 2, 16], [0, 1, 0, 14, 16, 2]])
+        if (zelle(x + nx, y + ny) !== WASSER) for (let i = 0; i < 8; i++) if (hash(x * 8 + i, y, 71 + nx * 3 + ny) < 0.55) {
+          b.fillStyle = 'rgba(220,240,255,0.7)'; b.fillRect(dx + rx + (rw > 2 ? i * 2 : 0), dy + ry + (rh > 2 ? i * 2 : 0), 2, 2);
+        }
+    }
+  }
+  // Schatten der Mauern und Bäume
+  maskeG.clearRect(zx0 * Z, zy0 * Z, (zx1 - zx0 + 1) * Z, (zy1 - zy0 + 1) * Z);
+  maskeG.fillStyle = '#000';
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (istMauer(k[y * N + x])) maskeG.fillRect(x * Z, y * Z, Z, Z);
+  b.globalAlpha = 0.5; b.drawImage(maskeHD, 6, 8); b.globalAlpha = 1;
+  maskeG.clearRect(zx0 * Z, zy0 * Z, (zx1 - zx0 + 1) * Z, (zy1 - zy0 + 1) * Z);
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (k[y * N + x] === WALD) maskeG.fillRect(x * Z, y * Z, Z, Z);
+  b.globalAlpha = 0.32; b.drawImage(maskeHD, 10, 14); b.globalAlpha = 1;
+  // Mauern mit Kanten: oben hell, unten eine dunkle Vorderseite → sieht aus wie ein Klotz
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) {
+    const t = k[y * N + x]; if (!istMauer(t)) continue;
+    const dx = x * Z, dy = y * Z;
+    b.drawImage(TEX[t], (x & 1) * 16, (y & 1) * 16, 16, 16, dx, dy, 16, 16);
+    if (!istMauer(zelle(x, y - 1))) { b.fillStyle = 'rgba(255,255,255,0.22)'; b.fillRect(dx, dy, 16, 2); }
+    if (!istMauer(zelle(x - 1, y))) { b.fillStyle = 'rgba(255,255,255,0.14)'; b.fillRect(dx, dy, 2, 16); }
+    if (!istMauer(zelle(x + 1, y))) { b.fillStyle = 'rgba(0,0,0,0.3)'; b.fillRect(dx + 14, dy, 2, 16); }
+    if (!istMauer(zelle(x, y + 1))) { b.fillStyle = 'rgba(0,0,0,0.42)'; b.fillRect(dx, dy + 10, 16, 6); b.fillStyle = 'rgba(0,0,0,0.35)'; b.fillRect(dx, dy + 14, 16, 2); }
+  }
+  b.restore();
+}
+function waldZeichnen(k) {
+  waldG.clearRect(0, 0, FR, FR); wasserMaskeG.clearRect(0, 0, FR, FR);
+  const Z = 4 * GR; let wasser = false;
+  const zelle = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? -1 : k[y * N + x];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const t = k[y * N + x], dx = x * Z, dy = y * Z;
+    if (t === WASSER) { wasserMaskeG.fillStyle = '#fff'; wasserMaskeG.fillRect(dx, dy, Z, Z); wasser = true; }
+    if (t !== WALD) continue;
+    waldG.drawImage(TEX[WALD], (x & 1) * 16, (y & 1) * 16, 16, 16, dx, dy, 16, 16);
+    if (zelle(x, y - 1) !== WALD) { waldG.fillStyle = 'rgba(190,240,120,0.35)'; waldG.fillRect(dx, dy, 16, 2); }
+    if (zelle(x, y + 1) !== WALD) { waldG.fillStyle = 'rgba(0,30,0,0.45)'; waldG.fillRect(dx, dy + 12, 16, 4); }
+    if (zelle(x + 1, y) !== WALD) { waldG.fillStyle = 'rgba(0,30,0,0.3)'; waldG.fillRect(dx + 14, dy, 2, 16); }
+  }
+  HD.wasser = wasser;
+}
+
+/* ---------- Was beim Malen passiert: Teilchen, Lichter, Spuren ---------- */
+const HD = { kartenId: null, kv: -1, karte: new Uint8Array(N * N), gesehen: new Map(), kugeln: new Set(), lage: new Map(), rueck: new Map(),
+             teilchen: [], lichter: [], wackeln: 0, zeit: 0, bonus: null, wasser: false, spurT: 0 };
+function teilchen(o) { if (HD.teilchen.length < (HD.sparen ? 220 : 700)) HD.teilchen.push(Object.assign({ vx: 0, vy: 0, l: 30, ml: 30, gr: 4, reib: 0.94, add: false, wachs: 0, steig: 0 }, o, { ml: o.l || 30 })); }
+function licht(x, y, r, farbe, l = 20, staerke = 1) { if (HD.sparen && HD.lichter.length > 5) return; HD.lichter.push({ x, y, r, farbe, l, ml: l, staerke }); }
+const zz = (a, b) => a + Math.random() * (b - a);
+function explosionGross(x, y) {
+  for (let i = 0; i < 34; i++) { const w = zz(0, 7), v = zz(0.5, 3.2); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(18, 38), gr: zz(5, 11), farbe: [255, zz(120, 230), zz(20, 80)], add: true, reib: 0.9 }); }
+  for (let i = 0; i < 16; i++) { const w = zz(0, 7), v = zz(0.3, 1.4); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(40, 80), gr: zz(8, 14), farbe: [zz(50, 80), zz(50, 75), zz(50, 70)], wachs: 0.25, steig: -0.15, reib: 0.95 }); }
+  for (let i = 0; i < 14; i++) { const w = zz(0, 7), v = zz(2, 5); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(25, 45), gr: zz(3, 6), farbe: [zz(40, 70), zz(40, 60), 40], reib: 0.9 }); }
+  for (let i = 0; i < 10; i++) { const w = zz(0, 7), v = zz(3, 7); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(10, 20), gr: 2, farbe: [255, 240, 180], add: true, reib: 0.92 }); }
+  teilchen({ x, y, art: 'welle', l: 22, gr: 10 });
+  licht(x, y, 200, 'feuer', 30, 1.2); licht(x, y, 90, 'weiss', 8, 1);
+  HD.wackeln = Math.max(HD.wackeln, 12);
+}
+function einschlag(x, y, metall) {
+  for (let i = 0; i < 8; i++) { const w = zz(0, 7), v = zz(1, 3.5); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(6, 14), gr: 2, farbe: metall ? [200, 230, 255] : [255, zz(180, 240), 90], add: true, reib: 0.88 }); }
+  for (let i = 0; i < 3; i++) teilchen({ x, y, vx: zz(-0.5, 0.5), vy: zz(-0.5, 0.5), l: zz(20, 35), gr: zz(5, 8), farbe: [110, 100, 90], wachs: 0.2, steig: -0.1 });
+  licht(x, y, 70, metall ? 'blau' : 'feuer', 8, 0.9);
+  HD.wackeln = Math.max(HD.wackeln, 2);
+}
+function mauerTruemmer(x, y, t) {
+  const farbe = t === STAHL ? [180, 186, 196] : [zz(130, 175), zz(50, 75), 40];
+  for (let i = 0; i < 2; i++) { const w = zz(0, 7), v = zz(0.6, 2.6); teilchen({ x: x + zz(0, 16), y: y + zz(0, 16), vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(18, 34), gr: zz(3, 6), farbe, reib: 0.9, schatten: true }); }
+}
+function funkeln(x, y, farbe, n = 14) {
+  for (let i = 0; i < n; i++) { const w = i / n * 6.283, v = zz(1.5, 3); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(20, 34), gr: 3, farbe, add: true, reib: 0.93 }); }
+  licht(x, y, 120, 'gelb', 20, 0.8);
+}
+
+// Ereignisse aus dem Spielstand ablesen (klappt beim Gastgeber und beim Gast gleich)
+function ereignisse(V) {
+  const spiel = modus === 'spiel' || !!(V.opt && V.opt.demo);
+  // neue Karte → alles neu
+  if (HD.kartenId !== V.kartenId) {
+    HD.kartenId = V.kartenId; HD.kv = V.kv; HD.karte.set(V.karte);
+    bodenZeichnen(V.karte, 0, 0, N - 1, N - 1); waldZeichnen(V.karte);
+    spurenG.clearRect(0, 0, FR, FR); HD.lage.clear(); HD.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80; HD.teilchen.length = 0; HD.lichter.length = 0; HD.kugeln.clear(); HD.gesehen.clear();
+  } else if (HD.kv !== V.kv) {
+    HD.kv = V.kv;
+    let x0 = N, y0 = N, x1 = -1, y1 = -1, neuWald = false, n = 0;
+    for (let i = 0; i < N * N; i++) {
+      const a = HD.karte[i], b = V.karte[i]; if (a === b) continue;
+      const x = i % N, y = (i / N) | 0;
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      if (a === WALD || b === WALD || a === WASSER || b === WASSER) neuWald = true;
+      if (spiel && istMauer(a) && b === LEER && n++ < 40) mauerTruemmer(x * 16, y * 16, a);
+    }
+    HD.karte.set(V.karte);
+    if (x1 >= 0) bodenZeichnen(V.karte, x0, y0, x1, y1);
+    if (neuWald) waldZeichnen(V.karte);
+  }
+  if (!spiel) return;
+  // neue Explosionen
+  for (const e of V.effekte) {
+    const k = e.art + e.x + ',' + e.y + ',' + (V.t - e.t);
+    if (HD.gesehen.has(k)) continue;
+    HD.gesehen.set(k, V.t);
+    if (e.t > 6 && e.art !== 'p') continue;                  // zu alt (z. B. nach dem Verbinden)
+    const x = e.x * GR, y = e.y * GR;
+    if (e.art === 'g') explosionGross(x, y);
+    else if (e.art === 'k') { const c = Math.floor(e.x / 4), r = Math.floor(e.y / 4); einschlag(x, y, [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(r + b) * N + c + a] === STAHL))); }
+  }
+  for (const [k, t] of HD.gesehen) if (V.t - t > 200 || t > V.t) HD.gesehen.delete(k);
+  // neue Kugeln → Mündungsfeuer und Rückstoß
+  const jetzt = new Set();
+  for (const k of V.kugeln) {
+    jetzt.add(k.id);
+    if (HD.kugeln.has(k.id)) continue;
+    const x = (k.x - DX[k.r] * 2) * GR, y = (k.y - DY[k.r] * 2) * GR;
+    licht(x, y, 80, 'gelb', 6, 1);
+    for (let i = 0; i < 5; i++) teilchen({ x, y, vx: DX[k.r] * zz(1, 3) + zz(-0.8, 0.8), vy: DY[k.r] * zz(1, 3) + zz(-0.8, 0.8), l: zz(5, 10), gr: 3, farbe: [255, 220, 120], add: true, reib: 0.85 });
+    teilchen({ x, y, vx: DX[k.r] * 0.6, vy: DY[k.r] * 0.6, l: 26, gr: 6, farbe: [140, 140, 140], wachs: 0.2, steig: -0.05 });
+    let best = null, d = 400;
+    for (const p of V.panzer) { const a = Math.abs(p.x + 8 + DX[p.r] * 8 - k.x) + Math.abs(p.y + 8 + DY[p.r] * 8 - k.y); if (a < d) { d = a; best = p; } }
+    if (best && d < 10) HD.rueck.set(best.id, 6);
+  }
+  HD.kugeln = jetzt;
+  // Bonus erscheint / wird genommen
+  const b = V.bonus ? V.bonus.art + V.bonus.x + ',' + V.bonus.y : null;
+  if (b !== HD.bonus) {
+    if (b) funkeln((V.bonus.x + 8) * GR, (V.bonus.y + 8) * GR, [255, 240, 150], 10);
+    else if (HD.bonusLage) funkeln(HD.bonusLage[0], HD.bonusLage[1], [255, 255, 200], 22);
+    HD.bonus = b; HD.bonusLage = V.bonus ? [(V.bonus.x + 8) * GR, (V.bonus.y + 8) * GR] : null;
+  }
+}
+function teilchenBewegen(dt) {
+  for (const t of HD.teilchen) {
+    t.x += t.vx * dt; t.y += t.vy * dt + t.steig * dt;
+    const r = Math.pow(t.reib, dt); t.vx *= r; t.vy *= r; t.gr += t.wachs * dt; t.l -= dt;
+  }
+  HD.teilchen = HD.teilchen.filter(t => t.l > 0 && !(t.flocke && t.y > FR + 10));
+  for (const l of HD.lichter) l.l -= dt;
+  HD.lichter = HD.lichter.filter(l => l.l > 0);
+  for (const [id, v] of HD.rueck) { if (v - dt <= 0) HD.rueck.delete(id); else HD.rueck.set(id, v - dt); }
+  HD.wackeln = Math.max(0, HD.wackeln - dt * 0.8);
+}
+
+/* ---------- Ein Bild in Block-Grafik ---------- */
+let hdLetzte = performance.now();
+function blockMalen(V) {
+  const jetzt = performance.now(), dt = V.pause ? 0 : Math.min(3, (jetzt - hdLetzte) / 16.67); hdLetzte = jetzt;
+  HD.zeit += dt;
+  const a = V.alpha == null ? 1 : V.alpha, blink = n => Math.floor(V.t / n) % 2 === 0, c = bg;
+  ereignisse(V); teilchenBewegen(dt);
+  // Rahmen aus Pflasterstein
+  c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
+  if (!blockMalen.muster) blockMalen.muster = c.createPattern(PFLASTER, 'repeat');
+  c.fillStyle = blockMalen.muster; c.fillRect(0, 0, blockBild.width, blockBild.height);
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, 0, blockBild.width, blockBild.height);
+  const ox = 16 * GR, oy = 8 * GR;
+  c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox - 8, oy - 8, FR + 16, FR + 16);
+  // Feld (mit Wackeln)
+  const wx = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0, wy = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0;
+  c.save(); c.beginPath(); c.rect(ox, oy, FR, FR); c.clip(); c.translate(ox + wx, oy + wy);
+  c.drawImage(bodenHD, 0, 0);
+  if (HD.wasser && !HD.sparen) {                              // Wellen ziehen über das Wasser
+    if (!blockMalen.wellen) blockMalen.wellen = wasserTmpG.createPattern(WELLEN, 'repeat');
+    const t = wasserTmpG; t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, FR, FR);
+    const v = Math.round(HD.zeit * 0.25) * TP;
+    t.save(); t.translate(v % 64, Math.round(v * 0.5) % 64); t.fillStyle = blockMalen.wellen; t.fillRect(-64, -64, FR + 128, FR + 128); t.restore();
+    t.globalCompositeOperation = 'destination-in'; t.drawImage(wasserMaske, 0, 0); t.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 0.45 + 0.15 * Math.sin(HD.zeit * 0.05); c.drawImage(wasserTmp, 0, 0); c.globalAlpha = 1;
+  }
+  // Kettenspuren
+  if ((modus === 'spiel' || (V.opt && V.opt.demo)) && dt > 0) {
+    spurenG.fillStyle = 'rgba(10,8,5,0.10)';
+    for (const p of V.panzer) {
+      if (p.spawn > 0) continue;
+      const alt = HD.lage.get(p.id);
+      if (alt && (alt[0] !== p.x || alt[1] !== p.y) && V.karte[((p.y + 8) >> 2) * N + ((p.x + 8) >> 2)] !== WASSER) {
+        const f = FORMEN[p.sp >= 0 ? 's0' : 'g' + p.typ].k, b = f[1] * GR, m = 8 * GR;
+        for (const s of [f[0], 16 - f[0] - f[1]]) {
+          const q = (s - 8) * GR;            // Abstand der Kette von der Mitte
+          if (p.r & 1) spurenG.fillRect(p.x * GR + m - 3, p.y * GR + m + q, 6, b);
+          else spurenG.fillRect(p.x * GR + m + q, p.y * GR + m - 3, b, 6);
+        }
+      }
+      HD.lage.set(p.id, [p.x, p.y]);
+    }
+    if (++HD.spurT % 40 === 0) { spurenG.globalCompositeOperation = 'destination-out'; spurenG.fillStyle = 'rgba(0,0,0,0.08)'; spurenG.fillRect(0, 0, FR, FR); spurenG.globalCompositeOperation = 'source-over'; }
+  }
+  c.drawImage(spurenHD, 0, 0);
+  // Adler auf seinem Sockel
+  c.drawImage(V.basisKaputt ? ADLER_KAPUTT_HD : ADLER_HD, BX * GR, BY * GR);
+  if (!V.basisKaputt && modus === 'spiel') { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18 + 0.08 * Math.sin(HD.zeit * 0.08); c.drawImage(GLUT.gelb, BX * GR - 16, BY * GR - 16, 96, 96); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; }
+  if (V.zeigeStart) for (const [x, y] of START_SP.concat(START_GEG)) { c.globalAlpha = 0.35; c.drawImage(GLUT.blau, x * GR, y * GR, 64, 64); c.globalAlpha = 1; }
+  // Panzer: erst alle Schatten, dann die Panzer
+  const liste = V.panzer.map(p => { const [x, y] = lage(p, a); return { p, x: x * GR, y: y * GR }; });
+  for (const { p, x, y } of liste) {
+    if (p.spawn > 0) continue;
+    const s = panzerHD(panzerForm(V, p), 'silber', p.r, 0).schatten;
+    c.globalAlpha = 0.4; c.drawImage(s, x + 6, y + 8); c.globalAlpha = 1;
+  }
+  for (const { p, x, y } of liste) {
+    const mx = x + 32, my = y + 32;
+    if (p.spawn > 0) { erscheinen(c, mx, my, p.spawn); continue; }
+    if (p.sp >= 0 && p.starr > 0 && blink(6)) continue;
+    const farbe = panzerFarbe(V, p, blink), rk = HD.rueck.get(p.id) || 0, rx = -DX[p.r] * Math.round(rk / 2) * 2, ry = -DY[p.r] * Math.round(rk / 2) * 2;
+    c.drawImage(panzerHD(panzerForm(V, p), farbe, p.r, p.anim).bild, x + rx, y + ry);
+    if (p.sp < 0 && p.bonus && farbe === 'rot') licht(mx, my, 90, 'rot', 1, 0.5);
+    if (p.sp >= 0 && p.starr > 0) { c.fillStyle = 'rgba(150,220,255,0.35)'; c.fillRect(x + 4, y + 4, 56, 56); }
+    if (p.schild > 0) schildMalen(c, mx, my);
+  }
+  // Kugeln mit Leuchtspur
+  for (const k of V.kugeln) {
+    const [x0, y0] = lage(k, a), x = x0 * GR, y = y0 * GR;
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = 0.55; c.drawImage(GLUT.gelb, x - 18, y - 18, 36, 36);
+    for (let i = 1; i <= 4; i++) { c.globalAlpha = 0.5 - i * 0.1; c.fillStyle = '#ffb040'; c.fillRect(x - 2 - DX[k.r] * i * 4, y - 2 - DY[k.r] * i * 4, 4, 4); }
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    c.fillStyle = '#fff6d8'; c.fillRect(x - 4, y - 4, 8, 8); c.fillStyle = '#ffd060'; c.fillRect(x - 4 + DX[k.r] * 0, y + 2, 8, 2);
+  }
+  // Blätterdach über allem
+  c.drawImage(waldHD, 0, 0);
+  // Bonus schwebt und leuchtet
+  if (V.bonus) {
+    const h = Math.round(Math.sin(HD.zeit * 0.12) * 3) * 2, bx = V.bonus.x * GR, by = V.bonus.y * GR;
+    c.globalAlpha = 0.35; c.fillStyle = '#000'; c.fillRect(bx + 8, by + 54, 48, 8); c.globalAlpha = 1;
+    c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.5 + 0.3 * Math.sin(HD.zeit * 0.2); c.drawImage(GLUT.gelb, bx - 32, by - 32 + h, 128, 128); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    c.drawImage(BONUS_HD[V.bonus.art], bx + 4, by + 4 + h, 56, 56);
+    if (Math.random() < 0.1 * dt) teilchen({ x: bx + zz(0, 64), y: by + zz(0, 64), vy: -0.6, l: 20, gr: 3, farbe: [255, 250, 200], add: true });
+  }
+  // Teilchen
+  for (const t of HD.teilchen) {
+    const f = Math.max(0, t.l / t.ml);
+    if (t.art === 'welle') { c.strokeStyle = `rgba(255,220,160,${f * 0.6})`; c.lineWidth = 4; c.beginPath(); c.arc(t.x, t.y, (1 - f) * 120 + 10, 0, 7); c.stroke(); continue; }
+    const gr = Math.max(2, Math.round(t.gr / 2) * 2), x = Math.round(t.x / 2) * 2 - gr / 2, y = Math.round(t.y / 2) * 2 - gr / 2;
+    if (t.add) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, f * 1.4); }
+    else c.globalAlpha = Math.min(1, f * 1.6) * (t.wachs ? 0.7 : 1);
+    if (t.schatten) { c.fillStyle = 'rgba(0,0,0,0.4)'; c.fillRect(x + 3, y + 4, gr, gr); }
+    c.fillStyle = rgb(t.farbe); c.fillRect(x, y, gr, gr);
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  }
+  // Feuerbälle
+  c.globalCompositeOperation = 'lighter';
+  for (const e of V.effekte) {
+    if (e.art === 'g') { const b = KNALL_GROSS_HD[Math.min(4, Math.floor(e.t / 5))]; c.globalAlpha = e.t < 20 ? 1 : 0.6; c.drawImage(b, e.x * GR - 96, e.y * GR - 96, 192, 192); }
+    if (e.art === 'k') { const b = KNALL_KLEIN_HD[Math.min(2, e.t >> 2)]; c.globalAlpha = 0.9; c.drawImage(b, e.x * GR - 40, e.y * GR - 40, 80, 80); }
+  }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  // Punkte
+  for (const e of V.effekte) if (e.art === 'p' && e.t > 20) schrift(c, e.w, e.x * GR, e.y * GR - 12 - (e.t - 20) * 0.6, 2, '#fff', true);
+  // Schnee auf Eis-Leveln
+  if (HD.schnee && dt > 0 && Math.random() < 0.5) teilchen({ x: zz(-100, FR), y: -6, vx: zz(0.2, 0.7), vy: zz(1, 2.2), l: 700, gr: Math.random() < 0.3 ? 6 : 4, farbe: [240, 248, 255], reib: 1, flocke: true });
+  // Level geschafft → Feuerwerk
+  if (V.phase === 'spiel' && V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0) && dt > 0 && Math.random() < 0.06 * dt) {
+    const farben = [[255, 90, 90], [120, 220, 255], [255, 230, 90], [140, 255, 140], [255, 140, 255]];
+    funkeln(zz(100, FR - 100), zz(80, FR - 300), farben[zufall(farben.length)], 26); Ton.spiel('knall');
+  }
+  // Nacht: alles dunkel, nur Scheinwerfer, Kugeln und Feuer leuchten
+  if (nachtLevel(V.level) && !HD.sparen) {
+    const n = lichtG;
+    n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, FR, FR);
+    n.fillStyle = 'rgba(3,5,22,0.84)'; n.fillRect(0, 0, FR, FR);
+    n.globalCompositeOperation = 'destination-out';
+    const loch = (x, y, r, a = 1) => { n.globalAlpha = a; n.drawImage(GLUT.weiss, x - r, y - r, r * 2, r * 2); };
+    for (const { p, x, y } of liste) {
+      const mx = x + 32, my = y + 32;
+      if (p.spawn > 0) { loch(mx, my, 90); continue; }
+      loch(mx, my, 70, 0.8);
+      n.save(); n.translate(mx, my); n.rotate(p.r * Math.PI / 2); n.globalAlpha = p.sp >= 0 ? 1 : 0.7; n.drawImage(KEGEL, -110, -300); n.restore();
+    }
+    for (const k of V.kugeln) { const [x, y] = lage(k, a); loch(x * GR, y * GR, 50); }
+    for (const l of HD.lichter) loch(l.x, l.y, l.r * 1.3, Math.min(1, l.l / l.ml * l.staerke));
+    for (const e of V.effekte) if (e.art === 'g') loch(e.x * GR, e.y * GR, 230, 1 - e.t / 25);
+    if (!V.basisKaputt) loch(BX * GR + 32, BY * GR + 32, 110, 0.9);
+    if (V.bonus) loch(V.bonus.x * GR + 32, V.bonus.y * GR + 32, 90, 0.9);
+    n.globalAlpha = 1; n.globalCompositeOperation = 'source-over';
+    c.drawImage(lichtHD, 0, 0);
+  }
+  // Lichter (Explosionen, Mündungsfeuer)
+  c.globalCompositeOperation = 'lighter';
+  for (const l of HD.lichter) { const f = (l.l / l.ml) * l.staerke; c.globalAlpha = Math.min(1, f); c.drawImage(GLUT[l.farbe], l.x - l.r, l.y - l.r, l.r * 2, l.r * 2); }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  if (V.uhr > 0) { c.fillStyle = `rgba(120,180,255,${0.12 + (V.uhr < 120 && blink(10) ? 0.08 : 0)})`; c.fillRect(0, 0, FR, FR); }
+  if (!HD.sparen) c.drawImage(VIGNETTE, 0, 0);
+  c.restore();
+  // innerer Rahmen-Schatten
+  c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(ox, oy, FR, 6); c.fillRect(ox, oy, 6, FR);
+  c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + FR, FR, 4); c.fillRect(ox + FR, oy, 4, FR + 4);
+  seitenleisteHD(V);
+  einblendungenHD(V, blink);
+}
+function panzerForm(V, p) { return p.sp >= 0 ? 's' + ((V.sp[p.sp] || {}).lvl || 0) : 'g' + p.typ; }
+function panzerFarbe(V, p, blink) {
+  if (p.sp >= 0) return p.sp ? 'gruen' : 'gelb';
+  if (p.bonus && blink(8)) return 'rot';
+  return p.typ === 3 ? ['silber', 'hgruen', 'gold', 'oliv'][begrenze(p.hp, 1, 4) - 1] : 'silber';
+}
+// Erscheinen: Lichtsäule mit kreisenden Funken
+function erscheinen(c, x, y, rest) {
+  const f = 1 - rest / 50, w = HD.zeit * 0.25;
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha = 0.5 + 0.3 * Math.sin(HD.zeit * 0.5); c.drawImage(GLUT.blau, x - 48, y - 48, 96, 96);
+  c.globalAlpha = 0.8;
+  for (let i = 0; i < 8; i++) { const r = 30 * (1 - f) + 6, a = w + i * Math.PI / 4; c.fillStyle = i % 2 ? '#bfe6ff' : '#ffffff'; c.fillRect(Math.round(x + Math.cos(a) * r) - 3, Math.round(y + Math.sin(a) * r) - 3, 6, 6); }
+  const s = 6 + 10 * Math.abs(Math.sin(HD.zeit * 0.3)); c.fillStyle = '#fff'; c.fillRect(x - s, y - 2, s * 2, 4); c.fillRect(x - 2, y - s, 4, s * 2);
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  if (Math.random() < 0.4) teilchen({ x: x + zz(-24, 24), y: y + zz(-10, 24), vy: -zz(0.5, 1.5), l: 16, gr: 2, farbe: [180, 230, 255], add: true });
+}
+// Schutzschild: schimmernde Blase aus Pixeln
+function schildMalen(c, x, y) {
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha = 0.25; c.drawImage(GLUT.blau, x - 44, y - 44, 88, 88);
+  c.globalAlpha = 0.9;
+  for (let i = 0; i < 28; i++) {
+    const a = i / 28 * 6.283 + HD.zeit * 0.06, r = 36 + Math.sin(HD.zeit * 0.3 + i) * 2;
+    if ((i + Math.floor(HD.zeit / 3)) % 4 === 0) continue;
+    c.fillStyle = i % 3 ? '#9fdcff' : '#ffffff'; c.fillRect(Math.round(x + Math.cos(a) * r) - 2, Math.round(y + Math.sin(a) * r) - 2, 4, 4);
+  }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+}
+function seitenleisteHD(V) {
+  const c = bg, x0 = 226 * GR;
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x0, 8 * GR, 28 * GR, FR);
+  const rest = 20 - (V.gegnerIdx || 0);
+  for (let i = 0; i < rest; i++) c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, x0 + 12 + (i % 2) * 40, 8 * GR + 20 + Math.floor(i / 2) * 36, 32, 32);
+  V.sp.forEach((s, i) => {
+    const y = (124 + i * 26) * GR;
+    schrift(c, (i + 1) + 'P', x0 + 12, y, 4, i ? '#7CFC6C' : '#FFD84A');
+    c.drawImage(panzerHD('s0', i ? 'gruen' : 'gelb', 0, 0).bild, x0 + 8, y + 34, 40, 40);
+    schrift(c, s.aus ? '-' : Math.min(9, s.leben), x0 + 56, y + 40, 4, '#fff');
+  });
+  c.drawImage(FAHNE_HD, x0 + 20, 178 * GR, 64, 64);
+  schrift(c, V.level, x0 + 56 - String(V.level).length * 12, 196 * GR, 4, '#fff');
+}
+function einblendungenHD(V, blink) {
+  const c = bg, W = 256 * GR, H = 224 * GR;
+  if (V.phase === 'intro') {
+    const zu = V.pt < 20 ? V.pt / 20 : V.pt > 80 ? Math.max(0, 1 - (V.pt - 80) / 30) : 1, h = Math.round(H / 2 * zu / 2) * 2;
+    c.fillStyle = blockMalen.muster; c.fillRect(0, 0, W, h); c.fillRect(0, H - h, W, h);
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, W, h); c.fillRect(0, H - h, W, h);
+    c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(0, h - 8, W, 8); c.fillRect(0, H - h, W, 8);
+    if (zu === 1) {
+      schrift(c, 'LEVEL ' + V.level, W / 2, 330, 12, '#FFD84A', true);
+      schrift(c, V.levelName || '', W / 2, 476, 6, '#fff', true);
+      if (nachtLevel(V.level)) schrift(c, '- NACHT -', W / 2, 640, 5, '#9fc8ff', true);
+      if (V.level === (S && S.opt.level) && V.sp.length && 'ontouchstart' in window)
+        schrift(c, V.sp.length > 1 && rolle === 'lokal' ? 'JEDER HAT SEINE SEITE' : 'LINKS FAHREN - RECHTS FEUER', W / 2, 560, 4, '#ddd', true);
+    }
+  }
+  if (V.phase === 'spiel' && V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0) && !(V.opt && V.opt.demo)) {
+    const s = 12 + Math.round(Math.sin(HD.zeit * 0.15) * 1);
+    schrift(c, 'GESCHAFFT!', W / 2, 360, s, '#FFE040', true);
+  }
+  if (V.phase === 'gameover') {
+    const y = Math.max(380, H - V.pt * 6);
+    schrift(c, 'GAME', W / 2, y, 16, '#FF4020', true); schrift(c, 'OVER', W / 2, y + 130, 16, '#FF4020', true);
+  }
+  if (V.pause && V.phase !== 'bilanz' && blink(30)) schrift(c, 'PAUSE', W / 2, 400, 12, '#FF6030', true);
+  if (V.phase === 'bilanz') bilanzHD(V);
+}
+function bilanzHD(V) {
+  const c = bg, W = 256 * GR, s = GR;
+  c.fillStyle = 'rgba(0,0,0,0.82)'; c.fillRect(0, 0, W, 224 * GR);
+  schrift(c, 'REKORD ' + Math.max(rekord, V.rekord || 0), W / 2, 36, 5, '#FFB830', true);
+  schrift(c, 'LEVEL ' + V.level, W / 2, 100, 7, '#fff', true);
+  const zwei = V.sp.length > 1, rechtsHD = (t, x, y, f) => schrift(c, t, x - String(t).length * 24 + 4, y, 4, f);
+  schrift(c, '1P', 36 * s, 44 * s, 4, '#FFD84A'); rechtsHD(V.sp[0].punkte, 100 * s, 56 * s, '#FFB830');
+  if (zwei) { schrift(c, '2P', 160 * s, 44 * s, 4, '#7CFC6C'); rechtsHD(V.sp[1].punkte, 224 * s, 56 * s, '#FFB830'); }
+  for (let t = 0; t < 4; t++) {
+    const y = (78 + t * 22) * s;
+    c.drawImage(panzerHD('g' + t, t === 3 ? 'oliv' : 'silber', 0, 0).bild, 112 * s, y - 24);
+    const zeile = (sp, xp) => { rechtsHD(sp.kills[t] * GEGNER[t].pkt, xp * s, y, '#fff'); schrift(c, 'PKT', (xp + 4) * s, y, 4, '#aaa'); rechtsHD(sp.kills[t], (xp + 40) * s, y, '#fff'); };
+    zeile(V.sp[0], 56); if (zwei) zeile(V.sp[1], 152);
+  }
+  c.fillStyle = '#fff'; c.fillRect(60 * s, 166 * s, 136 * s, 8);
+  schrift(c, 'SUMME', 56 * s, 174 * s, 4, '#fff'); rechtsHD(V.sp[0].kills.reduce((a, b) => a + b, 0), 96 * s, 174 * s, '#fff');
+  if (zwei) rechtsHD(V.sp[1].kills.reduce((a, b) => a + b, 0), 192 * s, 174 * s, '#fff');
+  if (V.vorbei) schrift(c, 'GAME OVER', W / 2, 194 * s, 7, '#FF4020', true);
+  else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) schrift(c, 'TIPPEN = WEITER', W / 2, 198 * s, 4, '#bbb', true);
+}
+
 /* =====================================================================
    QR-CODE – aus Морской бой übernommen (selbst gebaut, Fehlerstufe M)
    ===================================================================== */
@@ -1695,7 +2355,7 @@ function editorBauen() {
   for (const [t, name] of WERKZEUGE) {
     const b = document.createElement('button'); b.title = name; b.dataset.w = t;
     if (t === LEER) b.textContent = '🧽';
-    else { const c = leinwand(8, 8); c.getContext('2d').drawImage(MUSTER[t][0], 0, 0); b.appendChild(c); }
+    else { const c = leinwand(32, 32); c.getContext('2d').drawImage(TEX[t], 0, 0); b.appendChild(c); }
     b.onclick = () => { E.werkzeug = t; editorLeiste(); };
     box.appendChild(b);
   }
@@ -1739,7 +2399,7 @@ function editorLoeschen() {
    MENÜ & EINSTELLUNGEN
    ===================================================================== */
 let modus = 'menue', rolle = 'lokal', ticks = 0;
-const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true }, speicher.lies('einst', {}));
+const einst = Object.assign({ stufe: 'normal', level: 1, auto: false, freund: true, ton: true, grafik: 'block' }, speicher.lies('einst', {}));
 function einstSpeichern() { speicher.schreib('einst', einst); einstZeigen(); }
 function zeigen(id) {
   for (const s of document.querySelectorAll('.schicht')) s.classList.toggle('versteckt', s.id !== id);
@@ -1755,6 +2415,7 @@ function einstZeigen() {
   wahlSetzen('w-stufe', einst.stufe, w => einst.stufe = w);
   wahlSetzen('w-auto', einst.auto ? 1 : 0, w => einst.auto = w === '1');
   wahlSetzen('w-freund', einst.freund ? 1 : 0, w => einst.freund = w === '1');
+  wahlSetzen('w-grafik', einst.grafik, w => einst.grafik = w);
   wahlSetzen('w-ton', einst.ton ? 1 : 0, w => { einst.ton = w === '1'; if (einst.ton) { Ton.start(); setTimeout(() => Ton.spiel('nehmen'), 50); } });
   const l = levelHolen(einst.level);
   $('l-zahl').innerHTML = einst.level + '<br><small style="font-weight:600;color:#aaa;font-size:11px">' + l.n + '</small>';
@@ -1810,7 +2471,7 @@ function spielLaden() {
 $('b-fortsetzen').onclick = () => { Ton.start(); if (!spielLaden()) menueAnpassen(); };
 addEventListener('pagehide', spielSichern);
 function zumMenue() {
-  speicher.schreib('stand', null);
+  speicher.schreib('stand', null); eingabeZuletzt.fill(-1);
   S = null; modus = 'menue'; zeiger.clear();
   if (rolle === 'gast' && Netz.offen) { gastWarten(); return; }
   zeigen('menue'); menueAnpassen(); aufteilen();
@@ -1833,8 +2494,41 @@ function vorschau() {
   vorschauCache.t = ticks;
   return vorschauCache;
 }
+/* ---------- Vorführung im Menü: zwei Computer-Panzer kämpfen auf dem gewählten Level ---------- */
+let DEMO = null;
+const botZustand = [{ r: 0, t: 0 }, { r: 0, t: 0 }];
+function demoStarten() {
+  const alt = S;
+  neuesSpiel({ spieler: 2, stufe: 'normal', level: einst.level, freund: false, demo: true });
+  DEMO = S; S = alt;
+  DEMO.phase = 'spiel'; DEMO.pt = 700; DEMO.ton.length = 0; DEMO.demoLevel = einst.level;
+}
+function botEingabe(D, i) {
+  const ich = D.panzer.find(p => p.sp === i && !p.tot), b = botZustand[i];
+  if (!ich) return { r: -1, f: false };
+  ich.schild = 60;                                        // Vorführ-Panzer sind unverwundbar
+  if (--b.t <= 0) {
+    b.t = 20 + zufall(40);
+    let ziel = null, d = 1e9;
+    for (const q of D.panzer) if (q.sp < 0 && q.spawn === 0) { const a = Math.abs(q.x - ich.x) + Math.abs(q.y - ich.y); if (a < d) { d = a; ziel = q; } }
+    if (ziel && Math.random() < 0.7) {
+      const dx = ziel.x - ich.x, dy = ziel.y - ich.y;
+      if (Math.abs(dx) < 8) b.r = dy > 0 ? 2 : 0; else if (Math.abs(dy) < 8) b.r = dx > 0 ? 1 : 3;
+      else b.r = Math.random() < 0.5 ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
+    } else b.r = zufall(4);
+  }
+  return { r: b.r, f: true };
+}
+function demoSchritt() {
+  if (!DEMO || DEMO.demoLevel !== einst.level) demoStarten();
+  if (DEMO.schaufel < 100) { DEMO.schaufel = 1e6; ring(DEMO, STAHL); }
+  schritt(DEMO, [botEingabe(DEMO, 0), botEingabe(DEMO, 1)]);
+  DEMO.ton.length = 0; DEMO.md.length = 0;
+  if (DEMO.phase !== 'spiel') { DEMO = null; return; }
+}
 function ansicht() {
   if (modus === 'spiel') return rolle === 'gast' ? V : S;
+  if (modus === 'menue' && DEMO && einst.grafik !== 'klassisch') return DEMO;
   if (modus === 'editor') return editorAnsicht();
   return vorschau();
 }
@@ -1855,6 +2549,11 @@ document.addEventListener('visibilitychange', () => {
 let letzte = performance.now(), rest = 0, sichtbar = {};
 function tick() {
   ticks++;
+  if (modus === 'menue' && einst.grafik !== 'klassisch' && !document.hidden) { try { demoSchritt(); } catch (e) { console.error(e); DEMO = null; } }
+  else DEMO = null;
+  // Motor brummt, solange man selbst fährt
+  const fahr = modus === 'spiel' && (ansicht() || {}).phase === 'spiel' && !(ansicht() || {}).pause;
+  Ton.motor(fahr && (eingabeZuletzt[0] >= 0 || eingabeZuletzt[1] >= 0));
   if (modus === 'spiel' && S && rolle !== 'gast') {
     const ein = [eingabe(0), rolle === 'wirt' ? fernEingabe() : S.spieler > 1 ? eingabe(1) : null];
     schritt(S, ein);
@@ -1885,8 +2584,17 @@ function oberflaeche() {
   const info = rolle === 'lokal' ? '' : Netz.offen ? '📶 ' + (Netz.ping ? Math.round(Netz.ping) + ' ms' : 'verbunden') : '📶 getrennt';
   setz('info', info, w => $('netzinfo').textContent = w);
 }
+// Ruckelt es (weniger als ~45 Bilder/s)? Dann spart die Block-Grafik ein paar Effekte ein.
+let bildDauer = 16.7, ruckelZeit = 0;
+function ruckelWaechter(d) {
+  if (modus !== 'spiel' || einst.grafik === 'klassisch' || document.hidden || d > 200) return;
+  bildDauer = bildDauer * 0.95 + d * 0.05;
+  ruckelZeit = bildDauer > 22 ? ruckelZeit + d : 0;
+  if (ruckelZeit > 3000 && !HD.sparen) { HD.sparen = true; console.log('Block-Grafik: spare Effekte'); }
+}
 function schleife(jetzt) {
   requestAnimationFrame(schleife);
+  ruckelWaechter(jetzt - letzte);
   rest += Math.min(100, jetzt - letzte); letzte = jetzt;
   while (rest >= 1000 / 60) { rest -= 1000 / 60; try { tick(); } catch (e) { console.error(e); } }
   if (V) V.alpha = begrenze((performance.now() - V.empfangen) / 34, 0, 1);
