@@ -25,7 +25,21 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 - `apps/_vorlage/` – Startpunkt für neue Apps, nicht direkt verändern.
 - `tools/neue_app.py` – legt eine App aus der Vorlage an (inkl. Icon, Eintrag
   auf der Startseite). `tools/icon.py` – Icon neu erzeugen (Pillow).
-- `docs/` – Ablauf, Ideen, Mehrspieler-Optionen.
+- `docs/` – Ablauf, Ideen, Mehrspieler-Optionen, Bild-Prompts für ChatGPT (`BILD-PROMPTS.md`).
+
+## Design-Bilder kommen aus ChatGPT (gilt für das ganze Projekt)
+- **Wichtige Bild-Elemente mit hohem Design-Anspruch** malt Claude **nicht** selbst
+  (keine selbstgebauten Vektor-/Canvas-Logos): App-Icons, Logos/Schriftzüge,
+  Titelbilder, Spielfiguren-Porträts, Startbildschirm-Kunst.
+- Stattdessen schreibt **Claude den Prompt** (Vorlage + Stilregeln: `docs/BILD-PROMPTS.md`),
+  der Erwachsene erzeugt das Bild mit ChatGPT und lädt es hoch, Claude baut es ein
+  (zuschneiden, verkleinern, optimieren, in den Service-Worker-Cache).
+- Nur wenn es die Ressourcen nicht verschlechtert: Bilder klein halten (Icon-PNG
+  ≤ 60 KB bei 192 px, Bilder im Spiel als WebP, ≤ 150 KB pro Bild, ≤ 2 MB pro App),
+  keine Bilder für Dinge, die 60× pro Sekunde neu gemalt werden müssen.
+- Spielgrafik, die sich bewegt oder zerstört wird (Kacheln, Panzer, Effekte), bleibt Code.
+- Datenschutz gilt auch hier: keine echten Personen/Gesichter, kein Foto des Kindes als Vorlage.
+- Bei neuen Spielen von Anfang an: Icon-Prompt (+ ggf. Logo-Prompt) mitliefern.
 
 ## Arbeitsweise
 - Pro App: bei jeder Änderung `APP_VERSION` in `index.html` **und** `CACHE` in
