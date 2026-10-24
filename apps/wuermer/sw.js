@@ -1,6 +1,6 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'wuermer-v66';
+const CACHE = 'wuermer-v67';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js',
   './wurm/01-soldat-angst.webp', './wurm/01-soldat-aua.webp', './wurm/01-soldat-blinzeln.webp', './wurm/01-soldat-fliegen.webp', './wurm/01-soldat-jubel.webp', './wurm/01-soldat.webp',
   './wurm/02-rambo-angst.webp', './wurm/02-rambo-aua.webp', './wurm/02-rambo-blinzeln.webp', './wurm/02-rambo-fliegen.webp', './wurm/02-rambo-jubel.webp', './wurm/02-rambo.webp',
@@ -18,8 +18,9 @@ const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png',
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
+// Nur die eigenen alten Caches löschen – die anderen Spiele (gleiche Adresse) brauchen ihre noch!
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith(CACHE.replace(/\d+$/, '')) && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;

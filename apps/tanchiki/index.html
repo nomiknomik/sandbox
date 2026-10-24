@@ -144,6 +144,9 @@
       <button id="b-bauen">🧱 Level bauen</button>
       <button id="b-hilfe">❓ So geht's</button>
     </div>
+    <div class="zeile">
+      <button id="b-portal" onclick="location.href='../../'">🕹 Alle Spiele</button>
+    </div>
     <div class="klein" id="rekord"></div>
   </div>
 </div>
@@ -249,7 +252,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;

@@ -15,7 +15,10 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 - `<meta name="robots" content="noindex, nofollow">` auf jeder Seite.
 
 ## Aufbau
-- `index.html` – Startseite mit Liste der Apps (Marker `<!-- APPS -->`).
+- `index.html` – **Spieleportal** (eigene Home-Bildschirm-App „Spiele“, `manifest.webmanifest`,
+  `sw.js`, `icon-*.png` im Wurzelordner) mit Liste der Apps (Marker `<!-- APPS -->`).
+  Kurztext/Farbe pro Spiel im `INFO`-Objekt. Bei Änderung `PORTAL_VERSION` + `CACHE` hochzählen.
+  Jedes Spiel hat einen Knopf **🕹 Alle Spiele** (`../../`) zurück ins Portal.
 - `apps/<name>/` – je App ein eigenständiger PWA-Ordner (index.html, sw.js,
   manifest.webmanifest, icon-*.png). Ordnernamen: Kleinbuchstaben, Bindestrich,
   lateinisch (z. B. `morskoj-boj`).
@@ -30,6 +33,8 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 - Jede App hat unten rechts die Version; **Antippen = nach Update suchen**
   (lädt frisch vom Server, umgeht Cache). Steckt in `apps/_vorlage` – bei
   bestehenden Apps beibehalten.
+- Service Worker: alle Apps teilen sich eine Adresse → beim Aufräumen **nur eigene**
+  Caches löschen (`k.startsWith(CACHE.replace(/\d+$/, ''))`), nie fremde.
 - Eine Datei pro App (`index.html` mit CSS+JS), solange es übersichtlich bleibt.
 - Kindgerechte Kommentare im Code sind erwünscht (kurz, deutsch).
 - Lokal testen: `python3 -m http.server 8000` im Repo-Wurzelordner.

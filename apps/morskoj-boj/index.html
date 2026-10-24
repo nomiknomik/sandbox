@@ -68,6 +68,7 @@
   .menue{display:grid;gap:12px;width:min(92vw,420px)}
   .menue .zeile{display:flex;gap:12px;justify-content:center}
   #s-menu .ecke{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px}
+  #s-menu .ecke-links{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:14px}   /* zurück ins Spieleportal */
 
   /* ---------- Spielfeld (Board) ---------- */
   /* --rand = Tau-Rahmen um das Meer */
@@ -317,6 +318,7 @@
 <!-- Startbildschirm -->
 <section id="s-menu" class="screen on">
   <button class="rund ecke ton" aria-label="Ton an/aus">🔊</button>
+  <button class="rund ecke-links" aria-label="Alle Spiele" onclick="location.href='../../'">🕹</button>
   <div class="emblem"></div>
   <div class="titel">
     <h1 class="glow">МОРСКОЙ БОЙ</h1>
@@ -480,7 +482,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');

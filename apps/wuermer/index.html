@@ -248,7 +248,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.57';
+const APP_VERSION = '1.58';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2862,7 +2862,7 @@ function hintergrund() {
 function startMenue() {
   Online.stop(); hintergrund();
   karte('<h1><img src="icon-192.png" alt="" style="width:64px;height:64px;border-radius:16px;vertical-align:middle;margin-right:10px">Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Springen:</b> ⤴ zweimal = Doppelsprung, ▶ + ⤴ = weiter Sprung.\n<b>Kamera:</b> mit zwei Fingern schieben und zoomen.\n💀 Gegner besiegt? Du darfst nochmal schießen!',
-    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]], '', [['📊 Statistik', statistikZeigen]]);
+    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]], '', [['📊 Statistik', statistikZeigen], ['🕹 Alle Spiele', () => location.href = '../../']]);
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };

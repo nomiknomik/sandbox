@@ -6,8 +6,9 @@ const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png',
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
+// Nur die eigenen alten Caches löschen – die anderen Spiele (gleiche Adresse) brauchen ihre noch!
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith(CACHE.replace(/\d+$/, '')) && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
