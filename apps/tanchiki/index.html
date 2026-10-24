@@ -92,6 +92,11 @@
   #scanner.on{display:flex}
   #scanner video{width:min(80vw,60vh);aspect-ratio:1;object-fit:cover;border-radius:18px;border:4px solid var(--gruen)}
   #scanner button{padding:12px 26px;background:#fff;color:#000}
+  #drehen{position:fixed;inset:0;z-index:40;background:#151923f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+  #drehen div{font-size:64px;animation:drehen 2s ease-in-out infinite}
+  #drehen b{font-size:22px}
+  #drehen small{color:var(--muted)}
+  @keyframes drehen{50%{transform:rotate(-90deg)}}
   #meldung{position:fixed;left:50%;bottom:calc(16px + var(--unten));transform:translateX(-50%);z-index:60;background:#222;color:#fff;
            padding:10px 16px;border-radius:12px;font-weight:700;max-width:90vw;text-align:center;box-shadow:0 4px 16px #000a;display:none}
   /* Handy quer: Menü in zwei Spalten, damit alles auf einen Blick passt */
@@ -254,13 +259,14 @@
   <p id="sc-text" style="text-align:center"></p>
   <button id="sc-stopp">Abbrechen</button>
 </div>
+<div id="drehen" class="versteckt"><div>📱↻</div><b>Bitte quer halten</b><small>Танчики spielt man im Querformat</small></div>
 <div id="meldung"></div>
 <div id="version"></div>
 
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '4.0';
+const APP_VERSION = '5.0';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -293,15 +299,19 @@ const speicher = {
 };
 
 /* =====================================================================
-   SPIELFELD – so groß wie beim alten Original
-   Das Feld hat 13 × 13 Kacheln zu 16 Bildpunkten = 208 × 208.
-   Für Ziegel brauchen wir feinere Stücke: 52 × 52 Zellen zu 4 Punkten.
+   SPIELFELD – etwas breiter als früher (17 statt 13 Kacheln), damit es quer gut passt
+   Das Feld hat 17 × 13 Kacheln zu 16 Bildpunkten = 272 × 208.
+   Für Ziegel brauchen wir feinere Stücke: 68 × 52 Zellen zu 4 Punkten.
    ===================================================================== */
-const N = 52, FELD = 208;
+const KX = 17, KY = 13;                        // Kacheln quer / hoch
+const QX = KX * 2, QY = KY * 2;                // Viertel (8 × 8 Punkte)
+const NX = KX * 4, NY = KY * 4;                // Zellen (4 × 4 Punkte)
+const FB = KX * 16, FH = KY * 16;              // Feld in Punkten: Breite, Höhe
+const W2D = FB + 48;                           // ganzes Bild in der flachen Grafik (Rand + Seitenleiste)
 const LEER = 0, ZIEGEL = 1, STAHL = 2, WASSER = 3, WALD = 4, EIS = 5;
-const BX = 96, BY = 192;                       // da steht der Adler (Basis)
-const START_SP = [[64, 192], [128, 192]];      // Startplätze Spieler 1 und 2
-const START_GEG = [[96, 0], [192, 0], [0, 0]]; // Startplätze der Gegner (Mitte, rechts, links)
+const BX = FB / 2 - 8, BY = FH - 16;           // da steht die Basis (unten in der Mitte)
+const START_SP = [[BX - 32, BY], [BX + 32, BY]];                                    // Startplätze Spieler 1 und 2
+const START_GEG = [[BX, 0], [FB - 16, 0], [0, 0], [BX - 96, 0], [BX + 96, 0]];       // Startplätze der Gegner
 
 /* ---------- Pixel-Schrift (5 × 7) ---------- */
 const SCHRIFT = {
@@ -316,7 +326,7 @@ const SCHRIFT = {
   U: [17,17,17,17,17,17,14], V: [17,17,17,17,17,10,4], W: [17,17,17,21,21,21,10], X: [17,17,10,4,10,17,17],
   Y: [17,17,17,10,4,4,4], Z: [31,1,2,4,8,16,31], 'Ä': [10,0,14,17,31,17,17], 'Ö': [10,0,14,17,17,17,14], 'Ü': [10,0,17,17,17,17,14],
   ' ': [0,0,0,0,0,0,0], '-': [0,0,0,31,0,0,0], '.': [0,0,0,0,0,12,12], ':': [0,12,12,0,12,12,0], '!': [4,4,4,4,4,0,4],
-  '?': [14,17,1,2,4,0,4], '×': [0,17,10,4,10,17,0], '=': [0,0,31,0,31,0,0], '/': [1,1,2,4,8,16,16], '+': [0,4,4,31,4,4,0],
+  '?': [14,17,1,2,4,0,4], '×': [0,17,10,4,10,17,0], '=': [0,0,31,0,31,0,0], '/': [1,1,2,4,8,16,16], '+': [0,4,4,31,4,4,0], '♥': [0,10,31,31,14,4,0],
 };
 function schreibe(g, text, x, y, farbe = '#fff', mitte = false) {
   text = String(text).toUpperCase();
@@ -511,24 +521,42 @@ const LEVELS = [
 const KACHEL = { '.': [0, 0, 0, 0], '#': [1, 1, 1, 1], l: [1, 0, 1, 0], r: [0, 1, 0, 1], o: [1, 1, 0, 0], u: [0, 0, 1, 1],
   '@': [2, 2, 2, 2], L: [2, 0, 2, 0], R: [0, 2, 0, 2], O: [2, 2, 0, 0], U: [0, 0, 2, 2], '~': [3, 3, 3, 3], '%': [4, 4, 4, 4], '-': [5, 5, 5, 5] };
 
-// „Viertel“ = 8 × 8 Punkte. Ein Level hat 26 × 26 Viertel.
+// Die alten Level sind 13 Kacheln breit. Links und rechts kommen je 2 Kacheln dazu:
+// ein Spiegelbild der äußeren Spalten – so bleibt das Level symmetrisch.
+const SPIEGEL = { l: 'r', r: 'l', L: 'R', R: 'L' };
+function verbreitern(zeilen) {
+  const rand = (KX - 13) / 2;
+  return zeilen.map(z => {
+    if (z.length >= KX) return z;
+    const links = [...z.slice(1, rand + 1)].reverse().map(c => SPIEGEL[c] || c).join('');
+    return links + z + [...links].reverse().map(c => SPIEGEL[c] || c).join('');
+  });
+}
+// „Viertel“ = 8 × 8 Punkte. Ein Level hat 42 × 26 Viertel.
 function kachelnZuViertel(zeilen) {
-  const v = new Uint8Array(26 * 26);
-  zeilen.forEach((z, ky) => [...z].forEach((ch, kx) => (KACHEL[ch] || KACHEL['.']).forEach((t, i) => v[(ky * 2 + (i >> 1)) * 26 + kx * 2 + (i & 1)] = t)));
+  const v = new Uint8Array(QX * QY);
+  verbreitern(zeilen).forEach((z, ky) => [...z].forEach((ch, kx) => (KACHEL[ch] || KACHEL['.']).forEach((t, i) => v[(ky * 2 + (i >> 1)) * QX + kx * 2 + (i & 1)] = t)));
   return v;
 }
+// alte selbst gebaute Level (26 × 26 Viertel) in die neue Breite bringen
+function viertelBreit(v) {
+  if (v.length === QX * QY) return v;
+  const alt = Math.round(Math.sqrt(v.length)), neu = new Uint8Array(QX * QY), rand = (QX - alt) >> 1;
+  for (let y = 0; y < Math.min(alt, QY); y++) for (let x = 0; x < alt; x++) neu[y * QX + x + rand] = v[y * alt + x];
+  return neu;
+}
 function viertelZuKarte(v) {
-  const k = new Uint8Array(N * N);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) k[y * N + x] = v[(y >> 1) * 26 + (x >> 1)];
+  const k = new Uint8Array(NX * NY);
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) k[y * NX + x] = v[(y >> 1) * QX + (x >> 1)];
   return k;
 }
-// Ring um den Adler: 8 Punkte dick
-function ringZellen(f) { for (let y = 46; y < 52; y++) for (let x = 22; x < 30; x++) if (!(x >= 24 && x < 28 && y >= 48)) f(x, y); }
+// Ring um die Basis: 8 Punkte dick
+function ringZellen(f) { const bx = BX / 4, by = BY / 4; for (let y = by - 2; y < by + 4; y++) for (let x = bx - 2; x < bx + 6; x++) if (!(x >= bx && x < bx + 4 && y >= by)) f(x, y); }
 function basisVorbereiten(k) {
-  const frei = (x0, y0) => { for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 4; x++) k[y * N + x] = LEER; };
+  const frei = (x0, y0) => { for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 4; x++) k[y * NX + x] = LEER; };
   for (const [x, y] of START_GEG.concat(START_SP)) frei(x / 4, y / 4);
   frei(BX / 4, BY / 4);
-  ringZellen((x, y) => k[y * N + x] = ZIEGEL);
+  ringZellen((x, y) => k[y * NX + x] = ZIEGEL);
   return k;
 }
 
@@ -536,7 +564,7 @@ function basisVorbereiten(k) {
 const eigeneLevel = () => speicher.lies('eigene', []);
 function alleLevel() {
   return LEVELS.map(l => ({ n: l.n, v: kachelnZuViertel(l.k) }))
-    .concat(eigeneLevel().map((l, i) => ({ n: l.n || 'Eigenes ' + (i + 1), v: Uint8Array.from(l.v, c => c.charCodeAt(0) - 48), eigen: i })));
+    .concat(eigeneLevel().map((l, i) => ({ n: l.n || 'Eigenes ' + (i + 1), v: viertelBreit(Uint8Array.from(l.v, c => c.charCodeAt(0) - 48)), eigen: i })));
 }
 // Nach dem letzten Level geht es mit Zufalls-Leveln weiter
 function zufallsLevel(nr) {
@@ -544,14 +572,14 @@ function zufallsLevel(nr) {
   const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let versuch = 0; versuch < 40; versuch++) {
     const z = [];
-    for (let y = 0; y < 13; y++) {
+    for (let y = 0; y < KY; y++) {
       let links = '';
-      for (let x = 0; x < 7; x++) {
+      for (let x = 0; x < (KX + 1) / 2; x++) {
         const w = rnd();
         links += w < 0.55 ? '.' : w < 0.75 ? '#' : w < 0.8 ? 'lruo'[Math.floor(rnd() * 4)] : w < 0.86 ? '@' : w < 0.91 ? '~' : w < 0.97 ? '%' : '-';
       }
       const spiegel = { l: 'r', r: 'l' };
-      z.push(links + [...links.slice(0, 6)].reverse().map(c => spiegel[c] || c).join(''));
+      z.push(links + [...links.slice(0, (KX - 1) / 2)].reverse().map(c => spiegel[c] || c).join(''));
     }
     const v = kachelnZuViertel(z);
     if (erreichbar(v)) return { n: 'Zufall ' + nr, v };
@@ -560,14 +588,14 @@ function zufallsLevel(nr) {
 }
 // Kommt man von oben zum Adler? (Ziegel kann man wegschießen, Stahl und Wasser nicht)
 function erreichbar(v) {
-  const k = basisVorbereiten(viertelZuKarte(v)), sperr = (x, y) => { const t = k[(y * 2) * N + x * 2]; return t === STAHL || t === WASSER; };
-  const gesehen = new Set(['6,0']), weg = [[6, 0]];
+  const k = basisVorbereiten(viertelZuKarte(v)), sperr = (x, y) => { const t = k[(y * 2) * NX + x * 2]; return t === STAHL || t === WASSER; };
+  const mx = (KX - 1) / 2, gesehen = new Set([mx + ',0']), weg = [[mx, 0]];
   while (weg.length) {
     const [x, y] = weg.pop();
-    if (x === 6 && y === 11) return true;
+    if (x === mx && y === KY - 2) return true;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy, s = nx + ',' + ny;
-      if (nx < 0 || ny < 0 || nx > 12 || ny > 12 || gesehen.has(s)) continue;
+      if (nx < 0 || ny < 0 || nx >= KX || ny >= KY || gesehen.has(s)) continue;
       let zu = false; for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) if (sperr(nx * 2 + a, ny * 2 + b)) zu = true;
       if (!zu) { gesehen.add(s); weg.push([nx, ny]); }
     }
@@ -622,7 +650,7 @@ function levelStart(S) {
   const L = levelHolen(S.level);
   Object.assign(S, { levelName: L.n, karte: basisVorbereiten(viertelZuKarte(L.v)), mapVoll: true, panzer: [], kugeln: [], effekte: [], bonus: null,
     basisKaputt: false, schaufel: 0, uhr: 0, liste: gegnerMix(S.level), gegnerIdx: 0, spawnT: 30, spawnOrt: 0,
-    maxG: S.st.maxG + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
+    maxG: S.st.maxG + 1 + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
     phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false });
   S.md.length = 0; S.kv++;
   if (S.st.stahl) ring(S, STAHL);                          // Leicht: Adler von Anfang an hinter Stahl
@@ -650,9 +678,9 @@ function setze(S, i, t) { if (S.karte[i] !== t) { S.karte[i] = t; S.md.push(i, t
 
 // Darf ein Panzer hier stehen? (Ziegel, Stahl, Wasser und der Adler sind im Weg)
 function frei(S, x, y) {
-  if (x < 0 || y < 0 || x > FELD - 16 || y > FELD - 16) return false;
+  if (x < 0 || y < 0 || x > FB - 16 || y > FH - 16) return false;
   for (let r = y >> 2; r <= (y + 15) >> 2; r++) for (let c = x >> 2; c <= (x + 15) >> 2; c++) {
-    const t = S.karte[r * N + c]; if (t === ZIEGEL || t === STAHL || t === WASSER) return false;
+    const t = S.karte[r * NX + c]; if (t === ZIEGEL || t === STAHL || t === WASSER) return false;
   }
   return !ueber(x, y, 16, 16, BX, BY, 16, 16);
 }
@@ -661,7 +689,7 @@ function imWeg(S, p, x, y) {
   for (const q of S.panzer) if (q !== p && !q.tot && ueber(x, y, 16, 16, q.x, q.y, 16, 16) && !ueber(p.x, p.y, 16, 16, q.x, q.y, 16, 16)) return true;
   return false;
 }
-const aufEis = (S, p) => S.karte[((p.y + 8) >> 2) * N + ((p.x + 8) >> 2)] === EIS;
+const aufEis = (S, p) => S.karte[((p.y + 8) >> 2) * NX + ((p.x + 8) >> 2)] === EIS;
 
 // Drehen: quer zur alten Richtung rastet der Panzer auf ein 8er-Gitter ein – so passt er leichter durch Lücken
 function drehen(S, p, r) {
@@ -773,14 +801,14 @@ function kugelnZug(S) {
 }
 function kugelTrifft(S, k) {
   const x0 = k.x - 2, y0 = k.y - 2;
-  if (x0 < 0 || y0 < 0 || x0 + 4 > FELD || y0 + 4 > FELD) {
-    knall(S, 'k', begrenze(k.x, 0, FELD), begrenze(k.y, 0, FELD)); if (k.sp >= 0) S.ton.push('wand');
+  if (x0 < 0 || y0 < 0 || x0 + 4 > FB || y0 + 4 > FH) {
+    knall(S, 'k', begrenze(k.x, 0, FB), begrenze(k.y, 0, FH)); if (k.sp >= 0) S.ton.push('wand');
     return kugelWeg(S, k);
   }
   // Wand?
   const c0 = Math.floor(x0 / 4), c1 = Math.floor((x0 + 3.99) / 4), r0 = Math.floor(y0 / 4), r1 = Math.floor((y0 + 3.99) / 4);
   let ziegel = false, stahl = false;
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const t = S.karte[r * N + c]; if (t === ZIEGEL) ziegel = true; if (t === STAHL) stahl = true; }
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const t = S.karte[r * NX + c]; if (t === ZIEGEL) ziegel = true; if (t === STAHL) stahl = true; }
   if (ziegel || stahl) {
     if (!stahl || k.kraft) loch(S, k, r0, r1, c0, c1);
     knall(S, 'k', k.x, k.y);
@@ -805,15 +833,15 @@ function kugelTrifft(S, k) {
 // Ein Loch in die Mauer: 16 Punkte breit, 4 (mit 3 Sternen 8) Punkte tief
 function loch(S, k, r0, r1, c0, c1) {
   const tiefe = k.kraft ? 2 : 1, hart = t => t === ZIEGEL || t === STAHL;
-  const kaputt = (c, r) => { if (c < 0 || r < 0 || c >= N || r >= N) return; const t = S.karte[r * N + c]; if (t === ZIEGEL || (t === STAHL && k.kraft)) setze(S, r * N + c, LEER); };
+  const kaputt = (c, r) => { if (c < 0 || r < 0 || c >= NX || r >= NY) return; const t = S.karte[r * NX + c]; if (t === ZIEGEL || (t === STAHL && k.kraft)) setze(S, r * NX + c, LEER); };
   if (k.r === 0 || k.r === 2) {
     const reihen = k.r === 0 ? [r1, r0] : [r0, r1];
-    let r = reihen.find(r => { for (let c = c0; c <= c1; c++) if (hart(S.karte[r * N + c])) return true; return false; });
+    let r = reihen.find(r => { for (let c = c0; c <= c1; c++) if (hart(S.karte[r * NX + c])) return true; return false; });
     const b0 = Math.round((k.x - 8) / 4);
     for (let d = 0; d < tiefe; d++, r += DY[k.r]) for (let c = b0; c < b0 + 4; c++) kaputt(c, r);
   } else {
     const spalten = k.r === 3 ? [c1, c0] : [c0, c1];
-    let c = spalten.find(c => { for (let r = r0; r <= r1; r++) if (hart(S.karte[r * N + c])) return true; return false; });
+    let c = spalten.find(c => { for (let r = r0; r <= r1; r++) if (hart(S.karte[r * NX + c])) return true; return false; });
     const b0 = Math.round((k.y - 8) / 4);
     for (let d = 0; d < tiefe; d++, c += DX[k.r]) for (let r = b0; r < b0 + 4; r++) kaputt(c, r);
   }
@@ -839,16 +867,16 @@ function gegnerTreffer(S, p, von) {
 /* ---------- Extras ---------- */
 function bonusSetzen(S) {
   let x, y;
-  const schlecht = (x, y) => { for (let r = y >> 2; r < (y + 16) >> 2; r++) for (let c = x >> 2; c < (x + 16) >> 2; c++) { const t = S.karte[r * N + c]; if (t === STAHL || t === WASSER) return true; } return false; };
+  const schlecht = (x, y) => { for (let r = y >> 2; r < (y + 16) >> 2; r++) for (let c = x >> 2; c < (x + 16) >> 2; c++) { const t = S.karte[r * NX + c]; if (t === STAHL || t === WASSER) return true; } return false; };
   let n = 0;
-  do { x = zufall(25) * 8; y = zufall(23) * 8; } while ((ueber(x, y, 16, 16, BX - 16, BY - 16, 48, 32) || schlecht(x, y)) && ++n < 60);
+  do { x = zufall(FB / 8 - 1) * 8; y = zufall(FH / 8 - 3) * 8; } while ((ueber(x, y, 16, 16, BX - 16, BY - 16, 48, 32) || schlecht(x, y)) && ++n < 60);
   S.bonus = { art: BONUS_ARTEN[zufall(BONUS_ARTEN.length)], x, y, t: 0 };
   S.ton.push('bonus');
 }
 function ring(S, typ) {
   ringZellen((x, y) => {
     if (S.panzer.some(p => !p.tot && ueber(p.x, p.y, 16, 16, x * 4, y * 4, 4, 4))) return;   // niemanden einmauern
-    setze(S, y * N + x, typ);
+    setze(S, y * NX + x, typ);
   });
 }
 function bonusNehmen(S, p) {
@@ -890,8 +918,8 @@ function schritt(S, ein) {
     // neue Gegner
     const aktiv = S.panzer.filter(p => p.sp < 0 && !p.tot).length;
     if (S.gegnerIdx < 20 && aktiv < S.maxG && --S.spawnT <= 0) {
-      for (let v = 0; v < 3 && S.spawnT <= 0; v++) {
-        const [x, y] = START_GEG[S.spawnOrt++ % 3];
+      for (let v = 0; v < START_GEG.length && S.spawnT <= 0; v++) {
+        const [x, y] = START_GEG[S.spawnOrt++ % START_GEG.length];
         if (!S.panzer.some(q => !q.tot && ueber(x, y, 16, 16, q.x, q.y, 16, 16))) { gegnerSetzen(S, x, y); S.spawnT = S.spawnPause; }
       }
       if (S.spawnT <= 0) S.spawnT = 20;
@@ -933,17 +961,18 @@ function bilanzWeiter(S) {
    MALEN – erst klein (256 × 224 wie früher am Fernseher), dann groß gezogen
    ===================================================================== */
 const bild = $('bild'), g = bild.getContext('2d');
-const spielBild = leinwand(256, 224), sg = spielBild.getContext('2d');
-const kartenBild = leinwand(FELD, FELD), kg = kartenBild.getContext('2d');
-const waldBild = leinwand(FELD, FELD), wg = waldBild.getContext('2d');
+const spielBild = leinwand(W2D, 224), sg = spielBild.getContext('2d');
+const PX = FB + 24, MX = W2D / 2;               // Seitenleiste und Bildmitte (flache Grafik)
+const kartenBild = leinwand(FB, FH), kg = kartenBild.getContext('2d');
+const waldBild = leinwand(FB, FH), wg = waldBild.getContext('2d');
 let gemalt = '';
 function karteMalen(V) {
   const welle = Math.floor(V.t / 40) % 2, schluessel = V.kv + '/' + welle + '/' + V.kartenId;
   if (schluessel === gemalt) return;
   gemalt = schluessel;
-  kg.clearRect(0, 0, FELD, FELD); wg.clearRect(0, 0, FELD, FELD);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const t = V.karte[y * N + x]; if (!t) continue;
+  kg.clearRect(0, 0, FB, FH); wg.clearRect(0, 0, FB, FH);
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const t = V.karte[y * NX + x]; if (!t) continue;
     const m = MUSTER[t], quelle = m[t === WASSER ? welle : 0];
     (t === WALD ? wg : kg).drawImage(quelle, (x & 1) * 4, (y & 1) * 4, 4, 4, x * 4, y * 4, 4, 4);
   }
@@ -955,8 +984,8 @@ function lage(o, a) {
 }
 function spielMalen(V) {
   const a = V.alpha == null ? 1 : V.alpha, blink = n => Math.floor(V.t / n) % 2 === 0;
-  sg.fillStyle = '#636363'; sg.fillRect(0, 0, 256, 224);
-  sg.fillStyle = '#000'; sg.fillRect(16, 8, FELD, FELD);
+  sg.fillStyle = '#636363'; sg.fillRect(0, 0, W2D, 224);
+  sg.fillStyle = '#000'; sg.fillRect(16, 8, FB, FH);
   sg.save(); sg.translate(16, 8);
   karteMalen(V);
   sg.drawImage(kartenBild, 0, 0);
@@ -991,35 +1020,36 @@ function spielMalen(V) {
   // Einblendungen
   if (V.phase === 'intro') {
     const zu = V.pt < 20 ? V.pt / 20 : V.pt > 80 ? Math.max(0, 1 - (V.pt - 80) / 30) : 1, h = Math.round(112 * zu);
-    sg.fillStyle = '#636363'; sg.fillRect(0, 0, 256, h); sg.fillRect(0, 224 - h, 256, h);
-    if (zu === 1) { schreibe(sg, 'LEVEL ' + V.level, 128, 100, '#000', true); schreibe(sg, V.levelName || '', 128, 114, '#202020', true);
+    sg.fillStyle = '#636363'; sg.fillRect(0, 0, W2D, h); sg.fillRect(0, 224 - h, W2D, h);
+    if (zu === 1) { schreibe(sg, 'LEVEL ' + V.level, MX, 100, '#000', true); schreibe(sg, V.levelName || '', MX, 114, '#202020', true);
       if (V.level === (S && S.opt.level) && V.sp.length && 'ontouchstart' in window)       // kleiner Tipp im ersten Level
-        schreibe(sg, V.sp.length > 1 && rolle === 'lokal' ? 'JEDER HAT SEINE SEITE' : 'LINKS FAHREN - RECHTS FEUER', 128, 150, '#303030', true); }
+        schreibe(sg, V.sp.length > 1 && rolle === 'lokal' ? 'JEDER HAT SEINE SEITE' : 'LINKS FAHREN - RECHTS FEUER', MX, 150, '#303030', true); }
   }
   if (V.phase === 'gameover') {
     const y = Math.max(104, 216 - V.pt * 1.4);
-    sg.fillStyle = '#000'; sg.fillRect(86, y - 3, 84, 13);
-    schreibe(sg, 'GAME OVER', 128, y, '#F83800', true);
+    sg.fillStyle = '#000'; sg.fillRect(MX - 42, y - 3, 84, 13);
+    schreibe(sg, 'GAME OVER', MX, y, '#F83800', true);
   }
-  if (V.pause && V.phase !== 'bilanz' && blink(30)) { sg.fillStyle = '#000'; sg.fillRect(100, 101, 56, 13); schreibe(sg, 'PAUSE', 128, 104, '#F83800', true); }
-  if (V.uhr > 0 && V.uhr < 120 && blink(10)) schreibe(sg, 'UHR', 240, 4, '#fff', true);
+  if (V.pause && V.phase !== 'bilanz' && blink(30)) { sg.fillStyle = '#000'; sg.fillRect(MX - 28, 101, 56, 13); schreibe(sg, 'PAUSE', MX, 104, '#F83800', true); }
+  if (V.uhr > 0 && V.uhr < 120 && blink(10)) schreibe(sg, 'UHR', PX + 8, 4, '#fff', true);
   if (V.phase === 'bilanz') bilanzMalen(V);
 }
 function seitenleiste(V) {
   const rest = 20 - (V.gegnerIdx || 0);
-  for (let i = 0; i < rest; i++) sg.drawImage(MINI_GEGNER, 232 + (i % 2) * 9, 16 + Math.floor(i / 2) * 8);
+  for (let i = 0; i < rest; i++) sg.drawImage(MINI_GEGNER, PX + (i % 2) * 9, 16 + Math.floor(i / 2) * 8);
   V.sp.forEach((s, i) => {
     const y = 128 + i * 24;
-    schreibe(sg, (i + 1) + 'P', 232, y, '#000');
-    sg.drawImage(MINI_SPIELER, 232, y + 9);
-    schreibe(sg, s.aus ? '-' : Math.min(9, s.leben), 242, y + 9, '#000');
+    schreibe(sg, (i + 1) + 'P', PX, y, '#000');
+    sg.drawImage(MINI_SPIELER, PX, y + 9);
+    schreibe(sg, s.aus ? '-' : Math.min(9, s.leben), PX + 10, y + 9, '#000');
   });
-  sg.drawImage(FAHNE, 234, 182);
-  schreibe(sg, V.level, 243 - String(V.level).length * 3, 192, '#000');
+  sg.drawImage(FAHNE, PX + 2, 182);
+  schreibe(sg, V.level, PX + 11 - String(V.level).length * 3, 192, '#000');
 }
 function rechts(text, x, y, f) { schreibe(sg, text, x - String(text).length * 6 + 1, y, f); }
 function bilanzMalen(V) {
-  sg.fillStyle = '#000'; sg.fillRect(0, 0, 256, 224);
+  sg.fillStyle = '#000'; sg.fillRect(0, 0, W2D, 224);
+  sg.save(); sg.translate((W2D - 256) / 2, 0);            // Tabelle in der Mitte
   schreibe(sg, 'REKORD', 92, 10, '#F83800'); rechts(Math.max(rekord, V.rekord || 0), 196, 10, '#F8B800');
   schreibe(sg, 'LEVEL ' + V.level, 128, 26, '#fff', true);
   const zwei = V.sp.length > 1;
@@ -1037,6 +1067,7 @@ function bilanzMalen(V) {
   if (zwei) rechts(V.sp[1].kills.reduce((a, b) => a + b, 0), 192, 174, '#fff');
   if (V.vorbei) schreibe(sg, 'GAME OVER', 128, 196, '#F83800', true);
   else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) schreibe(sg, 'TIPPEN = WEITER', 128, 200, '#A8A8A8', true);
+  sg.restore();
 }
 
 /* =====================================================================
@@ -1051,18 +1082,32 @@ function randLesen() {
   Object.assign(rand, { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 });
   p.remove();
 }
+// 3D-Grafik läuft randlos über den ganzen Bildschirm
+const randlos = () => einst.grafik === '3d' && D3.bereit && modus !== 'editor';
 function aufteilen() {
   randLesen();
   const W = innerWidth, H = innerHeight, dpr = Math.min(3, devicePixelRatio || 1);
   if (bild.width !== Math.round(W * dpr) || bild.height !== Math.round(H * dpr)) { bild.width = Math.round(W * dpr); bild.height = Math.round(H * dpr); }
-  L.dpr = dpr; L.W = W; L.H = H;
+  L.dpr = dpr; L.W = W; L.H = H; L.voll = randlos();
   const steuern = modus === 'spiel', zwei = steuern && rolle === 'lokal' && S && S.spieler === 2, ed = modus === 'editor';
   L.zonen = [];
-  if (W >= H) {                                            // quer
-    const seite = steuern ? begrenze(W * 0.19, 110, 240) : ed ? begrenze(W * 0.2, 130, 250) : 0;
+  if (L.voll) {
+    // Randlos: das 3D-Bild füllt alles. Steuerung liegt halb durchsichtig darüber:
+    // links fahren, rechts schießen (zu zweit: jeder seine Hälfte, oben Feuer, unten fahren)
+    Object.assign(L, { s: 1, gx: 0, gy: 0, gw: W, gh: H });
+    const r = Math.min(W, H), li = { x: 0, y: 0, w: W / 2, h: H }, re = { x: W / 2, y: 0, w: W / 2, h: H };
+    const ecke = (x, y) => ({ ax: x, ay: y });
+    if (zwei) L.zonen.push({ sp: 0, art: 'feuer', ...teil(li, 0, 0.45), ...ecke(rand.l + r * 0.17, H * 0.3) }, { sp: 0, art: 'joy', ...teil(li, 0.45, 1), ...ecke(rand.l + r * 0.2, H - rand.b - r * 0.22) },
+                           { sp: 1, art: 'feuer', ...teil(re, 0, 0.45), ...ecke(W - rand.r - r * 0.17, H * 0.3) }, { sp: 1, art: 'joy', ...teil(re, 0.45, 1), ...ecke(W - rand.r - r * 0.2, H - rand.b - r * 0.22) });
+    else L.zonen.push({ sp: 0, art: 'joy', ...li, ...ecke(rand.l + r * 0.2, H - rand.b - r * 0.22) }, { sp: 0, art: 'feuer', ...re, ...ecke(W - rand.r - r * 0.2, H - rand.b - r * 0.22) });
+    L.werkzeug = { x: W, y: 0, w: 0, h: H, quer: true };
+    Object.assign($('ingame').style, { left: (rand.l + 8) + 'px', transform: 'none' });
+    if (D3.bereit) D3.groesse(W, H, 0, 0);
+  } else if (W >= H) {                                     // quer, flache Grafik
+    const seite = steuern ? begrenze(W * 0.13, 90, 200) : ed ? begrenze(W * 0.16, 120, 230) : 0;
     const aw = W - 2 * seite, ah = H - rand.t - rand.b - 8;
-    const s = Math.min(aw / 256, ah / 224);
-    Object.assign(L, { s, gw: 256 * s, gh: 224 * s }); L.gx = (W - L.gw) / 2; L.gy = rand.t + 4 + (ah - L.gh) / 2;
+    const s = Math.min(aw / W2D, ah / 224);
+    Object.assign(L, { s, gw: W2D * s, gh: 224 * s }); L.gx = (W - L.gw) / 2; L.gy = rand.t + 4 + (ah - L.gh) / 2;
     const li = { x: rand.l, y: 0, w: L.gx - rand.l, h: H }, re = { x: L.gx + L.gw, y: 0, w: W - L.gx - L.gw - rand.r, h: H };
     if (zwei) {
       L.zonen.push({ sp: 0, art: 'feuer', ...teil(li, 0, 0.4) }, { sp: 0, art: 'joy', ...teil(li, 0.4, 1) },
@@ -1070,10 +1115,10 @@ function aufteilen() {
     } else L.zonen.push({ sp: 0, art: 'joy', ...li }, { sp: 0, art: 'feuer', ...re });
     L.werkzeug = { x: L.gx + L.gw, y: 0, w: W - L.gx - L.gw, h: H, quer: true };
     Object.assign($('ingame').style, { left: (rand.l + 8) + 'px', transform: 'none' });
-  } else {                                                  // hochkant
+  } else {                                                  // hochkant (nur Menü/Editor – das Spiel will quer)
     const oben = rand.t + 52;
-    const s = Math.min((W - rand.l - rand.r) / 256, (steuern || ed ? H * 0.56 : H - oben) / 224);
-    Object.assign(L, { s, gw: 256 * s, gh: 224 * s }); L.gx = (W - L.gw) / 2; L.gy = oben;
+    const s = Math.min((W - rand.l - rand.r) / W2D, (steuern || ed ? H * 0.56 : H - oben) / 224);
+    Object.assign(L, { s, gw: W2D * s, gh: 224 * s }); L.gx = (W - L.gw) / 2; L.gy = oben;
     const unten = { x: 0, y: L.gy + L.gh, w: W, h: H - L.gy - L.gh };
     const lh = { x: 0, y: unten.y, w: W / 2, h: unten.h }, rh = { x: W / 2, y: unten.y, w: W / 2, h: unten.h };
     if (zwei) L.zonen.push({ sp: 0, art: 'feuer', ...teil(lh, 0, 0.4) }, { sp: 0, art: 'joy', ...teil(lh, 0.4, 1) },
@@ -1083,21 +1128,27 @@ function aufteilen() {
     Object.assign($('ingame').style, { left: '50%', transform: 'translateX(-50%)' });
   }
 }
-function dreiLage() { if (D3.bereit) D3.groesse(208 * L.s, D3_HOEHE * L.s, L.gx + 16 * L.s, L.gy + (8 + D3_OBEN) * L.s); }
 const teil = (z, a, b) => ({ x: z.x, y: z.y + z.h * a, w: z.w, h: z.h * (b - a) });
-addEventListener('resize', () => { aufteilen(); editorLeiste(); dreiLage(); });
+addEventListener('resize', () => { aufteilen(); editorLeiste(); });
 
 function allesMalen() {
   const V = ansicht();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  const drei = einst.grafik === '3d' && D3.bereit && modus !== 'editor' && !!V;
+  const drei = randlos() && !!V;
+  if (drei !== L.voll) aufteilen();
   D3.zeigen(drei);
   if (drei) g.clearRect(0, 0, bild.width, bild.height);
   else { g.fillStyle = '#000'; g.fillRect(0, 0, bild.width, bild.height); }
   if (!V) return;
   const block = einst.grafik !== 'klassisch';
-  if (drei) { dreiLage(); D3.malen(V); blockMalen(V, true); }        // 3D-Feld unten, Rahmen + Anzeigen darüber
-  else if (block) blockMalen(V); else spielMalen(V);
+  if (drei) {                                              // 3D-Feld unten, Anzeigen darüber
+    D3.malen(V);
+    g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+    randAnzeigen(V);
+    if (modus === 'spiel' && V.phase !== 'bilanz') steuerMalen();
+    return;
+  }
+  if (block) blockMalen(V); else spielMalen(V);
   g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
   g.imageSmoothingEnabled = false;
   g.drawImage(block ? blockBild : spielBild, L.gx, L.gy, L.gw, L.gh);
@@ -1108,7 +1159,7 @@ function steuerMalen() {
     const zg = [...zeiger.values()].find(p => p.z === z);
     const m = Math.min(z.w, z.h);
     if (z.art === 'joy') {
-      const R = Math.min(70, m * 0.36), cx = zg ? zg.x0 : z.x + z.w / 2, cy = zg ? zg.y0 : z.y + z.h / 2;
+      const R = L.voll ? Math.min(78, Math.min(L.W, L.H) * 0.14) : Math.min(70, m * 0.36), cx = zg ? zg.x0 : z.ax != null ? z.ax : z.x + z.w / 2, cy = zg ? zg.y0 : z.ay != null ? z.ay : z.y + z.h / 2;
       g.globalAlpha = zg ? 0.35 : 0.16; g.fillStyle = '#fff';
       g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fill();
       g.globalAlpha = 0.5; g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke();
@@ -1121,7 +1172,7 @@ function steuerMalen() {
       g.globalAlpha = zg ? 0.8 : 0.4; g.fillStyle = z.sp ? '#47D7E8' : '#8FC46A';
       g.beginPath(); g.arc(kx, ky, R * 0.42, 0, 7); g.fill();
     } else {
-      const R = Math.min(62, m * 0.32), cx = z.x + z.w / 2, cy = z.y + z.h / 2;
+      const R = L.voll ? Math.min(64, Math.min(L.W, L.H) * 0.12) : Math.min(62, m * 0.32), cx = z.ax != null ? z.ax : z.x + z.w / 2, cy = z.ay != null ? z.ay : z.y + z.h / 2;
       g.globalAlpha = zg ? 0.7 : 0.28; g.fillStyle = z.sp ? '#2A8FB0' : '#FF7A24';
       g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fill();
       g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.font = `800 ${Math.round(R * 0.32)}px -apple-system,system-ui,sans-serif`;
@@ -1292,9 +1343,9 @@ const Ton = {
    Dazu Funken, Rauch, Trümmer, Lichtblitze und wackelnder Bildschirm.
    Ein Spiel-Punkt = 4 Bild-Punkte, ein „Minecraft-Pixel“ = 2 Bild-Punkte.
    ===================================================================== */
-const GR = 4, TP = 2, FR = FELD * GR;
-const blockBild = leinwand(256 * GR, 224 * GR), bg = blockBild.getContext('2d');
-const hdLeinwand = () => { const c = leinwand(FR, FR); return [c, c.getContext('2d')]; };
+const GR = 4, TP = 2, FRB = FB * GR, FRH = FH * GR;   // Feld in Bild-Punkten (Breite, Höhe)
+const blockBild = leinwand(W2D * GR, 224 * GR), bg = blockBild.getContext('2d');
+const hdLeinwand = () => { const c = leinwand(FRB, FRH); return [c, c.getContext('2d')]; };
 const [bodenHD, bodenG] = hdLeinwand();      // Boden, Wasser, Eis, Mauern, Schatten (Zwischenspeicher)
 const [waldHD, waldG] = hdLeinwand();        // Blätterdach (über den Panzern)
 const [maskeHD, maskeG] = hdLeinwand();      // Hilfsbild für Schatten
@@ -1459,8 +1510,8 @@ const KEGEL = (() => {                       // Lichtkegel eines Scheinwerfers (
 })();
 const RUSS = glut([0, 0, 0]);
 const VIGNETTE = (() => {
-  const c = leinwand(FR, FR), t = c.getContext('2d'), gr = t.createRadialGradient(FR / 2, FR / 2, FR * 0.35, FR / 2, FR / 2, FR * 0.75);
-  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.45)'); t.fillStyle = gr; t.fillRect(0, 0, FR, FR); return c;
+  const c = leinwand(FRB, FRH), t = c.getContext('2d'), gr = t.createRadialGradient(FRB / 2, FRH / 2, FRH * 0.35, FRB / 2, FRH / 2, FRB * 0.6);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.45)'); t.fillStyle = gr; t.fillRect(0, 0, FRB, FRH); return c;
 })();
 
 // --- Panzer in Block-Optik: 32 × 32 Minecraft-Pixel, Licht kommt immer von oben links ---
@@ -1560,12 +1611,12 @@ function schrift(c, text, x, y, gr, farbe = '#fff', mitte = false, schatten = tr
 const istMauer = t => t === ZIEGEL || t === STAHL;
 function bodenZeichnen(k, x0, y0, x1, y1) {
   // Bereich in Zellen (inklusive), etwas Rand für Schatten
-  const zx0 = Math.max(0, x0 - 2), zy0 = Math.max(0, y0 - 2), zx1 = Math.min(N - 1, x1 + 1), zy1 = Math.min(N - 1, y1 + 1);
+  const zx0 = Math.max(0, x0 - 2), zy0 = Math.max(0, y0 - 2), zx1 = Math.min(NX - 1, x1 + 1), zy1 = Math.min(NY - 1, y1 + 1);
   const Z = 4 * GR, b = bodenG;
   b.save(); b.beginPath(); b.rect(x0 * Z, y0 * Z, (x1 - x0 + 1) * Z, (y1 - y0 + 2) * Z); b.clip();
-  const zelle = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? STAHL : k[y * N + x];
+  const zelle = (x, y) => (x < 0 || y < 0 || x >= NX || y >= NY) ? STAHL : k[y * NX + x];
   for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) {
-    const t = k[y * N + x], sx = (x & 1) * 16, sy = (y & 1) * 16, dx = x * Z, dy = y * Z;
+    const t = k[y * NX + x], sx = (x & 1) * 16, sy = (y & 1) * 16, dx = x * Z, dy = y * Z;
     const quelle = t === WASSER ? TEX[WASSER] : t === EIS ? TEX[EIS] : BODEN[Math.floor(hash(x >> 1, y >> 1, 70) * 4)];
     b.drawImage(quelle, sx, sy, 16, 16, dx, dy, 16, 16);
     if (t === WASSER) {                                       // Ufer: Schatten oben, Schaum an den Rändern
@@ -1579,14 +1630,14 @@ function bodenZeichnen(k, x0, y0, x1, y1) {
   // Schatten der Mauern und Bäume
   maskeG.clearRect(zx0 * Z, zy0 * Z, (zx1 - zx0 + 1) * Z, (zy1 - zy0 + 1) * Z);
   maskeG.fillStyle = '#000';
-  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (istMauer(k[y * N + x])) maskeG.fillRect(x * Z, y * Z, Z, Z);
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (istMauer(k[y * NX + x])) maskeG.fillRect(x * Z, y * Z, Z, Z);
   b.globalAlpha = 0.5; b.drawImage(maskeHD, 9, 15); b.globalAlpha = 1;
   maskeG.clearRect(zx0 * Z, zy0 * Z, (zx1 - zx0 + 1) * Z, (zy1 - zy0 + 1) * Z);
-  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (k[y * N + x] === WALD) maskeG.fillRect(x * Z, y * Z, Z, Z);
+  for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) if (k[y * NX + x] === WALD) maskeG.fillRect(x * Z, y * Z, Z, Z);
   b.globalAlpha = 0.32; b.drawImage(maskeHD, 10, 14); b.globalAlpha = 1;
   // Mauern mit Kanten: oben hell, unten eine dunkle Vorderseite → sieht aus wie ein Klotz
   for (let y = zy0; y <= zy1; y++) for (let x = zx0; x <= zx1; x++) {
-    const t = k[y * N + x]; if (!istMauer(t)) continue;
+    const t = k[y * NX + x]; if (!istMauer(t)) continue;
     const dx = x * Z, dy = y * Z;
     b.drawImage(TEX[t], (x & 1) * 16, (y & 1) * 16, 16, 16, dx, dy, 16, 16);
     if (!istMauer(zelle(x, y - 1))) { b.fillStyle = 'rgba(255,255,255,0.22)'; b.fillRect(dx, dy, 16, 2); }
@@ -1602,11 +1653,11 @@ function bodenZeichnen(k, x0, y0, x1, y1) {
   b.restore();
 }
 function waldZeichnen(k) {
-  waldG.clearRect(0, 0, FR, FR); wasserMaskeG.clearRect(0, 0, FR, FR);
+  waldG.clearRect(0, 0, FRB, FRH); wasserMaskeG.clearRect(0, 0, FRB, FRH);
   const Z = 4 * GR; let wasser = false;
-  const zelle = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? -1 : k[y * N + x];
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const t = k[y * N + x], dx = x * Z, dy = y * Z;
+  const zelle = (x, y) => (x < 0 || y < 0 || x >= NX || y >= NY) ? -1 : k[y * NX + x];
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const t = k[y * NX + x], dx = x * Z, dy = y * Z;
     if (t === WASSER) { wasserMaskeG.fillStyle = '#fff'; wasserMaskeG.fillRect(dx, dy, Z, Z); wasser = true; }
     if (t !== WALD) continue;
     waldG.drawImage(TEX[WALD], (x & 1) * 16, (y & 1) * 16, 16, 16, dx, dy, 16, 16);
@@ -1618,7 +1669,7 @@ function waldZeichnen(k) {
 }
 
 /* ---------- Was beim Malen passiert: Teilchen, Lichter, Spuren ---------- */
-const HD = { bewegt: new Map(), kartenId: null, kv: -1, karte: new Uint8Array(N * N), gesehen: new Map(), kugeln: new Set(), lage: new Map(), rueck: new Map(),
+const HD = { bewegt: new Map(), kartenId: null, kv: -1, karte: new Uint8Array(NX * NY), gesehen: new Map(), kugeln: new Set(), lage: new Map(), rueck: new Map(),
              teilchen: [], lichter: [], wackeln: 0, zeit: 0, bonus: null, wasser: false, spurT: 0 };
 function teilchen(o) { if (HD.teilchen.length < (HD.sparen ? 220 : 700)) HD.teilchen.push(Object.assign({ vx: 0, vy: 0, l: 30, ml: 30, gr: 4, reib: 0.94, add: false, wachs: 0, steig: 0 }, o, { ml: o.l || 30 })); }
 function licht(x, y, r, farbe, l = 20, staerke = 1) { if (HD.sparen && HD.lichter.length > 5) return; HD.lichter.push({ x, y, r, farbe, l, ml: l, staerke }); }
@@ -1653,14 +1704,14 @@ function ereignisse(V) {
   // neue Karte → alles neu
   if (HD.kartenId !== V.kartenId) {
     HD.kartenId = V.kartenId; HD.kv = V.kv; HD.karte.set(V.karte);
-    bodenZeichnen(V.karte, 0, 0, N - 1, N - 1); waldZeichnen(V.karte);
-    spurenG.clearRect(0, 0, FR, FR); HD.lage.clear(); HD.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80; HD.teilchen.length = 0; HD.lichter.length = 0; HD.kugeln.clear(); HD.gesehen.clear();
+    bodenZeichnen(V.karte, 0, 0, NX - 1, NY - 1); waldZeichnen(V.karte);
+    spurenG.clearRect(0, 0, FRB, FRH); HD.lage.clear(); HD.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80; HD.teilchen.length = 0; HD.lichter.length = 0; HD.kugeln.clear(); HD.gesehen.clear();
   } else if (HD.kv !== V.kv) {
     HD.kv = V.kv;
-    let x0 = N, y0 = N, x1 = -1, y1 = -1, neuWald = false, n = 0;
-    for (let i = 0; i < N * N; i++) {
+    let x0 = NX, y0 = NY, x1 = -1, y1 = -1, neuWald = false, n = 0;
+    for (let i = 0; i < NX * NY; i++) {
       const a = HD.karte[i], b = V.karte[i]; if (a === b) continue;
-      const x = i % N, y = (i / N) | 0;
+      const x = i % NX, y = (i / NX) | 0;
       x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
       if (a === WALD || b === WALD || a === WASSER || b === WASSER) neuWald = true;
       if (spiel && istMauer(a) && b === LEER && n++ < 40) mauerTruemmer(x * 16, y * 16, a);
@@ -1677,11 +1728,11 @@ function ereignisse(V) {
     HD.gesehen.set(k, V.t);
     if (e.t > 6 && e.art !== 'p') continue;                  // zu alt (z. B. nach dem Verbinden)
     const x = e.x * GR, y = e.y * GR;
-    const nass = [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(Math.floor(e.y / 4) + b * 3) * N + Math.floor(e.x / 4) + a * 3] === WASSER));
+    const nass = [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(Math.floor(e.y / 4) + b * 3) * NX + Math.floor(e.x / 4) + a * 3] === WASSER));
     if (nass && e.art !== 'p') for (let i = 0; i < 2; i++) teilchen({ x, y, art: 'welle', l: 30 + i * 10, gr: 10, farbe: '160,210,255' });
     if (e.art !== 'p' && !nass) { spurenG.globalAlpha = e.art === 'g' ? 0.55 : 0.3; const rr = e.art === 'g' ? 64 : 16; spurenG.drawImage(RUSS, x - rr, y - rr, rr * 2, rr * 2); spurenG.globalAlpha = 1; }   // Brandfleck
     if (e.art === 'g') explosionGross(x, y);
-    else if (e.art === 'k') { const c = Math.floor(e.x / 4), r = Math.floor(e.y / 4); einschlag(x, y, [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(r + b) * N + c + a] === STAHL))); }
+    else if (e.art === 'k') { const c = Math.floor(e.x / 4), r = Math.floor(e.y / 4); einschlag(x, y, [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(r + b) * NX + c + a] === STAHL))); }
   }
   for (const [k, t] of HD.gesehen) if (V.t - t > 200 || t > V.t) HD.gesehen.delete(k);
   // neue Kugeln → Mündungsfeuer und Rückstoß
@@ -1711,7 +1762,7 @@ function teilchenBewegen(dt) {
     t.x += t.vx * dt; t.y += t.vy * dt + t.steig * dt;
     const r = Math.pow(t.reib, dt); t.vx *= r; t.vy *= r; t.gr += t.wachs * dt; t.l -= dt;
   }
-  HD.teilchen = HD.teilchen.filter(t => t.l > 0 && !(t.flocke && t.y > FR + 10));
+  HD.teilchen = HD.teilchen.filter(t => t.l > 0 && !(t.flocke && t.y > FRH + 10));
   for (const l of HD.lichter) l.l -= dt;
   HD.lichter = HD.lichter.filter(l => l.l > 0);
   for (const [id, v] of HD.bewegt) { if (v - dt <= 0) HD.bewegt.delete(id); else HD.bewegt.set(id, v - dt); }
@@ -1721,33 +1772,27 @@ function teilchenBewegen(dt) {
 
 /* ---------- Ein Bild in Block-Grafik ---------- */
 let hdLetzte = performance.now();
-function blockMalen(V, nurRahmen) {
+function blockMalen(V) {
   const jetzt = performance.now(), dt = V.pause ? 0 : Math.min(3, (jetzt - hdLetzte) / 16.67); hdLetzte = jetzt;
   HD.zeit += dt;
   const a = V.alpha == null ? 1 : V.alpha, blink = n => Math.floor(V.t / n) % 2 === 0, c = bg;
-  if (!nurRahmen) { ereignisse(V); teilchenBewegen(dt); }
+  ereignisse(V); teilchenBewegen(dt);
   // Rahmen aus Pflasterstein
   c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
   if (!blockMalen.muster) blockMalen.muster = c.createPattern(PFLASTER, 'repeat');
   c.fillStyle = blockMalen.muster; c.fillRect(0, 0, blockBild.width, blockBild.height);
   c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, 0, blockBild.width, blockBild.height);
   const ox = 16 * GR, oy = 8 * GR;
-  c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox - 8, oy - 8, FR + 16, FR + 16);
-  if (nurRahmen) {                                       // 3D: Feld frei lassen, dort scheint das 3D-Bild durch
-    c.clearRect(ox, oy + D3_OBEN * GR, FR, D3_HOEHE * GR);
-    D3.texte(c, V, ox, oy);
-    seitenleisteHD(V); einblendungenHD(V, blink);
-    return;
-  }
+  c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox - 8, oy - 8, FRB + 16, FRH + 16);
   // Feld (mit Wackeln)
   const wx = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0, wy = HD.wackeln > 0.5 ? Math.round(zz(-1, 1) * HD.wackeln / 2) * 2 : 0;
-  c.save(); c.beginPath(); c.rect(ox, oy, FR, FR); c.clip(); c.translate(ox + wx, oy + wy);
+  c.save(); c.beginPath(); c.rect(ox, oy, FRB, FRH); c.clip(); c.translate(ox + wx, oy + wy);
   c.drawImage(bodenHD, 0, 0);
   if (HD.wasser && !HD.sparen) {                              // Wellen ziehen über das Wasser
     if (!blockMalen.wellen) blockMalen.wellen = wasserTmpG.createPattern(WELLEN, 'repeat');
-    const t = wasserTmpG; t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, FR, FR);
+    const t = wasserTmpG; t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, FRB, FRH);
     const v = Math.round(HD.zeit * 0.25) * TP;
-    t.save(); t.translate(v % 64, Math.round(v * 0.5) % 64); t.fillStyle = blockMalen.wellen; t.fillRect(-64, -64, FR + 128, FR + 128); t.restore();
+    t.save(); t.translate(v % 64, Math.round(v * 0.5) % 64); t.fillStyle = blockMalen.wellen; t.fillRect(-64, -64, FRB + 128, FRH + 128); t.restore();
     t.globalCompositeOperation = 'destination-in'; t.drawImage(wasserMaske, 0, 0); t.globalCompositeOperation = 'source-over';
     c.globalAlpha = 0.45 + 0.15 * Math.sin(HD.zeit * 0.05); c.drawImage(wasserTmp, 0, 0); c.globalAlpha = 1;
   }
@@ -1757,10 +1802,10 @@ function blockMalen(V, nurRahmen) {
     for (const p of V.panzer) {
       if (p.spawn > 0) continue;
       const alt = HD.lage.get(p.id);
-      if (alt && (alt[0] !== p.x || alt[1] !== p.y) && V.karte[((p.y + 8) >> 2) * N + ((p.x + 8) >> 2)] !== WASSER) {
+      if (alt && (alt[0] !== p.x || alt[1] !== p.y) && V.karte[((p.y + 8) >> 2) * NX + ((p.x + 8) >> 2)] !== WASSER) {
         const f = FORMEN[p.sp >= 0 ? 's0' : 'g' + p.typ].k, b = f[1] * GR, m = 8 * GR;
         HD.bewegt.set(p.id, 8);
-        const unten = V.karte[((p.y + 8) >> 2) * N + ((p.x + 8) >> 2)];
+        const unten = V.karte[((p.y + 8) >> 2) * NX + ((p.x + 8) >> 2)];
         if (unten !== EIS && Math.random() < 0.14 * dt) teilchen({ x: p.x * GR + m - DX[p.r] * 30 + zz(-10, 10), y: p.y * GR + m - DY[p.r] * 30 + zz(-10, 10), vx: -DX[p.r] * 0.4, vy: -DY[p.r] * 0.4, l: 26, gr: 6, farbe: [128, 112, 84], wachs: 0.18, reib: 0.95 });
         for (const s of [f[0], 16 - f[0] - f[1]]) {
           const q = (s - 8) * GR;            // Abstand der Kette von der Mitte
@@ -1770,7 +1815,7 @@ function blockMalen(V, nurRahmen) {
       }
       HD.lage.set(p.id, [p.x, p.y]);
     }
-    if (++HD.spurT % 40 === 0) { spurenG.globalCompositeOperation = 'destination-out'; spurenG.fillStyle = 'rgba(0,0,0,0.08)'; spurenG.fillRect(0, 0, FR, FR); spurenG.globalCompositeOperation = 'source-over'; }
+    if (++HD.spurT % 40 === 0) { spurenG.globalCompositeOperation = 'destination-out'; spurenG.fillStyle = 'rgba(0,0,0,0.08)'; spurenG.fillRect(0, 0, FRB, FRH); spurenG.globalCompositeOperation = 'source-over'; }
   }
   c.drawImage(spurenHD, 0, 0);
   // Basis: Stahlblock mit goldenem Stern (mit Seitenwand wie die Mauern)
@@ -1838,17 +1883,17 @@ function blockMalen(V, nurRahmen) {
   // Punkte
   for (const e of V.effekte) if (e.art === 'p' && e.t > 20) schrift(c, e.w, e.x * GR, e.y * GR - 12 - (e.t - 20) * 0.6, 2, '#fff', true);
   // Schnee auf Eis-Leveln
-  if (HD.schnee && dt > 0 && Math.random() < 0.5) teilchen({ x: zz(-100, FR), y: -6, vx: zz(0.2, 0.7), vy: zz(1, 2.2), l: 700, gr: Math.random() < 0.3 ? 6 : 4, farbe: [240, 248, 255], reib: 1, flocke: true });
+  if (HD.schnee && dt > 0 && Math.random() < 0.5) teilchen({ x: zz(-100, FRB), y: -6, vx: zz(0.2, 0.7), vy: zz(1, 2.2), l: 700, gr: Math.random() < 0.3 ? 6 : 4, farbe: [240, 248, 255], reib: 1, flocke: true });
   // Level geschafft → Feuerwerk
   if (V.phase === 'spiel' && V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0) && dt > 0 && Math.random() < 0.06 * dt) {
     const farben = [[255, 90, 90], [120, 220, 255], [255, 230, 90], [140, 255, 140], [255, 140, 255]];
-    funkeln(zz(100, FR - 100), zz(80, FR - 300), farben[zufall(farben.length)], 26); Ton.spiel('knall');
+    funkeln(zz(100, FRB - 100), zz(80, FRH - 300), farben[zufall(farben.length)], 26); Ton.spiel('knall');
   }
   // Nacht: alles dunkel, nur Scheinwerfer, Kugeln und Feuer leuchten
   if (nachtLevel(V.level) && !HD.sparen) {
     const n = lichtG;
-    n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, FR, FR);
-    n.fillStyle = 'rgba(3,5,22,0.84)'; n.fillRect(0, 0, FR, FR);
+    n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, FRB, FRH);
+    n.fillStyle = 'rgba(3,5,22,0.84)'; n.fillRect(0, 0, FRB, FRH);
     n.globalCompositeOperation = 'destination-out';
     const loch = (x, y, r, a = 1) => { n.globalAlpha = a; n.drawImage(GLUT.weiss, x - r, y - r, r * 2, r * 2); };
     for (const { p, x, y } of liste) {
@@ -1869,12 +1914,12 @@ function blockMalen(V, nurRahmen) {
   c.globalCompositeOperation = 'lighter';
   for (const l of HD.lichter) { const f = (l.l / l.ml) * l.staerke; c.globalAlpha = Math.min(1, f); c.drawImage(GLUT[l.farbe], l.x - l.r, l.y - l.r, l.r * 2, l.r * 2); }
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-  if (V.uhr > 0) { c.fillStyle = `rgba(120,180,255,${0.12 + (V.uhr < 120 && blink(10) ? 0.08 : 0)})`; c.fillRect(0, 0, FR, FR); }
+  if (V.uhr > 0) { c.fillStyle = `rgba(120,180,255,${0.12 + (V.uhr < 120 && blink(10) ? 0.08 : 0)})`; c.fillRect(0, 0, FRB, FRH); }
   if (!HD.sparen) c.drawImage(VIGNETTE, 0, 0);
   c.restore();
   // innerer Rahmen-Schatten
-  c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(ox, oy, FR, 6); c.fillRect(ox, oy, 6, FR);
-  c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + FR, FR, 4); c.fillRect(ox + FR, oy, 4, FR + 4);
+  c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(ox, oy, FRB, 6); c.fillRect(ox, oy, 6, FRH);
+  c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + FRH, FRB, 4); c.fillRect(ox + FRB, oy, 4, FRH + 4);
   seitenleisteHD(V);
   einblendungenHD(V, blink);
 }
@@ -1908,8 +1953,8 @@ function schildMalen(c, x, y) {
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 }
 function seitenleisteHD(V) {
-  const c = bg, x0 = 226 * GR;
-  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x0, 8 * GR, 28 * GR, FR);
+  const c = bg, x0 = (FB + 18) * GR;
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x0, 8 * GR, 28 * GR, FRH);
   const rest = 20 - (V.gegnerIdx || 0);
   for (let i = 0; i < rest; i++) c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, x0 + 12 + (i % 2) * 40, 8 * GR + 20 + Math.floor(i / 2) * 36, 32, 32);
   V.sp.forEach((s, i) => {
@@ -1923,11 +1968,48 @@ function seitenleisteHD(V) {
   schrift(c, V.level, x0 + 56 - String(V.level).length * 12, 196 * GR, 4, '#fff');
   if (V.phase === 'spiel' || V.phase === 'gameover') { const s = Math.floor((V.pt || 0) / 60); schrift(c, String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'), x0 + 26, 208 * GR, 2, '#ccc'); }
 }
-function einblendungenHD(V, blink) {
-  const c = bg, W = 256 * GR, H = 224 * GR;
+/* ---------- Anzeigen über dem 3D-Bild (randlos) ---------- */
+const randBild = leinwand(16, 16), rg = randBild.getContext('2d');
+function pille(c, x, y, w, h) {
+  const r = h / 4;
+  c.fillStyle = 'rgba(21,25,35,0.74)'; c.strokeStyle = 'rgba(71,90,120,0.9)'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  c.fill(); c.stroke();
+}
+function randAnzeigen(V) {
+  const H = 896, W = Math.round(H * L.W / L.H), k = H / L.H;
+  if (randBild.width !== W || randBild.height !== H) { randBild.width = W; randBild.height = H; }
+  const c = rg; c.clearRect(0, 0, W, H); c.imageSmoothingEnabled = false;
+  HD.zeit = D3.zeit;
+  const blink = n => Math.floor(V.t / n) % 2 === 0;
+  D3.texte(c, V, W, H);
+  if (V.phase !== 'bilanz' && V.sp && V.sp.length) {
+    // oben: Spieler 1 links, Level + Zeit + Gegner in der Mitte, Spieler 2 rechts
+    const oben = (rand.t + 6) * k, hoch = 70;
+    const knopf = $('ingame').getBoundingClientRect(), x1 = Math.max((rand.l + 60) * k, (knopf.right + 8) * k);
+    const spieler = (s, i, x) => {
+      pille(c, x, oben, 300, hoch);
+      c.drawImage(panzerHD('s' + (s.lvl || 0), i ? 'p2' : 'p1', 0, 0).bild, x + 8, oben + 4, 62, 62);
+      schrift(c, (i + 1) + 'P', x + 76, oben + 10, 3, i ? '#47D7E8' : '#FF9A4A');
+      schrift(c, '♥', x + 140, oben + 10, 3, '#FF5050'); schrift(c, s.aus ? '-' : Math.min(9, s.leben), x + 164, oben + 10, 3, '#fff');
+      schrift(c, String(s.punkte).padStart(6, '0'), x + 76, oben + 40, 3, '#D8C49A');
+    };
+    spieler(V.sp[0], 0, x1);
+    if (V.sp[1]) spieler(V.sp[1], 1, W - (rand.r + 12) * k - 300);
+    const mx = W / 2, sek = Math.floor(((V.phase === 'spiel' || V.phase === 'gameover') ? V.pt || 0 : 0) / 60);
+    pille(c, mx - 170, oben, 340, hoch);
+    schrift(c, 'LEVEL ' + V.level, mx - 150, oben + 10, 3, '#fff');
+    schrift(c, String(Math.floor(sek / 60)).padStart(2, '0') + ':' + String(sek % 60).padStart(2, '0'), mx - 150, oben + 40, 3, '#bbb');
+    c.drawImage(panzerHD('g0', 'silber', 0, 0).bild, mx + 40, oben + 8, 54, 54);
+    schrift(c, '×' + (20 - (V.gegnerIdx || 0)), mx + 98, oben + 24, 3, '#fff');
+  }
+  einblendungenHD(V, blink, c, W, H);
+  g.drawImage(randBild, 0, 0, L.W, L.H);
+}
+function einblendungenHD(V, blink, c = bg, W = W2D * GR, H = 224 * GR) {
   if (V.phase === 'intro') {
     const zu = V.pt < 20 ? V.pt / 20 : V.pt > 80 ? Math.max(0, 1 - (V.pt - 80) / 30) : 1, h = Math.round(H / 2 * zu / 2) * 2;
-    c.fillStyle = blockMalen.muster; c.fillRect(0, 0, W, h); c.fillRect(0, H - h, W, h);
+    c.fillStyle = c._muster || (c._muster = c.createPattern(PFLASTER, 'repeat')); c.fillRect(0, 0, W, h); c.fillRect(0, H - h, W, h);
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, W, h); c.fillRect(0, H - h, W, h);
     c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(0, h - 8, W, 8); c.fillRect(0, H - h, W, 8);
     if (zu === 1) {
@@ -1947,11 +2029,12 @@ function einblendungenHD(V, blink) {
     schrift(c, 'GAME', W / 2, y, 16, '#FF4020', true); schrift(c, 'OVER', W / 2, y + 130, 16, '#FF4020', true);
   }
   if (V.pause && V.phase !== 'bilanz' && blink(30)) schrift(c, 'PAUSE', W / 2, 400, 12, '#FF6030', true);
-  if (V.phase === 'bilanz') bilanzHD(V);
+  if (V.phase === 'bilanz') bilanzHD(V, c, W, H);
 }
-function bilanzHD(V) {
-  const c = bg, W = 256 * GR, s = GR;
-  c.fillStyle = 'rgba(0,0,0,0.82)'; c.fillRect(0, 0, W, 224 * GR);
+function bilanzHD(V, c, W, H) {
+  const s = GR;
+  c.fillStyle = 'rgba(0,0,0,0.82)'; c.fillRect(0, 0, W, H);
+  c.save(); c.translate((W - 256 * GR) / 2, (H - 224 * GR) / 2); W = 256 * GR;
   schrift(c, 'REKORD ' + Math.max(rekord, V.rekord || 0), W / 2, 36, 5, '#FFB830', true);
   schrift(c, 'LEVEL ' + V.level, W / 2, 100, 7, '#fff', true);
   const zwei = V.sp.length > 1, rechtsHD = (t, x, y, f) => schrift(c, t, x - String(t).length * 24 + 4, y, 4, f);
@@ -1968,6 +2051,7 @@ function bilanzHD(V) {
   if (zwei) rechtsHD(V.sp[1].kills.reduce((a, b) => a + b, 0), 192 * s, 174 * s, '#fff');
   if (V.vorbei) schrift(c, 'GAME OVER', W / 2, 194 * s, 7, '#FF4020', true);
   else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) schrift(c, 'TIPPEN = WEITER', W / 2, 198 * s, 4, '#bbb', true);
+  c.restore();
 }
 
 /* =====================================================================
@@ -2189,8 +2273,8 @@ function zuAnsicht(S) {
 }
 let V = null;               // was der Gast gerade sieht
 function ansichtLesen(a) {
-  if (!V) V = { karte: new Uint8Array(N * N), kv: 0, kartenId: Math.random(), panzer: [], kugeln: [], effekte: [], sp: [] };
-  if (a.M) { for (let i = 0; i < N * N; i++) V.karte[i] = a.M.charCodeAt(i) - 48; V.kv++; V.kartenId = Math.random(); }
+  if (!V) V = { karte: new Uint8Array(NX * NY), kv: 0, kartenId: Math.random(), panzer: [], kugeln: [], effekte: [], sp: [] };
+  if (a.M) { for (let i = 0; i < NX * NY; i++) V.karte[i] = a.M.charCodeAt(i) - 48; V.kv++; V.kartenId = Math.random(); }
   if (a.m) { for (let i = 0; i < a.m.length; i += 2) V.karte[a.m[i]] = a.m[i + 1]; V.kv++; }
   const altP = new Map(V.panzer.map(p => [p.id, p])), altK = new Map(V.kugeln.map(k => [k.id, k]));
   V.panzer = a.P.map(([id, sp, typ, x, y, r, anim, spawn, schild, starr, hp, bonus]) => {
@@ -2560,11 +2644,11 @@ $('sc-stopp').onclick = () => Scanner.stopp();
 /* =====================================================================
    LEVEL BAUEN
    ===================================================================== */
-const E = { v: new Uint8Array(676), werkzeug: ZIEGEL, gross: true, nr: -1, kv: 1 };
+const E = { v: new Uint8Array(QX * QY), werkzeug: ZIEGEL, gross: true, nr: -1, kv: 1 };
 let editorZeiger = false, editorKarte = null, editorKv = -1;
 function editorOeffnen() {
   const l = alleLevel()[einst.level - 1];
-  if (l && l.eigen != null) { E.v = Uint8Array.from(l.v); E.nr = l.eigen; } else { E.v = new Uint8Array(676); E.nr = -1; }
+  if (l && l.eigen != null) { E.v = Uint8Array.from(l.v); E.nr = l.eigen; } else { E.v = new Uint8Array(QX * QY); E.nr = -1; }
   E.kv++; modus = 'editor'; zeigen(null); aufteilen(); editorLeiste();
 }
 function editorAnsicht() {
@@ -2575,11 +2659,11 @@ function editorTippen(e, start) {
   if (start) editorZeiger = true;
   if (!editorZeiger) return;
   const fx = (e.clientX - L.gx) / L.s - 16, fy = (e.clientY - L.gy) / L.s - 8;
-  if (fx < 0 || fy < 0 || fx >= FELD || fy >= FELD) return;
+  if (fx < 0 || fy < 0 || fx >= FB || fy >= FH) return;
   let qx = Math.floor(fx / 8), qy = Math.floor(fy / 8), gr = 1;
   if (E.gross) { qx &= ~1; qy &= ~1; gr = 2; }
   let anders = false;
-  for (let y = qy; y < qy + gr; y++) for (let x = qx; x < qx + gr; x++) if (E.v[y * 26 + x] !== E.werkzeug) { E.v[y * 26 + x] = E.werkzeug; anders = true; }
+  for (let y = qy; y < qy + gr; y++) for (let x = qx; x < qx + gr; x++) if (E.v[y * QX + x] !== E.werkzeug) { E.v[y * QX + x] = E.werkzeug; anders = true; }
   if (anders) E.kv++;
 }
 const WERKZEUGE = [[ZIEGEL, 'Ziegel'], [STAHL, 'Stahl'], [WASSER, 'Wasser'], [WALD, 'Wald'], [EIS, 'Eis'], [LEER, 'Radierer']];
@@ -2595,7 +2679,7 @@ function editorBauen() {
   const knopf = (txt, titel, f, id) => { const b = document.createElement('button'); b.textContent = txt; b.title = titel; b.onclick = f; if (id) b.id = id; box.appendChild(b); };
   box.appendChild(Object.assign(document.createElement('div'), { className: 'trenn' }));
   knopf('◼', 'Pinsel groß/klein', () => { E.gross = !E.gross; editorLeiste(); }, 'e-pinsel');
-  knopf('📄', 'Neues leeres Level', () => { if (confirm('Alles leer machen?')) { E.v = new Uint8Array(676); E.nr = -1; E.kv++; } });
+  knopf('📄', 'Neues leeres Level', () => { if (confirm('Alles leer machen?')) { E.v = new Uint8Array(QX * QY); E.nr = -1; E.kv++; } });
   knopf('💾', 'Speichern', () => editorSpeichern(true));
   knopf('▶', 'Ausprobieren', () => { editorSpeichern(false); modus = 'menue'; rolle = 'lokal'; spielStarten(1); });
   knopf('🗑', 'Level löschen', editorLoeschen, 'e-loeschen');
@@ -2649,7 +2733,7 @@ function einstZeigen() {
   wahlSetzen('w-stufe', einst.stufe, w => einst.stufe = w);
   wahlSetzen('w-auto', einst.auto ? 1 : 0, w => einst.auto = w === '1');
   wahlSetzen('w-freund', einst.freund ? 1 : 0, w => einst.freund = w === '1');
-  wahlSetzen('w-grafik', einst.grafik, w => { einst.grafik = w; if (w === '3d') D3.laden(); });
+  wahlSetzen('w-grafik', einst.grafik, w => { einst.grafik = w; if (w === '3d') D3.laden(); aufteilen(); });
   wahlSetzen('w-ton', einst.ton ? 1 : 0, w => { einst.ton = w === '1'; if (einst.ton) { Ton.start(); setTimeout(() => Ton.spiel('nehmen'), 50); } });
   const l = levelHolen(einst.level);
   $('l-zahl').innerHTML = einst.level + '<br><small style="font-weight:600;color:#aaa;font-size:11px">' + l.n + '</small>';
@@ -2682,7 +2766,8 @@ function menueAnpassen() {
   const netz = rolle === 'wirt' && Netz.offen;
   for (const b of document.querySelectorAll('.normal-start')) b.classList.toggle('versteckt', netz);
   for (const id of ['m-netz', 'b-netzstart', 'b-trennen']) $(id).classList.toggle('versteckt', !netz);
-  const stand = speicher.lies('stand', null);
+  let stand = speicher.lies('stand', null);
+  if (stand && (!stand.karte || stand.karte.length !== NX * NY)) { speicher.schreib('stand', null); stand = null; }
   $('b-fortsetzen').classList.toggle('versteckt', netz || !stand);
   if (stand) $('fortsetzen-text').textContent = 'Level ' + stand.level + ' · ' + (stand.spieler === 2 ? '2 Spieler' : '1 Spieler') + ' · ' + stand.sp.map(s => s.punkte).join(' / ') + ' Punkte';
   einstZeigen();
@@ -2697,7 +2782,7 @@ function spielSichern() {
   speicher.schreib('stand', { ...S, karte: Array.from(S.karte).join(''), md: [], ton: [], tonNetz: [], pause: true });
 }
 function spielLaden() {
-  const k = speicher.lies('stand', null); if (!k) return false;
+  const k = speicher.lies('stand', null); if (!k || !k.karte || k.karte.length !== NX * NY) { speicher.schreib('stand', null); return false; }
   S = { ...k, karte: Uint8Array.from(k.karte, c => +c), kartenId: Math.random(), kv: (k.kv || 0) + 1, pause: true };
   rolle = 'lokal'; modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
   return true;
@@ -2821,6 +2906,8 @@ function tick() {
 function oberflaeche() {
   const V = ansicht(), setz = (k, w, f) => { if (sichtbar[k] !== w) { sichtbar[k] = w; f(w); } };
   setz('ingame', modus === 'spiel', w => $('ingame').classList.toggle('versteckt', !w));
+  const hoch = modus === 'spiel' && innerHeight > innerWidth;      // im Hochformat: Hinweis + Pause
+  setz('drehen', hoch, w => { $('drehen').classList.toggle('versteckt', !w); if (w && S && rolle !== 'gast' && S.phase !== 'bilanz') S.pause = true; });
   const netzSchicht = !$('netz').classList.contains('versteckt');
   setz('pause', modus === 'spiel' && !!V && !!V.pause && V.phase !== 'bilanz' && !netzSchicht, w => {
     $('pausemenue').classList.toggle('versteckt', !w); $('p-neu').classList.toggle('versteckt', rolle === 'gast');

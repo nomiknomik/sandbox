@@ -4,7 +4,7 @@
    Die Spielregeln bleiben in index.html – hier wird nur GEMALT.
    Koordinaten: Spiel-x → 3D-x, Spiel-y → 3D-z, Höhe → 3D-y.
    ===================================================================== */
-const D3_HOEHE = 176, D3_OBEN = (208 - D3_HOEHE) / 2;   // sichtbarer Ausschnitt in Spiel-Punkten
+let MXF = 0, MZF = 0;   // Mitte des Spielfelds (wird in aufbauen() gesetzt, wenn alles geladen ist)
 const D3 = {
   bereit: false, laedt: false, fehler: false,
 
@@ -25,6 +25,7 @@ const D3 = {
   /* ---------- Bühne, Kamera, Licht ---------- */
   aufbauen() {
     const T = this.T;
+    MXF = FB / 2; MZF = FH / 2;
     const cv = this.cv = document.createElement('canvas');
     cv.id = 'bild3d';
     cv.style.cssText = 'position:fixed;left:0;top:0;display:none;pointer-events:none';
@@ -32,22 +33,22 @@ const D3 = {
     const r = this.r = new T.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(2, devicePixelRatio || 1));
     r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
-    r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.1;
+    r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
     const s = this.szene = new T.Scene();
     s.background = new T.Color('#151923');
     // Kamera: von oben, 30° nach hinten gekippt, ohne Perspektive (wie ein Voxel-Spiel)
-    // Das 3D-Bild ist 208 breit und nur HOEHE hoch – durch die Schräge braucht das Feld weniger Höhe
-    const cam = this.cam = new T.OrthographicCamera(-104, 104, D3_HOEHE / 2, -D3_HOEHE / 2, 1, 900);
-    const w = 38 * Math.PI / 180;
-    this.camPos = new T.Vector3(104, 400 * Math.cos(w), 104 + 400 * Math.sin(w));
-    this.camZiel = new T.Vector3(104, 3, 106);
+    // ohne Perspektive; der Ausschnitt wird in groesse() an den Bildschirm angepasst
+    const cam = this.cam = new T.OrthographicCamera(-180, 180, 100, -100, 1, 900);
+    const w = 30 * Math.PI / 180;
+    this.camPos = new T.Vector3(MXF, 400 * Math.cos(w), MZF + 400 * Math.sin(w));
+    this.camZiel = new T.Vector3(MXF, 3, MZF + 2);
     cam.position.copy(this.camPos); cam.lookAt(this.camZiel);
     // Licht: Himmel + Sonne von oben links mit weichen Schatten
-    this.himmel = new T.HemisphereLight('#d4e6ff', '#3b3524', 1.1); s.add(this.himmel);
-    const sonne = this.sonne = new T.DirectionalLight('#fff1d6', 2.6);
-    sonne.position.set(104 - 110, 230, 104 - 90); sonne.target.position.set(104, 0, 104);
+    this.himmel = new T.HemisphereLight('#d4e6ff', '#5a5038', 1.45); s.add(this.himmel);
+    const sonne = this.sonne = new T.DirectionalLight('#fff1d6', 2.1);
+    sonne.position.set(MXF - 110, 230, MZF - 90); sonne.target.position.set(MXF, 0, MZF);
     sonne.castShadow = true; sonne.shadow.mapSize.set(2048, 2048);
-    Object.assign(sonne.shadow.camera, { left: -150, right: 150, top: 150, bottom: -150, near: 10, far: 600 });
+    Object.assign(sonne.shadow.camera, { left: -210, right: 210, top: 170, bottom: -170, near: 10, far: 700 });
     sonne.shadow.bias = -0.0006; sonne.shadow.normalBias = 0.25;
     s.add(sonne, sonne.target);
     // ein paar Lampen für Explosionen und Mündungsfeuer (immer gleich viele → kein Ruckeln)
@@ -59,7 +60,7 @@ const D3 = {
     this.feldAufbauen();
     this.teilchenAufbauen();
     Object.assign(this, { panzer: new Map(), kugeln: new Map(), effekte: new Map(), gesehen: new Map(), kugelnAlt: new Set(),
-                          karteId: null, kv: -1, karte: new Uint8Array(N * N), zeit: 0, wackeln: 0, letzte: performance.now(), rueck: new Map(), lage: new Map(), nacht: null });
+                          rauchQuellen: [], karteId: null, kv: -1, karte: new Uint8Array(NX * NY), zeit: 0, wackeln: 0, letzte: performance.now(), rueck: new Map(), lage: new Map(), nacht: null });
   },
 
   textur(canvas, wieder = false) {
@@ -68,15 +69,71 @@ const D3 = {
     if (wieder) t.wrapS = t.wrapT = T.RepeatWrapping;
     return t;
   },
+  /* ---------- Texturen nur für 3D: gröber (Richtung Minecraft), weniger Kontrast,
+     Kanten jedes Würfels leicht abgerundet (Licht oben links, Schatten unten rechts) ---------- */
+  kante(c, x, y, n, staerke = 1) {
+    const rand = Math.min(x, y, n - 1 - x, n - 1 - y);
+    if (rand === 0) {
+      if ((x === 0 || x === n - 1) && (y === 0 || y === n - 1)) return mische(c, [0, 0, 0], 0.32 * staerke);   // runde Ecke
+      if (y === 0 || x === 0) return mische(c, [255, 250, 235], 0.16 * staerke);                         // Licht oben/links
+      return mische(c, [0, 0, 0], 0.26 * staerke);                                                        // Schatten unten/rechts
+    }
+    if (rand === 1) return (y === 1 || x === 1) ? mische(c, [255, 250, 235], 0.06 * staerke) : mische(c, [0, 0, 0], 0.1 * staerke);
+    return c;
+  },
+  dreckig(c, x, y, v, s) {                                        // Schmutz und Moos in groben Flecken
+    const f = hash(x >> 2, y >> 2, s + v * 7), g = hash(x >> 1, y >> 1, s + 3 + v);
+    if (f < 0.22) c = mische(c, [40, 34, 28], 0.28 + 0.15 * g);
+    if (f > 0.9 && g > 0.5) c = mische(c, [70, 96, 42], 0.35);
+    return c;
+  },
+  texturen3D() {
+    const ziegel = v => textur((x, y) => {
+      const reihe = y >> 3, innen = y & 7, xs = x + (reihe & 1) * 8;
+      if (innen === 7 || xs % 16 === 15) return this.kante(rausch([118, 96, 84], x >> 1, y >> 1, 101 + v, 0.12), x, y, 16);   // Mörtel (wenig Kontrast)
+      let c = rausch([150, 74, 54], Math.floor(xs / 16), reihe, 102 + v, 0.16);
+      c = rausch(c, x >> 1, y >> 1, 103 + v, 0.1);
+      if (innen === 0) c = mische(c, [205, 130, 100], 0.18);
+      if (innen === 6) c = mische(c, [60, 26, 18], 0.14);
+      return this.kante(this.dreckig(c, x, y, v, 104), x, y, 16);
+    }, 16, 4);
+    const stahl = v => textur((x, y) => {
+      let c = rausch([150, 156, 166], x >> 1, y >> 1, 110 + v, 0.08);
+      for (const [a, b] of [[3, 3], [12, 3], [3, 12], [12, 12]]) { if (x === a && y === b) c = [104, 110, 122]; if (x === a - 1 && y === b - 1) c = [198, 204, 212]; }
+      if (v & 1 && hash(x >> 2, y >> 2, 111) < 0.18) c = mische(c, [120, 80, 50], 0.3);          // etwas Rost
+      if ((x - y === 2 || x - y === 3) && x > 5 && x < 13) c = mische(c, [220, 226, 236], 0.12); // Kratzer
+      return this.kante(c, x, y, 16, 1.2);
+    }, 16, 4);
+    const laub = v => textur((x, y) => {
+      const h = hash(x >> 1, y >> 1, 120 + v);
+      if (h < 0.06) return null;
+      let c = rausch([68, 128, 46], x >> 1, y >> 1, 121 + v, 0.18);
+      if (h > 0.82) c = mische(c, [126, 176, 70], 0.4); else if (h < 0.25) c = mische(c, [30, 70, 22], 0.35);
+      return this.kante(c, x, y, 16, 0.8);
+    }, 16, 4);
+    const boden = v => textur((x, y) => {
+      let c = rausch([66, 102, 46], x, y, 132 + v, 0.07);
+      const h = hash(x, y, 133 + v);
+      if (h > 0.9) c = mische(c, [92, 132, 58], 0.45);                  // helle Halme
+      else if (h < 0.06) c = mische(c, [92, 80, 56], 0.45);             // ein bisschen Erde
+      return c;
+    }, 8, 4);
+    const wasser = textur((x, y) => rausch([46, 96, 186], x, y, 140, 0.08), 8, 4);
+    const eis = textur((x, y) => { let c = rausch([170, 206, 238], x, y, 141, 0.06); if ((x + y) % 5 === 0) c = mische(c, [235, 246, 255], 0.35); return c; }, 8, 4);
+    this.t3 = { ziegel: [0, 1, 2, 3].map(ziegel), stahl: [0, 1, 2, 3].map(stahl), laub: [0, 1].map(laub), boden: [0, 1, 2, 3].map(boden), wasser, eis };
+    // Weiche Kante für die Voxel der Panzer (macht die Würfel minimal rund)
+    this.fase = textur((x, y) => this.kante([255, 255, 255], x, y, 8, 0.8), 8, 4);
+  },
   mats() {
     const T = this.T;
+    this.texturen3D();
     this.tex = { ziegel: this.textur(TEX[ZIEGEL]), stahl: this.textur(TEX[STAHL]), wald: this.textur(TEX[WALD]), pflaster: this.textur(PFLASTER, true),
                  basis: this.textur(BASIS_HD), basisKaputt: this.textur(BASIS_KAPUTT_HD), wellen: this.textur(WELLEN, true) };
     this.mat = {
-      ziegel: new T.MeshLambertMaterial({ map: this.tex.ziegel }),
-      stahl: new T.MeshPhongMaterial({ map: this.tex.stahl, shininess: 60, specular: '#7a8290' }),
-      wald: new T.MeshLambertMaterial({ map: this.tex.wald, alphaTest: 0.5, side: T.DoubleSide }),
-      panzer: new T.MeshLambertMaterial({ vertexColors: true }),
+      ziegel: this.t3.ziegel.map(c => new T.MeshLambertMaterial({ map: this.textur(c, true) })),
+      stahl: this.t3.stahl.map(c => new T.MeshPhongMaterial({ map: this.textur(c, true), shininess: 18, specular: '#3a3f48' })),
+      wald: new T.MeshLambertMaterial({ map: this.textur(this.t3.laub[0], true), alphaTest: 0.5, side: T.DoubleSide }),
+      panzer: new T.MeshLambertMaterial({ vertexColors: true, map: this.textur(this.fase) }),
       rand: new T.MeshLambertMaterial({ map: this.tex.pflaster, color: '#9aa0aa' }),
       leuchten: new T.MeshBasicMaterial({ color: '#fff3c0' }),
     };
@@ -88,49 +145,50 @@ const D3 = {
   /* ---------- Spielfeld: Boden, Wasser, Mauern, Bäume, Basis, Rand ---------- */
   feldAufbauen() {
     const T = this.T, s = this.szene;
-    // großer Steinboden außen herum
-    const aussen = new T.Mesh(new T.PlaneGeometry(520, 520), new T.MeshLambertMaterial({ map: this.tex.pflaster, color: '#5c616c' }));
-    this.tex.pflaster.repeat.set(1, 1);
-    aussen.material.map = this.textur(PFLASTER, true); aussen.material.map.repeat.set(40, 40);
-    aussen.rotation.x = -Math.PI / 2; aussen.position.set(104, -2.01, 104); aussen.receiveShadow = true; s.add(aussen);
+    // Landschaft außen herum: Gras mit Bäumen, Büschen und Felsen.
+    // Je nach Bildschirm sieht man links und rechts mehr oder weniger davon.
+    const grasTex = this.textur(this.t3.boden[1], true); grasTex.repeat.set(900 / 8, 600 / 8);
+    const aussen = new T.Mesh(new T.PlaneGeometry(900, 600), new T.MeshLambertMaterial({ map: grasTex, color: '#b8c4a8' }));
+    aussen.rotation.x = -Math.PI / 2; aussen.position.set(MXF, -0.6, MZF); aussen.receiveShadow = true; s.add(aussen);
+    this.landschaft();
     // Mauer rund ums Feld
-    const randTex = this.textur(PFLASTER, true); randTex.repeat.set(26, 1);
+    const randTex = this.textur(PFLASTER, true); randTex.repeat.set(30, 1);
     const randMat = new T.MeshLambertMaterial({ map: randTex, color: '#8a909a' });
-    for (const [x, z, bx, bz] of [[104, -6, 224, 12], [104, 214, 224, 12], [-6, 104, 12, 232], [214, 104, 12, 232]]) {
+    for (const [x, z, bx, bz] of [[MXF, -6, FB + 24, 12], [MXF, FH + 6, FB + 24, 12], [-6, MZF, 12, FH + 24], [FB + 6, MZF, 12, FH + 24]]) {
       const m = new T.Mesh(new T.BoxGeometry(bx, 9, bz), randMat); m.position.set(x, 2.5, z); m.castShadow = m.receiveShadow = true; s.add(m);
     }
     // Boden des Spielfelds (Gras, Wasser, Eis als ein großes Bild)
-    this.bodenCv = leinwand(FR, FR); this.bodenTex = this.textur(this.bodenCv);
-    const boden = new T.Mesh(new T.PlaneGeometry(FELD, FELD), new T.MeshLambertMaterial({ map: this.bodenTex }));
-    boden.rotation.x = -Math.PI / 2; boden.position.set(104, 0, 104); boden.receiveShadow = true; s.add(boden);
+    this.bodenCv = leinwand(FB * 4, FH * 4); this.bodenTex = this.textur(this.bodenCv);
+    const boden = new T.Mesh(new T.PlaneGeometry(FB, FH), new T.MeshLambertMaterial({ map: this.bodenTex }));
+    boden.rotation.x = -Math.PI / 2; boden.position.set(MXF, 0, MZF); boden.receiveShadow = true; s.add(boden);
     // Spuren und Brandflecken (eigene durchsichtige Schicht)
-    this.spurCv = leinwand(416, 416); this.spurG = this.spurCv.getContext('2d'); this.spurTex = this.textur(this.spurCv);
-    const spur = new T.Mesh(new T.PlaneGeometry(FELD, FELD), new T.MeshBasicMaterial({ map: this.spurTex, transparent: true, depthWrite: false }));
-    spur.rotation.x = -Math.PI / 2; spur.position.set(104, 0.05, 104); s.add(spur);
+    this.spurCv = leinwand(FB * 2, FH * 2); this.spurG = this.spurCv.getContext('2d'); this.spurTex = this.textur(this.spurCv);
+    const spur = new T.Mesh(new T.PlaneGeometry(FB, FH), new T.MeshBasicMaterial({ map: this.spurTex, transparent: true, depthWrite: false }));
+    spur.rotation.x = -Math.PI / 2; spur.position.set(MXF, 0.05, MZF); s.add(spur);
     // Wellen auf dem Wasser
-    this.wasserCv = leinwand(208, 208); this.wasserMaskTex = new T.CanvasTexture(this.wasserCv);
-    this.tex.wellen.repeat.set(13, 13);
+    this.wasserCv = leinwand(FB, FH); this.wasserMaskTex = new T.CanvasTexture(this.wasserCv);
+    this.tex.wellen.repeat.set(KX, KY);
     this.wellenMat = new T.MeshBasicMaterial({ map: this.tex.wellen, alphaMap: this.wasserMaskTex, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false });
-    const wellen = new T.Mesh(new T.PlaneGeometry(FELD, FELD), this.wellenMat);
-    wellen.rotation.x = -Math.PI / 2; wellen.position.set(104, 0.1, 104); s.add(wellen);
-    // Mauer-Würfel: je Art 4 Sorten (welches Viertel der Textur), damit das Muster passt
-    const wuerfel = (hoehe, qx, qy) => {
+    const wellen = new T.Mesh(new T.PlaneGeometry(FB, FH), this.wellenMat);
+    wellen.rotation.x = -Math.PI / 2; wellen.position.set(MXF, 0.1, MZF); s.add(wellen);
+    // Mauer-Würfel: jeder Würfel 4 × 4 groß; 4 Sorten mit unterschiedlichem Schmutz
+    const wuerfel = hoehe => {
       const g = new T.BoxGeometry(4, hoehe, 4); g.translate(0, hoehe / 2, 0);
       const uv = g.attributes.uv;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) + qx) / 2, (uv.getY(i) + 1 - qy) / 2);
+      for (let i = 0; i < uv.count; i++) if (i < 8 || i >= 16) uv.setY(i, uv.getY(i) * hoehe / 4);   // Seiten: Muster wiederholen statt strecken
       return g;
     };
     this.mauern = [];
-    for (const [typ, mat, h] of [[ZIEGEL, this.mat.ziegel, 8], [STAHL, this.mat.stahl, 9]]) for (let q = 0; q < 4; q++) {
-      const m = new T.InstancedMesh(wuerfel(h, q & 1, q >> 1), mat, N * N);
-      m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(N * N * 3).fill(1), 3);
+    for (const [typ, mats, h] of [[ZIEGEL, this.mat.ziegel, 8], [STAHL, this.mat.stahl, 8]]) for (let q = 0; q < 4; q++) {
+      const m = new T.InstancedMesh(wuerfel(h), mats[q], NX * NY);
+      m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(NX * NY * 3).fill(1), 3);
       m.count = 0; m.castShadow = m.receiveShadow = true; m.frustumCulled = false; s.add(m);
       this.mauern.push({ typ, q, m });
     }
     // Baumkronen: schweben über dem Boden, Panzer fahren darunter
     const krone = new T.BoxGeometry(4, 6, 4); krone.translate(0, 8, 0);
-    this.baeume = new T.InstancedMesh(krone, this.mat.wald, N * N);
-    this.baeume.instanceColor = new T.InstancedBufferAttribute(new Float32Array(N * N * 3).fill(1), 3);
+    this.baeume = new T.InstancedMesh(krone, this.mat.wald, NX * NY);
+    this.baeume.instanceColor = new T.InstancedBufferAttribute(new Float32Array(NX * NY * 3).fill(1), 3);
     this.baeume.count = 0; this.baeume.castShadow = true; this.baeume.receiveShadow = true; this.baeume.frustumCulled = false; s.add(this.baeume);
     // Basis: Stahlklotz mit goldenem Stern
     const bg = new T.BoxGeometry(16, 7, 16); bg.translate(0, 3.5, 0);
@@ -151,13 +209,37 @@ const D3 = {
     this.bonusGlut = new T.Sprite(this.glut.gelb); this.bonusGlut.scale.set(36, 36, 1); this.bonusGlut.visible = false; s.add(this.bonusGlut);
   },
 
+  landschaft() {
+    const T = this.T, s = this.szene, m = new T.Matrix4(), c = new T.Color();
+    const stamm = new T.InstancedMesh(new T.BoxGeometry(2, 6, 2).translate(0, 3, 0), new T.MeshLambertMaterial({ color: '#6b4a2e', map: this.textur(this.fase) }), 400);
+    const krone = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new T.MeshLambertMaterial({ map: this.textur(this.t3.laub[1], true) }), 1600);
+    const fels = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new T.MeshLambertMaterial({ map: this.textur(this.t3.stahl[2], true), color: '#9a9488' }), 400);
+    for (const x of [stamm, krone, fels]) { x.castShadow = x.receiveShadow = true; x.frustumCulled = false; x.instanceColor = new T.InstancedBufferAttribute(new Float32Array(x.count * 3).fill(1), 3); x.count = 0; s.add(x); }
+    const setz = (mesh, x, y, z, sx, sy, sz, f = 1) => { m.makeScale(sx, sy, sz); m.setPosition(x, y, z); mesh.setMatrixAt(mesh.count, m); c.setRGB(f, f, f); mesh.setColorAt(mesh.count++, c); };
+    // auf einem groben Raster außerhalb des Feldes (plus Rand) zufällig etwas hinstellen
+    for (let gz = -90; gz < FH + 90; gz += 10) for (let gx = -230; gx < FB + 230; gx += 10) {
+      if (gx > -20 && gx < FB + 14 && gz > -20 && gz < FH + 14) continue;
+      const h = hash(gx + 500, gz + 500, 150), x = gx + hash(gx, gz, 151) * 6, z = gz + hash(gx, gz, 152) * 6;
+      if (h < 0.16 && stamm.count < 400) {                              // Baum: Stamm + Würfelkrone
+        const k = 7 + hash(gx, gz, 153) * 5, y0 = 5;
+        setz(stamm, x, -0.6, z, 1, 0.9 + hash(gx, gz, 154) * 0.4, 1, 1);
+        for (let i = 0; i < 4 && krone.count < 1600; i++) setz(krone, x + (hash(gx, i, 155) - 0.5) * 5, y0 + i * 1.6, z + (hash(gz, i, 156) - 0.5) * 5, k - i * 1.4, 3, k - i * 1.4, 0.8 + 0.35 * hash(gx, gz + i, 157));
+      } else if (h < 0.26 && krone.count < 1600) {                      // Busch
+        const k = 3 + hash(gx, gz, 158) * 3; setz(krone, x, -0.6, z, k, k * 0.7, k, 0.75 + 0.3 * hash(gx, gz, 159));
+      } else if (h < 0.31 && fels.count < 400) {                        // Felsbrocken
+        const k = 2 + hash(gx, gz, 160) * 4; setz(fels, x, -0.6, z, k, k * 0.6, k * 0.8, 0.8 + 0.3 * hash(gx, gz, 161));
+      }
+    }
+    for (const x of [stamm, krone, fels]) { x.instanceMatrix.needsUpdate = true; x.instanceColor.needsUpdate = true; }
+  },
+
   // Neue Karte: Boden-Bild malen, Mauern und Bäume setzen
   karteNeu(k) {
     const g = this.bodenCv.getContext('2d'), Z = 16;
-    const zelle = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? LEER : k[y * N + x];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const t = k[y * N + x], q = t === WASSER ? TEX[WASSER] : t === EIS ? TEX[EIS] : BODEN[Math.floor(hash(x >> 1, y >> 1, 70) * 4)];
-      g.drawImage(q, (x & 1) * 16, (y & 1) * 16, 16, 16, x * Z, y * Z, Z, Z);
+    const zelle = (x, y) => (x < 0 || y < 0 || x >= NX || y >= NY) ? LEER : k[y * NX + x];
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+      const t = k[y * NX + x], q = t === WASSER ? this.t3.wasser : t === EIS ? this.t3.eis : this.t3.boden[Math.floor(hash(x >> 1, y >> 1, 70) * 4)];
+      g.imageSmoothingEnabled = false; g.drawImage(q, (x & 1) * 16, (y & 1) * 16, 16, 16, x * Z, y * Z, Z, Z);
       if (t === WASSER) {
         if (zelle(x, y - 1) !== WASSER) { g.fillStyle = 'rgba(0,10,40,0.5)'; g.fillRect(x * Z, y * Z, Z, 5); }
         for (const [nx, ny, rx, ry, rw, rh] of [[-1, 0, 0, 0, 2, 16], [1, 0, 14, 0, 2, 16], [0, 1, 0, 14, 16, 2], [0, -1, 0, 0, 16, 2]])
@@ -165,13 +247,13 @@ const D3 = {
       }
     }
     this.bodenTex.needsUpdate = true;
-    const w = this.wasserCv.getContext('2d'); w.fillStyle = '#000'; w.fillRect(0, 0, 208, 208); w.fillStyle = '#fff';
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (k[y * N + x] === WASSER) w.fillRect(x * 4, y * 4, 4, 4);
+    const w = this.wasserCv.getContext('2d'); w.fillStyle = '#000'; w.fillRect(0, 0, FB, FH); w.fillStyle = '#fff';
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) if (k[y * NX + x] === WASSER) w.fillRect(x * 4, y * 4, 4, 4);
     this.wasserMaskTex.needsUpdate = true;
-    this.spurG.clearRect(0, 0, 416, 416); this.spurTex.needsUpdate = true;
+    this.spurG.clearRect(0, 0, FB * 2, FH * 2); this.spurTex.needsUpdate = true;
     const m = new this.T.Matrix4(); let n = 0;
     const c = new this.T.Color();
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (k[y * N + x] === WALD) {
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) if (k[y * NX + x] === WALD) {
       const h = hash(x >> 1, y >> 1, 90), s = 0.85 + 0.3 * h;
       m.makeScale(1, s, 1); m.setPosition(x * 4 + 2, 0, y * 4 + 2); this.baeume.setMatrixAt(n, m);
       const f = 0.8 + 0.35 * hash(x, y, 91); c.setRGB(f * (0.9 + 0.2 * h), f, f * 0.85); this.baeume.setColorAt(n++, c);
@@ -182,9 +264,9 @@ const D3 = {
   mauernSetzen(k) {
     const m = new this.T.Matrix4(), c = new this.T.Color();
     for (const e of this.mauern) e.n = 0;
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const t = k[y * N + x]; if (t !== ZIEGEL && t !== STAHL) continue;
-      const e = this.mauern[(t === STAHL ? 4 : 0) + (x & 1) + (y & 1) * 2];
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+      const t = k[y * NX + x]; if (t !== ZIEGEL && t !== STAHL) continue;
+      const e = this.mauern[(t === STAHL ? 4 : 0) + Math.floor(hash(x, y, 95) * 4)];
       m.makeTranslation(x * 4 + 2, 0, y * 4 + 2); e.m.setMatrixAt(e.n, m);
       const f = 0.86 + 0.24 * hash(x, y, t === STAHL ? 93 : 92); c.setRGB(f, f, f); e.m.setColorAt(e.n++, c);
     }
@@ -194,7 +276,7 @@ const D3 = {
   /* ---------- Panzer aus Voxeln bauen ---------- */
   // Kasten in eine Liste: Ecken (x0,y0,z0)-(x1,y1,z1), Farbe [r,g,b] 0..255
   geometrie(kaesten) {
-    const T = this.T, pos = [], nor = [], col = [];
+    const T = this.T, pos = [], nor = [], col = [], uvs = [], UV = [[0, 0], [1, 0], [1, 1], [0, 1]];
     const F = [ // Flächen: Normale + 4 Ecken (Index in [x0|x1, y0|y1, z0|z1])
       [[1, 0, 0], [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]]], [[-1, 0, 0], [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]]],
       [[0, 1, 0], [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]]], [[0, -1, 0], [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]]],
@@ -203,13 +285,14 @@ const D3 = {
       const P = [[x0, x1], [y0, y1], [z0, z1]], cc = [c[0] / 255, c[1] / 255, c[2] / 255].map(v => Math.pow(v, 2.2));
       for (const [n, ecken] of F) {
         const e = ecken.map(([a, b, d]) => [P[0][a], P[1][b], P[2][d]]);
-        for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...e[i]); nor.push(...n); col.push(...cc); }
+        for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...e[i]); nor.push(...n); col.push(...cc); uvs.push(...UV[i]); }
       }
     }
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
     g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+    g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
     return g;
   },
   panzerCache: {},
@@ -217,7 +300,7 @@ const D3 = {
     const k = form + farbe + anim;
     if (this.panzerCache[k]) return this.panzerCache[k];
     const d = FORMEN[form], basis = HD_FARBEN[farbe], akz = AKZENT[farbe], unten = [], oben = [];
-    const var_ = (c, x, y, s, st = 0.12) => rausch(c, Math.floor(x * 2) + 50, Math.floor(y * 2) + 50, s, st);
+    const var_ = (c, x, y, s, st = 0.07) => rausch(c, Math.floor(x * 2) + 50, Math.floor(y * 2) + 50, s, st);
     const X = v => v - 8, Z = v => v - 8;                      // Spiel-Raster (0..16) → Mitte des Panzers
     // Ketten mit Gliedern, die sich bewegen
     const [kx, kb, ky0, ky1] = d.k;
@@ -269,7 +352,7 @@ const D3 = {
     const art = (mat, n, schatten) => { const m = new T.InstancedMesh(g, mat, n); m.count = 0; m.frustumCulled = false; m.castShadow = schatten; m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(n * 3), 3); this.szene.add(m); return { m, n, liste: [] }; };
     this.tl = {
       feuer: art(new T.MeshBasicMaterial({ blending: T.AdditiveBlending, transparent: true, depthWrite: false }), 500, false),
-      rauch: art(new T.MeshLambertMaterial({ transparent: true, opacity: 0.6, depthWrite: false }), 300, false),
+      rauch: art(new T.MeshLambertMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), 600, false),
       brocken: art(new T.MeshLambertMaterial(), 400, true),
     };
     this.tlm = new T.Matrix4(); this.tlq = new T.Quaternion(); this.tlv = new T.Vector3(); this.tls = new T.Vector3(); this.tlc = new T.Color(); this.tle = new T.Euler();
@@ -303,6 +386,7 @@ const D3 = {
     l.l.color.set(farbe); l.l.position.set(x, 12, z); Object.assign(l, { leben, max: leben, staerke });
   },
   explosion(x, z) {
+    this.rauchQuellen.push({ x, z, bis: this.zeit + 420, staerke: 1 });          // Wrack qualmt noch eine Weile
     for (let i = 0; i < 40; i++) { const w = Math.random() * 6.28, v = Math.random() * 0.9 + 0.2; this.teil('feuer', { x, y: 3 + Math.random() * 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: Math.random() * 0.8, gr: 1.5 + Math.random() * 2.5, farbe: [255, 120 + Math.random() * 110, 30], l: 18 + Math.random() * 18, reib: 0.9 }); }
     for (let i = 0; i < 18; i++) { const w = Math.random() * 6.28, v = Math.random() * 0.3; this.teil('rauch', { x, y: 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: 0.15 + Math.random() * 0.15, gr: 2 + Math.random() * 2, wachs: 0.06, farbe: [70, 68, 66], l: 50 + Math.random() * 40 }); }
     for (let i = 0; i < 16; i++) { const w = Math.random() * 6.28, v = 0.5 + Math.random() * 1.2; this.teil('brocken', { x, y: 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: 1 + Math.random() * 1.5, g: 0.09, gr: 0.8 + Math.random() * 1.2, farbe: [50 + Math.random() * 30, 52, 48], l: 70 + Math.random() * 40, reib: 0.98 }); }
@@ -331,14 +415,15 @@ const D3 = {
     if (this.karteId !== V.kartenId) {
       this.karteId = V.kartenId; this.kv = V.kv; this.karte.set(V.karte); this.karteNeu(V.karte);
       for (const a of Object.values(this.tl)) a.liste.length = 0;
+      this.rauchQuellen.length = 0; this.basisWar = null;
       this.gesehen.clear(); this.kugelnAlt.clear(); this.lage.clear();
       this.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80;
     } else if (this.kv !== V.kv) {
       this.kv = V.kv; let n = 0;
-      for (let i = 0; i < N * N; i++) {
+      for (let i = 0; i < NX * NY; i++) {
         const a = this.karte[i], b = V.karte[i]; if (a === b) continue;
         if (spiel && (a === ZIEGEL || a === STAHL) && b === LEER && n++ < 60) {
-          const x = (i % N) * 4 + 2, z = Math.floor(i / N) * 4 + 2, farbe = a === STAHL ? [180, 186, 196] : [150 + Math.random() * 30, 60, 40];
+          const x = (i % NX) * 4 + 2, z = Math.floor(i / NX) * 4 + 2, farbe = a === STAHL ? [180, 186, 196] : [150 + Math.random() * 30, 60, 40];
           for (let j = 0; j < 2; j++) { const w = Math.random() * 6.28, v = 0.2 + Math.random() * 0.6; this.teil('brocken', { x, y: 3 + Math.random() * 3, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: 0.5 + Math.random(), g: 0.08, gr: 0.9 + Math.random() * 0.8, farbe, l: 60 + Math.random() * 40 }); }
           this.teil('rauch', { x, y: 3, z, vy: 0.08, gr: 2, wachs: 0.05, farbe: [140, 120, 100], l: 30 });
         }
@@ -353,7 +438,7 @@ const D3 = {
       this.gesehen.set(k, V.t);
       if (e.t > 6 && e.art !== 'p') continue;
       if (e.art === 'g') this.explosion(e.x, e.y);
-      if (e.art === 'k') { const c = Math.floor(e.x / 4), r = Math.floor(e.y / 4); this.einschlag(e.x, e.y, [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(r + b) * N + c + a] === STAHL))); }
+      if (e.art === 'k') { const c = Math.floor(e.x / 4), r = Math.floor(e.y / 4); this.einschlag(e.x, e.y, [-1, 0, 1].some(a => [-1, 0, 1].some(b => V.karte[(r + b) * NX + c + a] === STAHL))); }
     }
     for (const [k, t] of this.gesehen) if (V.t - t > 200 || t > V.t) this.gesehen.delete(k);
     // Mündungsfeuer + Rückstoß
@@ -415,7 +500,7 @@ const D3 = {
       this.lage.set(p.id, [p.x, p.y]);
       if (bewegt) {
         o.bewegt = 8;
-        const unten = V.karte[((p.y + 8) >> 2) * N + ((p.x + 8) >> 2)];
+        const unten = V.karte[((p.y + 8) >> 2) * NX + ((p.x + 8) >> 2)];
         if (unten !== EIS && unten !== WASSER && Math.random() < 0.18 * dt) this.teil('rauch', { x: x - DX[p.r] * 8 + (Math.random() - 0.5) * 6, y: 0.8, z: z - DY[p.r] * 8 + (Math.random() - 0.5) * 6, vx: -DX[p.r] * 0.08, vz: -DY[p.r] * 0.08, vy: 0.05, gr: 1.6, wachs: 0.05, farbe: [130, 112, 84], l: 30 });
         if (dt > 0) { const f = FORMEN[form].k, g2 = this.spurG; g2.fillStyle = 'rgba(12,9,5,0.10)';
           for (const s of [f[0], 16 - f[0] - f[1]]) { const q = s - 8 + f[1] / 2; if (p.r & 1) g2.fillRect(x * 2 - 2, (z + q) * 2 - f[1], 4, f[1] * 2); else g2.fillRect((x + q) * 2 - f[1], z * 2 - 2, f[1] * 2, 4); }
@@ -459,6 +544,7 @@ const D3 = {
     for (const [k, s] of this.effekte) if (!eda.has(k)) { this.szene.remove(s); s.material.dispose(); this.effekte.delete(k); }
     // Basis
     const kaputt = !!V.basisKaputt;
+    if (this.basisWar !== kaputt && kaputt) this.rauchQuellen.push({ x: BX + 8, z: BY + 8, bis: Infinity, staerke: 2 });
     if (this.basisWar !== kaputt) { this.basisWar = kaputt; this.basisOben.map = kaputt ? this.tex.basisKaputt : this.tex.basis; this.basisOben.needsUpdate = true; this.basis.scale.y = kaputt ? 0.55 : 1; }
     this.basisGlut.visible = !kaputt; this.basisGlut.material.opacity = 0.35 + 0.15 * Math.sin(this.zeit * 0.08);
     // Bonus
@@ -468,11 +554,24 @@ const D3 = {
       this.bonus.material = this.bonusMats[V.bonus.art]; this.bonus.position.set(V.bonus.x + 8, h, V.bonus.y + 8);
       this.bonusGlut.position.set(V.bonus.x + 8, h, V.bonus.y + 8); this.bonusGlut.material.opacity = 0.5 + 0.3 * Math.sin(this.zeit * 0.2);
     }
+    // Rauch: Wracks, brennende Basis, beschädigte schwere Panzer
+    if (dt > 0) {
+      this.rauchQuellen = this.rauchQuellen.filter(q => q.bis > this.zeit);
+      for (const q of this.rauchQuellen) {
+        const rest = q.bis === Infinity ? 1 : Math.min(1, (q.bis - this.zeit) / 200);
+        if (Math.random() < 0.22 * q.staerke * rest * dt) this.teil('rauch', { x: q.x + (Math.random() - 0.5) * 6, y: 2, z: q.z + (Math.random() - 0.5) * 6, vx: 0.03 + Math.random() * 0.04, vz: -0.02, vy: 0.12 + Math.random() * 0.08, gr: 1.6 + Math.random() * 1.5, wachs: 0.035, farbe: q.staerke > 1 ? [44, 42, 40] : [62, 60, 58], l: 80 + Math.random() * 60, reib: 0.995 });
+        if (q.staerke > 1 && Math.random() < 0.15 * dt) this.teil('feuer', { x: q.x + (Math.random() - 0.5) * 10, y: 3, z: q.z + (Math.random() - 0.5) * 8, vy: 0.2, gr: 1.2, farbe: [255, 140, 40], l: 18, reib: 0.98 });
+      }
+      for (const p of V.panzer) if (p.sp < 0 && p.typ === 3 && p.hp <= 2 && p.spawn === 0 && Math.random() < 0.12 * dt) {
+        const [gx, gy] = lage(p, a);
+        this.teil('rauch', { x: gx + 8 - DX[p.r] * 5, y: 5, z: gy + 8 - DY[p.r] * 5, vy: 0.12, gr: 1.4, wachs: 0.04, farbe: [70, 68, 66], l: 60, reib: 0.99 });
+      }
+    }
     // Schnee, Feuerwerk
-    if (this.schnee && dt > 0) for (let i = 0; i < 2; i++) this.teil('feuer', { x: Math.random() * 240 - 16, y: 70, z: Math.random() * 260 - 30, vx: 0.1, vy: -0.35 - Math.random() * 0.2, gr: 0.6 + Math.random() * 0.5, farbe: [200, 210, 225], l: 220, reib: 1 });
+    if (this.schnee && dt > 0 && Math.random() < 0.6) this.teil('feuer', { x: Math.random() * (FB + 40) - 20, y: 70, z: Math.random() * (FH + 60) - 30, vx: 0.04 + Math.random() * 0.05, vy: -0.12 - Math.random() * 0.08, gr: 0.6 + Math.random() * 0.5, farbe: [200, 210, 225], l: 600, reib: 1 });
     if (V.phase === 'spiel' && V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0) && dt > 0 && Math.random() < 0.05 * dt) {
       const farben = [[255, 90, 90], [120, 220, 255], [255, 230, 90], [140, 255, 140], [255, 140, 255]];
-      this.funkeln(20 + Math.random() * 170, 30 + Math.random() * 20, 20 + Math.random() * 120, farben[zufall(farben.length)], 34); Ton.spiel('knall');
+      this.funkeln(20 + Math.random() * (FB - 40), 30 + Math.random() * 20, 20 + Math.random() * (FH - 80), farben[zufall(farben.length)], 34); Ton.spiel('knall');
     }
     // Wasser bewegt sich, Lampen verglühen, Teilchen fliegen
     this.tex.wellen.offset.set((this.zeit * 0.004) % 1, (this.zeit * 0.002) % 1);
@@ -481,7 +580,7 @@ const D3 = {
     this.teilchenBewegen(dt);
     if (this.spurNeu && Math.floor(this.zeit) % 6 === 0) { this.spurTex.needsUpdate = true; this.spurNeu = false; }
     if (dt > 0 && Math.floor(this.zeit) % 120 === 0 && !this.verblasst) {                // Spuren verblassen langsam
-      this.verblasst = true; const g2 = this.spurG; g2.globalCompositeOperation = 'destination-out'; g2.fillStyle = 'rgba(0,0,0,0.12)'; g2.fillRect(0, 0, 416, 416); g2.globalCompositeOperation = 'source-over'; this.spurTex.needsUpdate = true;
+      this.verblasst = true; const g2 = this.spurG; g2.globalCompositeOperation = 'destination-out'; g2.fillStyle = 'rgba(0,0,0,0.12)'; g2.fillRect(0, 0, FB * 2, FH * 2); g2.globalCompositeOperation = 'source-over'; this.spurTex.needsUpdate = true;
     } else if (Math.floor(this.zeit) % 120 !== 0) this.verblasst = false;
     // Kamera wackelt bei Explosionen
     this.wackeln = Math.max(0, this.wackeln - dt * 0.15);
@@ -495,7 +594,7 @@ const D3 = {
     const nacht = nachtLevel(V.level);
     if (nacht !== this.nacht) {
       this.nacht = nacht;
-      this.himmel.intensity = nacht ? 0.32 : 1.1; this.sonne.intensity = nacht ? 0.35 : 2.6;
+      this.himmel.intensity = nacht ? 0.32 : 1.45; this.sonne.intensity = nacht ? 0.35 : 2.1;
       this.sonne.color.set(nacht ? '#7f9cff' : '#fff1d6'); this.szene.background.set(nacht ? '#05070d' : '#151923');
       for (const s of this.scheinwerfer) { this.szene.remove(s, s.target); }
       this.scheinwerfer = [];
@@ -528,17 +627,24 @@ const D3 = {
     if (!immer && w === this.w && h === this.h && x === this.x && y === this.y) return;
     Object.assign(this, { w, h, x, y });
     this.r.setSize(Math.round(w), Math.round(h), false);
+    // Ausschnitt: das Feld nutzt die ganze Höhe (die Anzeigen liegen oben über dem Rand)
+    const halbB = FB / 2 + 6, halbH = (FH * Math.cos(30 * Math.PI / 180)) / 2 + 9, a = w / h;
+    let hh = halbH, hb = hh * a;
+    if (hb < halbB) { hb = halbB; hh = hb / a; }
+    const oben = 3;
+    Object.assign(this.cam, { left: -hb, right: hb, top: hh + oben, bottom: -hh + oben });
+    this.cam.updateProjectionMatrix();
     Object.assign(this.cv.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
   },
   zeigen(an) { if (this.cv) this.cv.style.display = an ? 'block' : 'none'; },
   // 3D-Punkt → Punkt im 2D-Bild (für Punkte-Zahlen)
-  aufBild(x, y, z, ox, oy) {
+  aufBild(x, y, z, W, H) {
     const v = new this.T.Vector3(x, y, z).project(this.cam);
-    return [ox + (v.x + 1) / 2 * FR, oy + D3_OBEN * GR + (1 - v.y) / 2 * D3_HOEHE * GR];
+    return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H];
   },
-  texte(c, V, ox, oy) {
+  texte(c, V, W, H) {
     for (const e of V.effekte) if (e.art === 'p' && e.t > 20) {
-      const [x, y] = this.aufBild(e.x, 10 + (e.t - 20) * 0.08, e.y, ox, oy);
+      const [x, y] = this.aufBild(e.x, 10 + (e.t - 20) * 0.08, e.y, W, H);
       schrift(c, e.w, x, y, 3, '#fff', true);
     }
   },
