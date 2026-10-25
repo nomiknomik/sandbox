@@ -104,3 +104,11 @@ lernt man, wie zwei Geräte miteinander reden.
   „📶 Nicht verbunden – hier tippen“ → QR-Codes neu tauschen.
 - Würmer mit 3 Geräten: der Gastgeber tippt in der Lobby „📶 Verbindung“ →
   „Ich zeige den QR-Code“ für das dritte Gerät.
+
+## Танчики v5.4 – Gegeneinander (Duell)
+- Menü „Zu zweit: Miteinander / Gegeneinander“. Gilt für ein Gerät und zwei Geräte.
+- Jeder hat eine Basis (Spieler 1 unten, Spieler 2 oben), keine Computer-Panzer.
+  Basis des anderen treffen oder seine 3 Panzer abschießen = Runde gewonnen;
+  wer zuerst 3 Runden gewinnt, ist Sieger.
+- Karten: 4 Duell-Karten + Zufallskarten, alle um 180° gedreht gleich (fair).
+- Extras im Duell: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt die eigene Basis.

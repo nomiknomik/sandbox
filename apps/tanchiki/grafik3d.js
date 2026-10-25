@@ -197,6 +197,11 @@ const D3 = {
     this.basis = new T.Mesh(bg, [seite, seite, this.basisOben, seite, seite, seite]);
     this.basis.position.set(BX + 8, 0, BY + 8); this.basis.castShadow = this.basis.receiveShadow = true; s.add(this.basis);
     this.basisGlut = new T.Sprite(this.glut.gelb); this.basisGlut.scale.set(34, 34, 1); this.basisGlut.position.set(BX + 8, 9, BY + 8); s.add(this.basisGlut);
+    // Duell: zweite Basis oben (eigenes Material, damit sie getrennt kaputt gehen kann)
+    this.basis2Oben = new T.MeshPhongMaterial({ map: this.tex.basis, shininess: 30 });
+    this.basis2 = new T.Mesh(bg, [seite, seite, this.basis2Oben, seite, seite, seite]);
+    this.basis2.position.set(BX2 + 8, 0, BY2 + 8); this.basis2.rotation.y = Math.PI; this.basis2.castShadow = this.basis2.receiveShadow = true; this.basis2.visible = false; s.add(this.basis2);
+    this.basis2Glut = new T.Sprite(this.glut.gelb.clone()); this.basis2Glut.scale.set(34, 34, 1); this.basis2Glut.position.set(BX2 + 8, 9, BY2 + 8); this.basis2Glut.visible = false; s.add(this.basis2Glut);
     // Extra (Bonus): schwebendes Bild mit Rahmen
     this.bonusMats = {};
     for (const art of BONUS_ARTEN) {
@@ -415,7 +420,7 @@ const D3 = {
     if (this.karteId !== V.kartenId) {
       this.karteId = V.kartenId; this.kv = V.kv; this.karte.set(V.karte); this.karteNeu(V.karte);
       for (const a of Object.values(this.tl)) a.liste.length = 0;
-      this.rauchQuellen.length = 0; this.basisWar = null;
+      this.rauchQuellen.length = 0; this.basisWar = null; this.basis2War = null;
       this.gesehen.clear(); this.kugelnAlt.clear(); this.lage.clear();
       this.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80;
     } else if (this.kv !== V.kv) {
@@ -549,6 +554,11 @@ const D3 = {
     if (this.basisWar !== kaputt && kaputt) this.rauchQuellen.push({ x: BX + 8, z: BY + 8, bis: Infinity, staerke: 2 });
     if (this.basisWar !== kaputt) { this.basisWar = kaputt; this.basisOben.map = kaputt ? this.tex.basisKaputt : this.tex.basis; this.basisOben.needsUpdate = true; this.basis.scale.y = kaputt ? 0.55 : 1; }
     this.basisGlut.visible = !kaputt; this.basisGlut.material.opacity = 0.35 + 0.15 * Math.sin(this.zeit * 0.08);
+    const k2 = !!V.basis2Kaputt, d = !!V.duell;
+    this.basis2.visible = d;
+    if (d && this.basis2War !== k2 && k2) this.rauchQuellen.push({ x: BX2 + 8, z: BY2 + 8, bis: Infinity, staerke: 2 });
+    if (this.basis2War !== k2) { this.basis2War = k2; this.basis2Oben.map = k2 ? this.tex.basisKaputt : this.tex.basis; this.basis2Oben.needsUpdate = true; this.basis2.scale.y = k2 ? 0.55 : 1; }
+    this.basis2Glut.visible = d && !k2; this.basis2Glut.material.opacity = this.basisGlut.material.opacity;
     // Bonus
     this.bonus.visible = this.bonusGlut.visible = !!V.bonus;
     if (V.bonus) {
