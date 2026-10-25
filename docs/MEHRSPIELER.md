@@ -88,3 +88,19 @@ lernt man, wie zwei Geräte miteinander reden.
   zwischen zwei Bildern über; der eigene Panzer läuft ohne Pufferzeit. Lernthema:
   *Lieber ein Bild weglassen als auf ein verlorenes warten.*
   (Würmer-Prinzip „gleiche Eingaben = gleiches Ergebnis“ passt für Runden, nicht für Echtzeit.)
+
+## Ohne Internet in Würmer (v1.59) und Морской бой (v2.5)
+- Menü **📶 Ohne Internet**: ein Gerät zeigt einen QR-Code (Gastgeber), das andere
+  scannt ihn und zeigt seinen Antwort-Code, den der Gastgeber scannt. Selbes WLAN
+  oder persönlicher Hotspot, kein Internet, keine fremden Server.
+- Gemeinsames Modul `lokal.js` (in beiden Apps gleich): ersetzt GitHub als
+  „Ablage“. Der Gastgeber hält den Spielstand; Mitspieler schicken Änderungen
+  mit der Nummer des Stands, auf dem sie aufbauen (`_lr`) – passt sie nicht,
+  kommt „nein“ + aktueller Stand und es wird neu probiert (wie `sha` bei GitHub).
+  Dadurch läuft die ganze bisherige Online-Logik unverändert weiter.
+- Stand wird auf jedem Gerät gespeichert (`wu-lokal` / `mb-lokal`): Nach einem
+  Neustart der App einfach QR-Codes neu tauschen – das Spiel geht weiter.
+- Verbindung weg (Bildschirm aus, WLAN weg): Würmer ⚡ oben links, Морской бой
+  „📶 Nicht verbunden – hier tippen“ → QR-Codes neu tauschen.
+- Würmer mit 3 Geräten: der Gastgeber tippt in der Lobby „📶 Verbindung“ →
+  „Ich zeige den QR-Code“ für das dritte Gerät.

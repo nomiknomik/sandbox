@@ -246,9 +246,10 @@
 </div>
 <div id="version"></div>
 
+<script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.58';
+const APP_VERSION = '1.59';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2770,7 +2771,8 @@ function hud() {
   $('fernbedienung').classList.toggle('versteckt', !schaf);
   $('waffen').style.visibility = schaf ? 'hidden' : '';     // Knopf sitzt dort, wo sonst die Waffen sind
   if (schaf) $('fernbedienung').querySelector('small').textContent = Math.ceil(schaf.zuender) + ' s';
-  $('direkt').classList.toggle('versteckt', !(Direkt.an && !Direkt.alleVerbunden() && (Direkt.problem || Direkt.klapptNicht())));
+  const lokalWeg = Lokal.an && spiel.modus === 'online' && !Lokal.verbunden();
+  $('direkt').classList.toggle('versteckt', !(lokalWeg || (Direkt.an && !Direkt.lokal && !Direkt.alleVerbunden() && (Direkt.problem || Direkt.klapptNicht()))));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
   if ($('runde').innerHTML !== rt) $('runde').innerHTML = rt;
@@ -2786,6 +2788,7 @@ function hud() {
     if (Direkt.an && Date.now() - (Direkt.verbundenSeit || 0) < 3000) st = '⚡ WLAN-Direkt verbunden';
     if (Direkt.an && Direkt.problem && !Direkt.alleVerbunden()) st = '⚡ ' + Direkt.problem;
     if (Online.fehlerText && !Direkt.alleVerbunden()) st = '⚠ ' + Online.fehlerText;
+    if (lokalWeg) st = '📶 Nicht verbunden – oben links ⚡ tippen und QR-Codes neu tauschen';
   }
   if ($('status').textContent !== st) $('status').textContent = st;
 }
@@ -2862,7 +2865,7 @@ function hintergrund() {
 function startMenue() {
   Online.stop(); hintergrund();
   karte('<h1><img src="icon-192.png" alt="" style="width:64px;height:64px;border-radius:16px;vertical-align:middle;margin-right:10px">Würmer</h1>', 'Teams mit je 4 Würmern.\n<b>Zielen:</b> Finger irgendwo hinlegen, wegziehen, loslassen – wie eine Steinschleuder!\n<b>Springen:</b> ⤴ zweimal = Doppelsprung, ▶ + ⤴ = weiter Sprung.\n<b>Kamera:</b> mit zwei Fingern schieben und zoomen.\n💀 Gegner besiegt? Du darfst nochmal schießen!',
-    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', onlineMenue]], '', [['📊 Statistik', statistikZeigen], ['🕹 Alle Spiele', () => location.href = '../../']]);
+    [['🎮 Auf diesem Gerät spielen', () => teamWahl('lokal')], ['🌐 Online – mehrere Geräte', () => { Lokal.an = false; onlineMenue(); }], ['📶 Ohne Internet – per QR-Code', lokalMenue]], '', [['📊 Statistik', statistikZeigen], ['🕹 Alle Spiele', () => location.href = '../../']]);
 }
 // Wer spielt mit? Jedes Team: Mensch oder Computer (Team Gelb auch „aus“)
 const WAHL_STANDARD = { lokal: { art: ['m', 'c', '-'], stufe: 'mittel' }, online: { art: ['m', 'm', '-'], stufe: 'mittel' } };
@@ -3085,6 +3088,7 @@ const Sync = {
   },
   // Lesen. Mit ETag fragt GitHub nur „hat sich was geändert?“ – das ist schnell.
   async lesen(frisch = false) {
+    if (Lokal.an && this === Sync) return (this.stand = Lokal.lesen());     // ohne Internet: Stand vom Gastgeber
     const h = this.kopf(); if (!frisch && this.etag) h['If-None-Match'] = this.etag;
     const res = await fetch(this.url(), { headers: h, cache: 'no-store' });
     if (res.status === 304) return this.stand;
@@ -3098,6 +3102,7 @@ const Sync = {
     return this.stand;
   },
   async schreiben(stand) {
+    if (Lokal.an && this === Sync) { const ok = await Lokal.schreiben(stand); this.stand = Lokal.stand; return ok; }
     const body = { message: 'Würmer: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
     if (this.sha) body.sha = this.sha;
     const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -3135,7 +3140,7 @@ const Online = {
   start() { this.stop(); gruppeWaehlen = false; this.timer = setInterval(() => this.tick(), 1500); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
-    if (this.tickt || document.hidden || !this.timer || !Sync.cfg) return;
+    if (this.tickt || document.hidden || !this.timer || !(Sync.cfg || Lokal.an)) return;
     this.tickt = true;
     try {
       if (spiel && spiel.ausstehend.length) await this.senden();
@@ -3174,12 +3179,38 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && On
 
 function onlineMenue() {
   hintergrund();
+  if (Lokal.an) return lokalLobby();                            // „Zurück zur Lobby“ im Modus ohne Internet
   if (!Sync.cfg) return setupZeigen();
   lobbyText = ''; lobby('Verbinde mit GitHub …', []);
   Online.start();
 }
 
+/* ---------- Ohne Internet: Geräte per QR-Code direkt verbinden (lokal.js) ---------- */
+Lokal.einrichten({
+  praefix: 'wu', geraet: Sync.geraet, titel: 'Ohne Internet',
+  qr: (cv, text) => QR.malen(cv, text),
+  wennStand: () => { if (Online.timer) setTimeout(() => Online.tick(), 0); },
+  // Neu verbunden: Live-Kanal fürs Zuschauen an Direkt geben, Stand gleich prüfen
+  wennVerbunden: g => setTimeout(() => { const p = Lokal.peers[g]; if (Direkt.lokal && Direkt.andere.includes(g) && p && p.s) Direkt.kanal(p.s, g); Online.tick(); }, 300),
+  wennAbbruch: () => { if (!spiel) startMenue(); },
+});
+function lokalMenue() {
+  Online.stop(); hintergrund(); Lokal.an = !!Lokal.rolle;
+  if (Lokal.an && Lokal.verbunden()) return lokalLobby();
+  karte('<h2>📶 Ohne Internet</h2>', 'Verbinden …', [], '', [['← Zurück', startMenue]]);
+  Lokal.dialog(lokalLobby);
+}
+function lokalLobby() { Lokal.an = true; lobbyText = ''; lobby('Verbunden ✓ …', []); Online.start(); }
+async function lokalBeenden() {
+  Online.stop(); lobbyText = '';
+  const ok = await frage('Ohne Internet beenden?', 'Die Verbindung wird getrennt und das gespeicherte Spiel auf diesem Gerät gelöscht.', 'Ja, beenden');
+  if (!ok) return lokalLobby();
+  Lokal.beenden(); startMenue();
+}
+
 function lobby(text, knoepfe) {
+  if (Lokal.an) return karte('<h2>📶 Ohne Internet</h2>', text + (Lokal.verbunden() ? '' : '\n\n⚠ Nicht verbunden'), knoepfe, text.includes('…') ? '<div class="laden"><span class="sanduhr">⏳</span><div class="balken"><i></i></div></div>' : '',
+    [['📶 Verbindung', () => Lokal.dialog(lokalLobby)], ['⏹ Beenden', lokalBeenden], ['← Zurück', startMenue]]);
   // Wird gerade gewartet (Text mit „…“)? Dann Sanduhr und Ladebalken zeigen
   const laden = text.includes('…') ? '<div class="laden"><span class="sanduhr">⏳</span><div class="balken"><i></i></div></div>' : '';
   karte('<h2>🌐 Online</h2>', text, knoepfe, laden, [['📱 Einladung zeigen', einladungZeigen], ['⚙ Gerät zurücksetzen', zuruecksetzen], ['← Zurück', startMenue]]);
@@ -3327,6 +3358,7 @@ const Direkt = {
   an: false, pcs: {}, kanaele: {}, timer: null, problem: '', angebote: {},
   start(st) {
     this.stop();
+    if (Lokal.an) return this.lokalStart(st);
     if (!st.direkt || !window.RTCPeerConnection || st.geraete.length < 2) return;
     Object.assign(this, { an: true, st, id: st.id, host: st.geraete[0] === Sync.geraet, problem: '', letztesAngebot: null,
                           angebote: {}, version: 0, letzterVersuch: 0, pause: 15000, warVerbunden: false, getrenntSeit: 0, startZeit: Date.now() });
@@ -3337,7 +3369,14 @@ const Direkt = {
   stop() {
     clearInterval(this.timer); this.timer = null;
     for (const pc of Object.values(this.pcs)) try { pc.close(); } catch {}
-    this.pcs = {}; this.kanaele = {}; this.an = false;
+    this.pcs = {}; this.kanaele = {}; this.an = false; this.lokal = false;
+  },
+  // Ohne Internet: Die Verbindung gibt es schon (lokal.js) – nur den Live-Kanal mitbenutzen
+  lokalStart(st) {
+    if (st.geraete.length < 2) return;
+    Object.assign(this, { an: true, lokal: true, st, id: st.id, host: st.geraete[0] === Sync.geraet, problem: '', warVerbunden: true, getrenntSeit: 0, startZeit: Date.now() });
+    this.andere = this.host ? st.geraete.slice(1) : [st.geraete[0]];
+    for (const g of this.andere) { const p = Lokal.peers[g]; if (p && p.s) this.kanal(p.s, g); }
   },
   // Nach 12 s noch nie verbunden? Dann Hinweis + ⚡-Knopf (Safari braucht evtl. die Kamera-Erlaubnis)
   klapptNicht() { return this.an && !this.warVerbunden && Date.now() - this.startZeit > 12000; },
@@ -3345,7 +3384,7 @@ const Direkt = {
   alleVerbunden() { return this.an && this.andere.every(g => this.offen(g)); },
   // Wachhund: Ist die Verbindung weg (z. B. iPhone gesperrt), wird neu verbunden
   wachen() {
-    if (!this.an) return;
+    if (!this.an || this.lokal) return;
     if (this.alleVerbunden()) { this.warVerbunden = true; this.getrenntSeit = 0; this.pause = 15000; this.letzterVersuch = 0; return; }
     if (!this.getrenntSeit) this.getrenntSeit = Date.now();
     if (!this.host) return this.antworten();
@@ -3440,6 +3479,7 @@ const Direkt = {
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Direkt.an) Direkt.wachen(); });
 // Gastgeber: Kamera einmal kurz erlauben → Safari gibt die WLAN-Adresse frei → neu verbinden
 $('direkt').onclick = async () => {
+  if (Lokal.an) return Lokal.dialog(() => {});                // ohne Internet: QR-Codes neu tauschen
   try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
   if (!Direkt.st) return;
   Direkt.startZeit = Date.now();

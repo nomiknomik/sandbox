@@ -331,6 +331,7 @@
     <button data-modus="cpu" data-stufe="admiral">GEGEN COMPUTER<small>Stufe: Admiral – richtig schwer</small></button>
     <button data-modus="duo">ZU ZWEIT<small>Ein Gerät, abwechselnd</small></button>
     <button id="b-online">ONLINE · ZWEI GERÄTE<small>iPhone ↔ iPad über GitHub</small></button>
+    <button id="b-lokal">OHNE INTERNET · ZWEI GERÄTE<small>QR-Code · selbes WLAN oder Hotspot</small></button>
     <div class="zeile"><button id="b-regeln">REGELN</button></div>
   </div>
 </section>
@@ -416,7 +417,7 @@
 <section id="s-online" class="screen">
   <div class="kopf">
     <button class="rund zummenue" aria-label="Zurück">✕</button>
-    <h2 class="glow">ONLINE · ZWEI GERÄTE</h2>
+    <h2 class="glow" id="o-titel">ONLINE · ZWEI GERÄTE</h2>
     <button class="rund ton" aria-label="Ton an/aus">🔊</button>
   </div>
   <div class="online-mitte">
@@ -424,7 +425,7 @@
     <p id="o-status" class="glow"></p>
     <div class="menue" id="o-knoepfe"></div>
   </div>
-  <div class="knoepfe klein">
+  <div class="knoepfe klein" id="o-github">
     <button id="o-einladung">EINLADUNG ZEIGEN</button>
     <button id="o-loeschen">EINRICHTUNG LÖSCHEN</button>
   </div>
@@ -480,9 +481,10 @@
 <canvas id="fx"></canvas>
 <div id="version"></div>
 
+<script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '2.4';
+const APP_VERSION = '2.5';
 // Version unten rechts antippen = nach Update suchen.
 // (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
@@ -1790,6 +1792,7 @@ const Sync = {
   },
   // Lesen. Mit ETag fragt GitHub nur „hat sich was geändert?“ – das ist schnell.
   async lesen(frisch = false) {
+    if (Lokal.an && this === Sync) return (this.stand = Lokal.lesen());     // ohne Internet: Stand vom Gastgeber
     const h = this.kopf(); if (!frisch && this.etag) h['If-None-Match'] = this.etag;
     const res = await fetch(this.url(), { headers: h, cache: 'no-store' });
     if (res.status === 304) return this.stand;
@@ -1803,6 +1806,7 @@ const Sync = {
     return this.stand;
   },
   async schreiben(stand) {
+    if (Lokal.an && this === Sync) { const ok = await Lokal.schreiben(stand); this.stand = Lokal.stand; return ok; }
     const body = { message: 'Морской бой: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
     if (this.sha) body.sha = this.sha;
     const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -1877,15 +1881,49 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && On
 
 function onlineMenue() {
   spiel = null; beschaeftigt = false;
+  if (Lokal.an) return lokalLobby();                            // „zurück zur Lobby“ im Modus ohne Internet
+  onlineTitel();
   if (!Sync.cfg) return setupZeigen();
   zeige('s-online');
   lobby('Verbinde mit GitHub …', []);
   Online.start();
 }
-$('#b-online').onclick = () => { Ton.klick(); onlineMenue(); };
+$('#b-online').onclick = () => { Ton.klick(); Lokal.an = false; onlineMenue(); };
+$('#b-lokal').onclick = () => { Ton.klick(); lokalMenue(); };
+
+/* ---------- Ohne Internet: Geräte per QR-Code direkt verbinden (lokal.js) ---------- */
+Lokal.einrichten({
+  praefix: 'mb', geraet: Sync.geraet, titel: 'Ohne Internet',
+  qr: (cv, text) => QR.malen(cv, text),
+  wennStand: st => Online.direktEmpfang(st),
+  wennVerbunden: () => { verbindungAnzeigen(); setTimeout(() => Online.tick(), 300); },
+  wennGetrennt: () => verbindungAnzeigen(),
+  wennAbbruch: () => { if (!spiel) menue(); },
+});
+// Kopfzeile und kleine Knöpfe: GitHub oder ohne Internet
+function onlineTitel() {
+  $('#o-titel').textContent = Lokal.an ? 'OHNE INTERNET' : 'ONLINE · ZWEI GERÄTE';
+  $('#o-github').hidden = Lokal.an;
+}
+function lokalMenue() {
+  spiel = null; beschaeftigt = false; Online.stop(); Lokal.an = !!Lokal.rolle;
+  if (Lokal.an && Lokal.verbunden()) return lokalLobby();
+  Lokal.an = true; onlineTitel(); zeige('s-online'); lobby('Verbinden …', []);
+  Lokal.dialog(lokalLobby);
+}
+function lokalLobby() { spiel = null; beschaeftigt = false; Lokal.an = true; onlineTitel(); zeige('s-online'); lobby('Verbunden ✓ …', []); Online.start(); }
+async function lokalBeenden() {
+  const ok = await dialog('<h2 class="glow">OHNE INTERNET BEENDEN?</h2><p class="mono" style="color:var(--g-dim)">Die Verbindung wird getrennt und das gespeicherte Spiel auf diesem Gerät gelöscht.</p>', [['NEIN'], ['BEENDEN', true]]);
+  if (!ok) return;
+  Online.stop(); Lokal.beenden(); speicher.weg('mb-online'); menue();
+}
 $$('.zummenue').forEach(b => b.onclick = () => { Ton.klick(); menue(); });
 
 function lobby(text, knoepfe) {
+  if (Lokal.an) {
+    if (!Lokal.verbunden()) text += '\n⚠ Nicht verbunden';
+    knoepfe = [...knoepfe, ['📶 VERBINDUNG', () => Lokal.dialog(lokalLobby)], ['⏹ OHNE INTERNET BEENDEN', lokalBeenden]];
+  }
   const s = $('#o-status'); s.textContent = text; s.classList.remove('fehler');
   const box = $('#o-knoepfe'); box.innerHTML = '';
   knoepfe.forEach(([t, fn]) => { const b = document.createElement('button'); b.innerHTML = t; b.onclick = () => { Ton.klick(); fn(); }; box.appendChild(b); });
@@ -2159,6 +2197,7 @@ const hatKandidaten = sdp => /a=candidate/.test(sdp || '');
 const Direkt = {
   an: false, pc: null, kanalObj: null, timer: null, problem: '', id: null,
   start(st) {
+    if (Lokal.an) return;                                     // ohne Internet sind die Geräte schon direkt verbunden
     if (this.an && this.id === st.id) return;
     this.stop();
     if (st.direkt === false || !window.RTCPeerConnection || st.geraete.length < 2) return;
@@ -2234,11 +2273,17 @@ const Direkt = {
 function verbindungAnzeigen() {
   const el = $('#verbindung'); if (!el) return;
   const online = spiel && spiel.modus === 'online';
+  if (online && Lokal.an) {
+    el.className = Lokal.verbunden() ? 'direkt' : 'problem';
+    el.textContent = Lokal.verbunden() ? '📶 Direkt verbunden' : '📶 Nicht verbunden – hier tippen';
+    return;
+  }
   el.className = !online ? '' : Direkt.verbunden() ? 'direkt' : Direkt.problem ? 'problem' : '';
   el.textContent = !online ? '' : Direkt.verbunden() ? '⚡ WLAN-Direkt' : Direkt.problem ? '⚡ ' + Direkt.problem
     : Direkt.an ? '⚡ verbinde … (sonst ☁ über GitHub)' : '☁ über GitHub';
 }
 $('#verbindung').onclick = async () => {
+  if (Lokal.an) return Lokal.verbunden() || Lokal.dialog(() => {});   // ohne Internet: QR-Codes neu tauschen
   if (!Direkt.problem) return;
   try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
   const st = Direkt.st; Direkt.stop(); if (st) Direkt.start(st);

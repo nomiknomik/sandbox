@@ -1,7 +1,7 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'morskoj-boj-v15';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js'];
+const CACHE = 'morskoj-boj-v16';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js', './lokal.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
