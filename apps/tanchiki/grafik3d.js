@@ -556,8 +556,9 @@ const D3 = {
     if (this.basisWar !== kaputt && kaputt) this.rauchQuellen.push({ x: BX + 8, z: BY + 8, bis: Infinity, staerke: 2 });
     if (this.basisWar !== kaputt) { this.basisWar = kaputt; this.basisOben.map = kaputt ? this.tex.basisKaputt : this.tex.basis; this.basisOben.needsUpdate = true; this.basis.scale.y = kaputt ? 0.55 : 1; }
     this.basisGlut.visible = !kaputt; this.basisGlut.material.opacity = 0.35 + 0.15 * Math.sin(this.zeit * 0.08);
-    const k2 = !!V.basis2Kaputt, d = !!V.duell;
+    const k2 = !!V.basis2Kaputt, d = !!(V.duell || V.angriff);
     this.basis2.visible = d;
+    this.basis2Oben.color.set(V.angriff ? '#ff8a80' : '#ffffff');      // Angriff: die Feind-Basis ist rot
     if (d && this.basis2War !== k2 && k2) this.rauchQuellen.push({ x: BX2 + 8, z: BY2 + 8, bis: Infinity, staerke: 2 });
     if (this.basis2War !== k2) { this.basis2War = k2; this.basis2Oben.map = k2 ? this.tex.basisKaputt : this.tex.basis; this.basis2Oben.needsUpdate = true; this.basis2.scale.y = k2 ? 0.55 : 1; }
     this.basis2Glut.visible = d && !k2; this.basis2Glut.material.opacity = this.basisGlut.material.opacity;
@@ -591,7 +592,7 @@ const D3 = {
     }
     // Schnee, Feuerwerk
     if (this.schnee && dt > 0 && Math.random() < 0.6) this.teil('feuer', { x: Math.random() * (FB + 40) - 20, y: 70, z: Math.random() * (FH + 60) - 30, vx: 0.04 + Math.random() * 0.05, vy: -0.12 - Math.random() * 0.08, gr: 0.6 + Math.random() * 0.5, farbe: [200, 210, 225], l: 600, reib: 1 });
-    if (V.phase === 'spiel' && V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0) && dt > 0 && Math.random() < 0.05 * dt) {
+    if (V.phase === 'spiel' && !V.duell && (V.angriff ? V.basis2Kaputt : V.gegnerIdx >= 20 && !V.panzer.some(p => p.sp < 0)) && dt > 0 && Math.random() < 0.05 * dt) {
       const farben = [[255, 90, 90], [120, 220, 255], [255, 230, 90], [140, 255, 140], [255, 140, 255]];
       this.funkeln(20 + Math.random() * (FB - 40), 30 + Math.random() * 20, 20 + Math.random() * (FH - 80), farben[zufall(farben.length)], 34); Ton.spiel('knall');
     }

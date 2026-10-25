@@ -112,3 +112,9 @@ lernt man, wie zwei Geräte miteinander reden.
   wer zuerst 3 Runden gewinnt, ist Sieger.
 - Karten: 4 Duell-Karten + Zufallskarten, alle um 180° gedreht gleich (fair).
 - Extras im Duell: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt die eigene Basis.
+
+## Танчики v5.6 – Angriff
+- Spielart „Angriff 🎯“ (allein oder zu zweit zusammen, auch über zwei Geräte):
+  oben steht die rote Computer-Basis, die zerstört werden muss; die eigene unten schützen.
+- Computer-Panzer kommen ohne Ende; etwa ein Drittel bewacht die eigene Basis.
+EOF
