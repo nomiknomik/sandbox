@@ -54,6 +54,8 @@ const D3 = {
     // ein paar Lampen für Explosionen und Mündungsfeuer (immer gleich viele → kein Ruckeln)
     this.lampen = [];
     for (let i = 0; i < 4; i++) { const l = new T.PointLight('#ff9a40', 0, 80, 1.6); l.position.set(0, 10, 0); s.add(l); this.lampen.push({ l, leben: 0, max: 1, staerke: 0 }); }
+    // Brandstellen nach Explosionen: drei flackernde Feuer-Lichter
+    this.brandLampen = []; for (let i = 0; i < 3; i++) { const l = new T.PointLight('#ff7a2a', 0, 60, 1.8); l.position.set(0, 6, 0); s.add(l); this.brandLampen.push(l); }
     this.scheinwerfer = [];
 
     this.mats();
@@ -391,7 +393,7 @@ const D3 = {
     l.l.color.set(farbe); l.l.position.set(x, 12, z); Object.assign(l, { leben, max: leben, staerke });
   },
   explosion(x, z) {
-    this.rauchQuellen.push({ x, z, bis: this.zeit + 420, staerke: 1 });          // Wrack qualmt noch eine Weile
+    this.rauchQuellen.push({ x, z, bis: this.zeit + 420, staerke: 1, brand: this.zeit + 360 });   // Wrack qualmt und brennt noch eine Weile
     for (let i = 0; i < 40; i++) { const w = Math.random() * 6.28, v = Math.random() * 0.9 + 0.2; this.teil('feuer', { x, y: 3 + Math.random() * 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: Math.random() * 0.8, gr: 1.5 + Math.random() * 2.5, farbe: [255, 120 + Math.random() * 110, 30], l: 18 + Math.random() * 18, reib: 0.9 }); }
     for (let i = 0; i < 18; i++) { const w = Math.random() * 6.28, v = Math.random() * 0.3; this.teil('rauch', { x, y: 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: 0.15 + Math.random() * 0.15, gr: 2 + Math.random() * 2, wachs: 0.06, farbe: [70, 68, 66], l: 50 + Math.random() * 40 }); }
     for (let i = 0; i < 16; i++) { const w = Math.random() * 6.28, v = 0.5 + Math.random() * 1.2; this.teil('brocken', { x, y: 4, z, vx: Math.cos(w) * v, vz: Math.sin(w) * v, vy: 1 + Math.random() * 1.5, g: 0.09, gr: 0.8 + Math.random() * 1.2, farbe: [50 + Math.random() * 30, 52, 48], l: 70 + Math.random() * 40, reib: 0.98 }); }
@@ -574,6 +576,14 @@ const D3 = {
         if (Math.random() < 0.22 * q.staerke * rest * dt) this.teil('rauch', { x: q.x + (Math.random() - 0.5) * 6, y: 2, z: q.z + (Math.random() - 0.5) * 6, vx: 0.03 + Math.random() * 0.04, vz: -0.02, vy: 0.12 + Math.random() * 0.08, gr: 1.6 + Math.random() * 1.5, wachs: 0.035, farbe: q.staerke > 1 ? [44, 42, 40] : [62, 60, 58], l: 80 + Math.random() * 60, reib: 0.995 });
         if (q.staerke > 1 && Math.random() < 0.15 * dt) this.teil('feuer', { x: q.x + (Math.random() - 0.5) * 10, y: 3, z: q.z + (Math.random() - 0.5) * 8, vy: 0.2, gr: 1.2, farbe: [255, 140, 40], l: 18, reib: 0.98 });
       }
+      // Brandstellen: kleine Flammen + flackerndes Licht (die neuesten drei)
+      const braende = this.rauchQuellen.filter(q => q.brand > this.zeit).slice(-3);
+      this.brandLampen.forEach((l, i) => {
+        const q = braende[i]; if (!q) { l.intensity = 0; return; }
+        const f = Math.min(1, (q.brand - this.zeit) / 120);
+        l.position.set(q.x, 6, q.z); l.intensity = (this.nacht ? 3200 : 900) * f * (0.75 + Math.random() * 0.35);
+        if (Math.random() < 0.4 * f * dt) this.teil('feuer', { x: q.x + (Math.random() - 0.5) * 7, y: 2, z: q.z + (Math.random() - 0.5) * 7, vy: 0.25 + Math.random() * 0.15, gr: 1 + Math.random() * 1.3, farbe: [255, 120 + Math.random() * 70, 30], l: 14 + Math.random() * 10, reib: 0.97 });
+      });
       for (const p of V.panzer) if (p.sp < 0 && p.typ === 3 && p.hp <= 2 && p.spawn === 0 && Math.random() < 0.12 * dt) {
         const [gx, gy] = lageGenau(p, a);
         this.teil('rauch', { x: gx + 8 - DX[p.r] * 5, y: 5, z: gy + 8 - DY[p.r] * 5, vy: 0.12, gr: 1.4, wachs: 0.04, farbe: [70, 68, 66], l: 60, reib: 0.99 });
@@ -606,7 +616,7 @@ const D3 = {
     const nacht = nachtLevel(V.level);
     if (nacht !== this.nacht) {
       this.nacht = nacht;
-      this.himmel.intensity = nacht ? 0.32 : 1.45; this.sonne.intensity = nacht ? 0.35 : 2.1;
+      this.himmel.intensity = nacht ? 0.4 : 1.45; this.sonne.intensity = nacht ? 0.44 : 2.1;   // Nacht: etwas heller als früher
       this.sonne.color.set(nacht ? '#7f9cff' : '#fff1d6'); this.szene.background.set(nacht ? '#05070d' : '#151923');
       for (const s of this.scheinwerfer) { this.szene.remove(s, s.target); }
       this.scheinwerfer = [];

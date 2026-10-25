@@ -173,7 +173,8 @@
     <div class="karte"><h3>Ziel</h3>
       <p>Zerstöre alle 20 Gegner-Panzer eines Levels. Beschütze dabei deine <b>Basis</b> unten in der Mitte (Stern-Block bzw. Adler) – wird er getroffen, ist das Spiel aus.</p>
       <p><b>Gegeneinander ⚔️</b> (zu zweit): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
-      <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen selten, 6 Leben.</p></div>
+      <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
+      <p><b>Normal:</b> Die Mauer um den Adler wächst langsam nach. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
         <li><b>Touch:</b> Links irgendwo hinlegen und schieben = fahren. Rechts tippen/halten = schießen.</li>
@@ -276,7 +277,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.4';
+const APP_VERSION = '5.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -661,9 +662,11 @@ function levelHolen(nr) { const a = alleLevel(); return nr <= a.length ? a[nr - 
 const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];      // Richtungen: 0 hoch, 1 rechts, 2 runter, 3 links
 const STUFEN = {
   // Leicht = fürs Kind: Adler hinter Stahl, Gegner langsam, schießen selten, Kugeln langsamer, viele Extras
-  leicht: { leben: 6, tempo: 0.65, feuer: 0.35, ziel: 0.15, maxG: 2, pause: 110, kugel: 0.75, stahl: true, bonus: [1, 4, 7, 10, 13, 16, 19], bossHp: 8 },
-  normal: { leben: 3, tempo: 1, feuer: 1, ziel: 0.45, maxG: 4, pause: 0, bonus: [3, 10, 17] },
-  schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17], bossHp: 20 },
+  // sterne: was ein Spieler-Panzer beim Abschuss von seinen Sternen verliert (99 = alle, wie früher)
+  // mauer: so viele Bilder, bis an der Basis-Mauer ein Stückchen nachwächst (0 = nie)
+  leicht: { leben: 5, tempo: 0.75, feuer: 0.5, ziel: 0.25, maxG: 2, pause: 70, kugel: 0.85, stahl: true, bonus: [1, 4, 8, 12, 16, 19], bossHp: 10, sterne: 0, mauer: 0 },
+  normal: { leben: 3, tempo: 0.8, feuer: 0.6, ziel: 0.3, maxG: 3, pause: 40, kugel: 0.9, bonus: [3, 8, 13, 17], sterne: 1, mauer: 50 },
+  schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17], bossHp: 20, sterne: 99, mauer: 0 },
 };
 // Gegner-Arten: normal, flink, Kanone, schwer gepanzert
 const GEGNER = [
@@ -797,19 +800,39 @@ function spielerZug(S, p, e) {
 }
 
 // Die Computer-Panzer: fahren, manchmal abbiegen, zum Ziel wollen, schießen
+// Was ist direkt vor dem Panzer? 'ziegel' (wegschießen!), 'hart' (Stahl, Wasser, Rand), 'panzer' oder nichts
+function vorne(S, p, r = p.r) {
+  const g = GROESSE(p), nx = p.x + DX[r] * 2, ny = p.y + DY[r] * 2;
+  if (nx < 0 || ny < 0 || nx > FB - g || ny > FH - g) return 'hart';
+  let z = false, h = false;
+  for (let y = ny >> 2; y <= (ny + g - 1) >> 2; y++) for (let x = nx >> 2; x <= (nx + g - 1) >> 2; x++) {
+    const t = S.karte[y * NX + x]; if (t === ZIEGEL) z = true; if (t === STAHL || t === WASSER) h = true;
+  }
+  if (h) return 'hart';
+  if (z) return 'ziegel';
+  if (ueber(nx, ny, g, g, BX, BY, 16, 16)) return 'ziegel';               // der Adler: draufschießen
+  if (imWeg(S, p, nx, ny)) return 'panzer';
+  return '';
+}
 function gegnerZug(S, p) {
   if (S.uhr > 0) return;
   const g = GEGNER[p.typ], ax = p.x, ay = p.y;
-  const ok = fahren(S, p, g.tempo * S.st.tempo);
-  if (!ok) { if (++p.blockiert > 4 + zufall(24)) { kiNeu(S, p, true); p.blockiert = 0; } }
-  else {
-    p.blockiert = 0;
-    if ((p.x !== ax || p.y !== ay) && p.x % 8 === 0 && p.y % 8 === 0 && Math.random() < 0.07) kiNeu(S, p, false);
+  const ok = fahren(S, p, g.tempo * S.st.tempo), bewegt = p.x !== ax || p.y !== ay;
+  // Langsame Panzer kommen nicht jedes Bild voran – deshalb zählt die Zeit seit dem letzten echten Schritt
+  if (bewegt) {
+    p.fest = 0; p.vor = '';
+    if (p.x % 8 === 0 && p.y % 8 === 0 && Math.random() < 0.07) kiNeu(S, p, false);
+  } else if (!ok) {
+    if (!p.fest) p.fest = S.t;
+    p.vor = vorne(S, p);
+    // Ziegel vor der Nase: erst eine Weile draufschießen. Stahl, Wasser, Panzer: schnell abbiegen.
+    const geduld = p.vor === 'ziegel' ? 70 + zufall(70) : 6 + zufall(14);
+    if (S.t - p.fest > geduld) { kiNeu(S, p, true); p.fest = 0; }
   }
   if (p.kugeln === 0 && p.feuerT === 0) {
     let w = 0.022 * S.st.feuer * (p.typ === 4 ? 1.6 : 1);
     if (inLinie(S, p)) w *= 5;
-    if (!ok) w *= 2;
+    if (p.fest) w *= p.vor === 'ziegel' ? 6 : 2;
     if (Math.random() < w) {
       if (p.typ === 4) { schiessen(S, p, g.kugel * (S.st.kugel || 1), false, -7); schiessen(S, p, g.kugel * (S.st.kugel || 1), false, 7); S.ton.push('boss'); }
       else schiessen(S, p, g.kugel * (S.st.kugel || 1), false);
@@ -824,14 +847,24 @@ function zielPunkt(S, p) {
   }
   return [BX, BY];
 }
+// Neue Richtung: freie Wege bevorzugen, Ziegel gehen auch (wegschießen), Stahl/Wasser kaum
 function kiNeu(S, p, blockiert) {
-  let r;
+  const gewicht = [0.4, 1, 1.6, 1];                        // ohne Ziel: eher nach unten
   // am Anfang eines Levels fahren die Gegner eher wild herum, später zielstrebiger
   if (Math.random() < S.st.ziel * (S.pt < 600 ? 0.5 : 1)) {
     const [zx, zy] = zielPunkt(S, p), dx = zx - p.x, dy = zy - p.y;
-    if (Math.random() * (Math.abs(dx) + Math.abs(dy) + 1) < Math.abs(dx)) r = dx > 0 ? 1 : 3; else r = dy > 0 ? 2 : 0;
-  } else { const w = Math.random(); r = w < 0.4 ? 2 : w < 0.6 ? 1 : w < 0.8 ? 3 : 0; }
-  if (blockiert && r === p.r) r = (p.r + (Math.random() < 0.5 ? 1 : 3)) % 4;
+    if (Math.abs(dx) > 4) gewicht[dx > 0 ? 1 : 3] += 3 * Math.abs(dx) / (Math.abs(dx) + Math.abs(dy));
+    if (Math.abs(dy) > 4) gewicht[dy > 0 ? 2 : 0] += 3 * Math.abs(dy) / (Math.abs(dx) + Math.abs(dy));
+  }
+  for (let r = 0; r < 4; r++) {
+    const v = vorne(S, p, r);
+    gewicht[r] *= v === 'hart' ? 0.03 : v === 'panzer' ? 0.2 : v === 'ziegel' ? 0.5 : 1;
+    if (r === (p.r + 2) % 4) gewicht[r] *= 0.5;            // umdrehen nur ungern
+    if (blockiert && r === p.r) gewicht[r] = 0;
+  }
+  const summe = gewicht.reduce((a, b) => a + b, 0);
+  let w = Math.random() * summe, r = 0;
+  while (r < 3 && w > gewicht[r]) w -= gewicht[r++];
   drehen(S, p, r);
 }
 // Ist ein Spieler oder der Adler genau vor dem Rohr?
@@ -933,7 +966,7 @@ function rundeEnde(S, sieger) {
 function spielVorbei(S) { S.phase = 'gameover'; S.pt = 0; S.ton.push('gameover'); }
 function spielerTreffer(S, p) {
   p.tot = true; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('explosion');
-  const sp = S.sp[p.sp]; sp.lvl = 0;
+  const sp = S.sp[p.sp]; sp.lvl = Math.max(0, sp.lvl - (S.st.sterne ?? 99));   // Leicht: Sterne bleiben, Normal: einer weg, Schwer: alle weg
   if (sp.leben > 0) { sp.leben--; sp.warte = 70; }
   else { sp.aus = true; if (S.duell) rundeEnde(S, 1 - p.sp); else if (S.sp.every(s => s.aus) && S.phase === 'spiel') spielVorbei(S); }
 }
@@ -1020,6 +1053,16 @@ function schritt(S, ein) {
     S[key]--;
     if (S[key] === 0) ring(S, stahl ? STAHL : ZIEGEL, b);
     else if (S[key] < 180 && S[key] % 15 === 0 && !stahl) ring(S, (S[key] / 15) % 2 ? ZIEGEL : STAHL, b);
+  }
+  // Normal: Die Mauer um die Basis wächst langsam nach (ein Stückchen nach dem anderen)
+  if (S.phase === 'spiel' && S.st.mauer && S.t % S.st.mauer === 0) for (const b of S.duell ? [0, 1] : [0]) {
+    if ((b ? S.schaufel2 : S.schaufel) > 0) continue;
+    let fertig = false;
+    ringZellen((x, y) => {
+      if (fertig || S.karte[y * NX + x] !== LEER) return;
+      if (S.panzer.some(q => !q.tot && ueber(q.x, q.y, GROESSE(q), GROESSE(q), x * 4, y * 4, 4, 4)) || S.kugeln.some(k => ueber(k.x - 2, k.y - 2, 4, 4, x * 4, y * 4, 4, 4))) return;
+      setze(S, y * NX + x, ZIEGEL); fertig = true;
+    }, b);
   }
   if (S.phase === 'spiel' && S.duell && !S.bonus && --S.bonusT <= 0) { bonusSetzen(S); S.bonusT = 600; }   // Duell: ab und zu ein Extra
   if (S.phase === 'spiel') {
@@ -1825,7 +1868,7 @@ function waldZeichnen(k) {
 }
 
 /* ---------- Was beim Malen passiert: Teilchen, Lichter, Spuren ---------- */
-const HD = { bewegt: new Map(), kartenId: null, kv: -1, karte: new Uint8Array(NX * NY), gesehen: new Map(), kugeln: new Set(), lage: new Map(), rueck: new Map(),
+const HD = { braende: [], bewegt: new Map(), kartenId: null, kv: -1, karte: new Uint8Array(NX * NY), gesehen: new Map(), kugeln: new Set(), lage: new Map(), rueck: new Map(),
              teilchen: [], lichter: [], wackeln: 0, zeit: 0, bonus: null, wasser: false, spurT: 0 };
 function teilchen(o) { if (HD.teilchen.length < (HD.sparen ? 220 : 700)) HD.teilchen.push(Object.assign({ vx: 0, vy: 0, l: 30, ml: 30, gr: 4, reib: 0.94, add: false, wachs: 0, steig: 0 }, o, { ml: o.l || 30 })); }
 function licht(x, y, r, farbe, l = 20, staerke = 1) { if (HD.sparen && HD.lichter.length > 5) return; HD.lichter.push({ x, y, r, farbe, l, ml: l, staerke }); }
@@ -1837,6 +1880,8 @@ function explosionGross(x, y) {
   for (let i = 0; i < 10; i++) { const w = zz(0, 7), v = zz(3, 7); teilchen({ x, y, vx: Math.cos(w) * v, vy: Math.sin(w) * v, l: zz(10, 20), gr: 2, farbe: [255, 240, 180], add: true, reib: 0.92 }); }
   teilchen({ x, y, art: 'welle', l: 22, gr: 10 });
   licht(x, y, 200, 'feuer', 30, 1.2); licht(x, y, 90, 'weiss', 8, 1);
+  HD.braende.push({ x, y, l: 420 });                       // danach brennt es noch eine Weile
+  if (HD.braende.length > 6) HD.braende.shift();
   HD.wackeln = Math.max(HD.wackeln, 12);
 }
 function einschlag(x, y, metall) {
@@ -1861,7 +1906,7 @@ function ereignisse(V) {
   if (HD.kartenId !== V.kartenId) {
     HD.kartenId = V.kartenId; HD.kv = V.kv; HD.karte.set(V.karte);
     bodenZeichnen(V.karte, 0, 0, NX - 1, NY - 1); waldZeichnen(V.karte);
-    spurenG.clearRect(0, 0, FRB, FRH); HD.lage.clear(); HD.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80; HD.teilchen.length = 0; HD.lichter.length = 0; HD.kugeln.clear(); HD.gesehen.clear();
+    spurenG.clearRect(0, 0, FRB, FRH); HD.lage.clear(); HD.schnee = V.karte.reduce((a, t) => a + (t === EIS), 0) >= 80; HD.teilchen.length = 0; HD.lichter.length = 0; HD.braende.length = 0; HD.kugeln.clear(); HD.gesehen.clear();
   } else if (HD.kv !== V.kv) {
     HD.kv = V.kv;
     let x0 = NX, y0 = NY, x1 = -1, y1 = -1, neuWald = false, n = 0;
@@ -1921,6 +1966,13 @@ function teilchenBewegen(dt) {
   HD.teilchen = HD.teilchen.filter(t => t.l > 0 && !(t.flocke && t.y > FRH + 10));
   for (const l of HD.lichter) l.l -= dt;
   HD.lichter = HD.lichter.filter(l => l.l > 0);
+  // Brandstellen: kleine Flammen, die flackern und Licht geben (nachts schön sichtbar)
+  for (const b of HD.braende) {
+    b.l -= dt; const f = Math.min(1, b.l / 120);
+    if (Math.random() < 0.35 * dt * f) teilchen({ x: b.x + zz(-14, 14), y: b.y + zz(-10, 10), vx: zz(-0.2, 0.2), vy: -zz(0.4, 0.9), l: zz(12, 22), gr: zz(4, 8), farbe: [255, zz(110, 190), 30], add: true, reib: 0.95 });
+    if (Math.random() < 0.5 * dt) licht(b.x, b.y, 130 + zz(-15, 15), 'feuer', 6, 0.55 * f);
+  }
+  HD.braende = HD.braende.filter(b => b.l > 0);
   for (const [id, v] of HD.bewegt) { if (v - dt <= 0) HD.bewegt.delete(id); else HD.bewegt.set(id, v - dt); }
   for (const [id, v] of HD.rueck) { if (v - dt <= 0) HD.rueck.delete(id); else HD.rueck.set(id, v - dt); }
   HD.wackeln = Math.max(0, HD.wackeln - dt * 0.8);
@@ -2054,7 +2106,7 @@ function blockMalen(V) {
   if (nachtLevel(V.level) && !HD.sparen) {
     const n = lichtG;
     n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, FRB, FRH);
-    n.fillStyle = 'rgba(3,5,22,0.84)'; n.fillRect(0, 0, FRB, FRH);
+    n.fillStyle = 'rgba(3,5,22,0.76)'; n.fillRect(0, 0, FRB, FRH);
     n.globalCompositeOperation = 'destination-out';
     const loch = (x, y, r, a = 1) => { n.globalAlpha = a; n.drawImage(GLUT.weiss, x - r, y - r, r * 2, r * 2); };
     for (const { p, x, y } of liste) {
