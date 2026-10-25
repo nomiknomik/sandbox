@@ -117,4 +117,3 @@ lernt man, wie zwei Geräte miteinander reden.
 - Spielart „Angriff 🎯“ (allein oder zu zweit zusammen, auch über zwei Geräte):
   oben steht die rote Computer-Basis, die zerstört werden muss; die eigene unten schützen.
 - Computer-Panzer kommen ohne Ende; etwa ein Drittel bewacht die eigene Basis.
-EOF
