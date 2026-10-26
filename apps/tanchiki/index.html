@@ -176,7 +176,7 @@
       <p><b>Angriff 🎯</b> (allein oder zu zweit zusammen): Oben steht die Basis der Computer-Panzer. Zerstöre sie – dann ist das Level geschafft. Die Computer-Panzer kommen ohne Ende, ein Teil bewacht ihre Basis, der Rest greift deine Basis unten an.</p>
       <p><b>Duell ⚔️</b> (zu zweit gegeneinander): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
       <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
-      <p><b>Sterne ⭐:</b> bis zu 8. 1 = schnellere Kugeln, 2 = zwei Kugeln, 3 = Stahl kaputt, 4 = Panzerung (ein Treffer kostet nur einen Stern), 5 = schneller fahren. <b>Ränge:</b> 6 = Raketen (explodieren und reißen Mauern und Gegner ringsum weg), 7 = Schutzschild (lädt sich alle 20 Sekunden auf und hält einen Treffer ab), 8 = Helfer-Drohne (kleiner Panzer, der mitfährt und selbst schießt). Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt.</p>
+      <p><b>Sterne ⭐:</b> bis zu 8. 1 = schnellere Kugeln, 2 = zwei Kugeln, 3 = Stahl kaputt, 4 = Panzerung (ein Treffer kostet nur einen Stern), 5 = schneller fahren. <b>Ränge:</b> 6 = Durchschuss (die Kugel fliegt durch einen Gegner hindurch und trifft auch den nächsten), 7 = Schutzschild (lädt sich alle 20 Sekunden auf und hält einen Treffer ab), 8 = Raketen (explodieren und reißen Mauern und Gegner ringsum weg), 9 = Helfer-Drohne (kleiner Panzer, der mitfährt und selbst schießt). Ab Rang 6 werden die Gegner etwas stärker. Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt.</p>
       <p><b>Normal:</b> Der Adler hält 2 Treffer aus (♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '6.0';
+const APP_VERSION = '6.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -403,9 +403,10 @@ const FORMEN = {
   s3: { k: [0, 3, 1, 16], r: [3, 3, 10, 12], t: [7.5, 9.0, 3.5], l: [6, 0, 4, 8], p: 1 },                 // Stufe 3: Panzerplatten
   s4: { k: [0, 3, 1, 16], r: [3, 3, 10, 12], t: [7.5, 9.0, 3.6], l: [6, 0, 4, 8], p: 1, m: [5, 0, 6, 2] },   // Stufe 4: Platten + Mündung
   s5: { k: [0, 2, 1, 17], r: [3, 3, 10, 12], t: [7.5, 9.0, 3.8], l: [5, 0, 6, 9], p: 1, m: [5, 0, 6, 2] },   // Stufe 5: dickes, langes Rohr
-  s6: { k: [0, 2, 1, 17], r: [3, 3, 10, 12], t: [7.5, 9.0, 3.8], l: [5, 0, 6, 9], p: 1, m: [5, 0, 6, 2], q: 1 },   // Rang 6: Raketen
-  s7: { k: [0, 2, 1, 17], r: [2, 3, 12, 12], t: [7.5, 9.0, 4.0], l: [5, 0, 6, 9], p: 1, m: [5, 0, 6, 2], q: 1 },   // Rang 7: Schild
-  s8: { k: [0, 2, 1, 17], r: [2, 2, 12, 13], t: [7.5, 9.0, 4.2], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },  // Rang 8: Drohne
+  s6: { k: [0, 2, 1, 17], r: [3, 3, 10, 12], t: [7.5, 9.0, 3.9], l: [5, 0, 6, 10], p: 1, m: [5, 0, 6, 2] },         // Rang 6: Durchschuss
+  s7: { k: [0, 2, 1, 17], r: [2, 3, 12, 12], t: [7.5, 9.0, 4.0], l: [5, 0, 6, 10], p: 1, m: [5, 0, 6, 2] },         // Rang 7: Schild
+  s8: { k: [0, 2, 1, 17], r: [2, 3, 12, 12], t: [7.5, 9.0, 4.1], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },   // Rang 8: Raketen
+  s9: { k: [0, 2, 1, 17], r: [2, 2, 12, 13], t: [7.5, 9.0, 4.3], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },   // Rang 9: Drohne
   g0: { k: [1, 3, 3, 15], r: [4, 5, 8, 9], t: [7.5, 9.5, 2.5], l: [7, 1, 2, 7] },                         // Gegner: normal
   g1: { k: [2, 3, 1, 15], r: [5, 3, 6, 12], t: [7.5, 9.0, 2.2], l: [7, 0, 2, 6], n: 1 },                  // flink
   g2: { k: [1, 3, 3, 16], r: [4, 6, 8, 10], t: [7.5, 10.5, 2.6], l: [7, 0, 2, 10], q: 1 },                // Kanone
@@ -466,7 +467,7 @@ const ADLER_KAPUTT = ausText([
 const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer', 'turbo', 'doppel'];
 const BONUS_TEXT = {
   helm: 'Helm: 10 Sekunden unverwundbar', uhr: 'Uhr: alle Gegner frieren ein', schaufel: 'Schaufel: Stahlmauer um den Adler',
-  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 zwei Kugeln, 3 Stahl kaputt, 4 Panzerung (ein Treffer kostet nur einen Stern), 5 schneller fahren, 6 Raketen, 7 Schutzschild, 8 Helfer-Drohne', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
+  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 zwei Kugeln, 3 Stahl kaputt, 4 Panzerung (ein Treffer kostet nur einen Stern), 5 schneller fahren, 6 Durchschuss, 7 Schutzschild, 8 Raketen, 9 Helfer-Drohne', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
   turbo: 'Turbo: 15 Sekunden viel schneller fahren', doppel: 'Doppelschuss: 20 Sekunden zwei Kugeln auf einmal',
 };
 const BONUS_BILD = {
@@ -735,7 +736,9 @@ function spielerSetzen(S, i) {
   S.panzer.push({ id: S.nid++, sp: i, typ: -1, x, y, r, spawn: 50, schild: 0, starr: 0, sub: 0, anim: 0, animT: 0, rutsch: 0, feuerT: 0, kugeln: 0, hp: 1, schutzT: 0 });
 }
 function gegnerSetzen(S, x, y) {
-  const typ = S.liste[S.gegnerIdx % 20], w = Math.random();
+  let typ = S.liste[S.gegnerIdx % 20];
+  if (typ < 3 && Math.random() < gegnerPlus(S)) typ++;          // starke Spieler bekommen stärkere Gegner
+  const w = Math.random();
   // Angriff: ein Teil der Gegner bewacht die eigene Basis oben (fährt dort herum)
   const ziel = S.angriff && w < 0.35 ? 'wache' : w < (S.angriff ? 0.35 : 0) + (S.st.basis ?? 0.5) * (S.angriff ? 0.7 : 1) ? 'basis' : 'spieler';
   S.panzer.push({ id: S.nid++, sp: -1, typ, x, y, r: 2, spawn: 50, schild: 0, starr: 0, sub: 0, anim: 0, animT: 0, feuerT: 30, kugeln: 0,
@@ -809,14 +812,14 @@ function spielerZug(S, p, e) {
     const vorher = S.kid;
     if (p.doppel > 0) { schiessen(S, p, v, sp.lvl >= 3, -4); schiessen(S, p, v, sp.lvl >= 3, 4); }   // Doppelschuss: zwei Kugeln nebeneinander
     else schiessen(S, p, v, sp.lvl >= 3);
-    if (sp.lvl >= 6) for (const k of S.kugeln) if (k.id >= vorher) k.rk = 1;          // Rang 6: Raketen
+    for (const k of S.kugeln) if (k.id >= vorher) { if (sp.lvl >= 8) k.rk = 1; else if (sp.lvl >= 6) k.durch = 1; }   // Rang 8: Raketen, Rang 6: Durchschuss
   }
   // Rang 7: Schutzschild lädt sich alle 20 Sekunden von selbst auf
   if (sp.lvl >= 7 && !p.schutz && (p.schutzT = (p.schutzT || 0) + 1) >= 1200) { p.schutz = true; p.schutzT = 0; }
   if (S.bonus && ueber(p.x, p.y, 16, 16, S.bonus.x, S.bonus.y, 16, 16)) bonusNehmen(S, p);
 }
 
-/* ---------- Rang 8: Helfer-Drohne – ein kleiner Panzer, der mitfährt und selbst schießt ---------- */
+/* ---------- Rang 9: Helfer-Drohne – ein kleiner Panzer, der mitfährt und selbst schießt ---------- */
 const eigeneBasis = (S, i) => basen(S)[S.duell ? i : 0];
 function feindeVon(S, i) { return S.panzer.filter(q => !q.tot && q.spawn === 0 && (S.duell ? q.sp >= 0 && q.sp !== i : q.sp < 0)); }
 function vorRohr(p, x, y) {                              // Liegt der Punkt (Panzer-Ecke) genau vor dem Rohr?
@@ -835,7 +838,7 @@ function drohneSetzen(S, i) {
 }
 function drohneZug(S, p) {
   const sp = S.sp[p.sp];
-  if (sp.lvl < 8) { p.tot = true; knall(S, 'k', p.x + 6, p.y + 6); return; }      // Rang verloren: Drohne fliegt weg
+  if (sp.lvl < 9) { p.tot = true; knall(S, 'k', p.x + 6, p.y + 6); return; }      // Rang verloren: Drohne fliegt weg
   if (p.starr > 0) { p.starr--; return; }
   if (S.phase !== 'spiel') return;
   const chef = S.panzer.find(q => q.sp === p.sp && !q.drohne && !q.tot);
@@ -896,7 +899,7 @@ function gegnerZug(S, p) {
     if (S.t - p.fest > geduld) { kiNeu(S, p, true); p.fest = 0; }
   }
   if (p.kugeln === 0 && p.feuerT === 0) {
-    let w = 0.022 * S.st.feuer * (p.typ === 4 ? 1.6 : 1);
+    let w = 0.022 * S.st.feuer * (p.typ === 4 ? 1.6 : 1) * (1 + gegnerPlus(S));
     const linie = inLinie(S, p);
     if (linie) w *= linie === 'basis' ? (S.st.linie || 5) : 5;
     if (p.fest) w *= p.vor === 'ziegel' ? 6 : 2;
@@ -999,6 +1002,8 @@ function kugelTrifft(S, k) {
   for (const p of S.panzer) {
     if (p.tot || p.id === k.von || p.spawn > 0 || !ueber(x0, y0, 4, 4, p.x, p.y, GROESSE(p), GROESSE(p))) continue;
     if (k.sp < 0 && p.sp < 0) continue;              // Gegner schießen sich nicht gegenseitig ab
+    if (p.id === k.durchId) continue;                // gerade durchgeflogen
+    if (k.durch && p.sp < 0) { k.durch = 0; k.durchId = p.id; return gegnerTreffer(S, p, k.sp); }   // Rang 6: Kugel fliegt weiter
     kugelWeg(S, k);
     if (p.sp >= 0 && k.sp === p.sp) return;                // eigene Drohne/eigener Panzer: nichts passiert
     if (p.sp >= 0 && k.sp >= 0 && S.duell) {                 // Duell: Gegner getroffen!
@@ -1010,7 +1015,7 @@ function kugelTrifft(S, k) {
     return gegnerTreffer(S, p, k.sp);
   }
 }
-// Rang 6: Rakete explodiert – Mauern ringsum weg, Feinde in der Nähe getroffen (die eigene Basis bleibt heil)
+// Rang 8: Rakete explodiert – Mauern ringsum weg, Feinde in der Nähe getroffen (die eigene Basis bleibt heil)
 function rakete(S, k) {
   const R = 13, eigen = S.duell ? k.sp : 0, schutz = new Set();
   ringZellen((x, y) => schutz.add(y * NX + x), eigen);
@@ -1066,8 +1071,10 @@ function rundeEnde(S, sieger) {
   S.ton.push('geschafft');
 }
 function spielVorbei(S) { S.phase = 'gameover'; S.pt = 0; S.ton.push('gameover'); }
-const MAX_STERNE = 8;
-const RANG_TEXT = { 6: 'RAKETEN!', 7: 'SCHILD!', 8: 'DROHNE!' };
+const MAX_STERNE = 9;
+const RANG_TEXT = { 6: 'DURCHSCHUSS!', 7: 'SCHILD!', 8: 'RAKETEN!', 9: 'DROHNE!' };
+// Ab Rang 6 werden die Gegner etwas stärker – sonst ist man unbesiegbar (0 = normal, bis 0.32 bei Rang 9)
+const gegnerPlus = S => S.duell ? 0 : Math.max(0, Math.max(...S.sp.map(s => s.lvl || 0)) - 5) * 0.08;
 function spielerTreffer(S, p) {
   if (p.tot) return;                                       // schon weg (z. B. Rakete + Treffer gleichzeitig)
   const s0 = S.sp[p.sp];
@@ -1191,17 +1198,17 @@ function schritt(S, ein) {
     // neue Gegner
     const aktiv = S.panzer.filter(p => p.sp < 0 && !p.tot).length;
     const orte = S.angriff ? START_ANGRIFF : START_GEG, nachschub = S.angriff ? !S.basis2Kaputt : S.gegnerIdx < 20;   // Angriff: Nachschub ohne Ende
-    if (!S.duell && nachschub && aktiv < S.maxG && --S.spawnT <= 0) {
+    if (!S.duell && nachschub && aktiv < S.maxG + (gegnerPlus(S) >= 0.16 ? 1 : 0) && --S.spawnT <= 0) {   // ab Rang 7 ein Gegner mehr
       for (let v = 0; v < orte.length && S.spawnT <= 0; v++) {
         const [x, y] = orte[S.spawnOrt++ % orte.length];
         if (!S.panzer.some(q => !q.tot && ueber(x, y, 16, 16, q.x, q.y, GROESSE(q), GROESSE(q)))) { gegnerSetzen(S, x, y); S.spawnT = S.spawnPause; }
       }
       if (S.spawnT <= 0) S.spawnT = 20;
     }
-    // Rang 8: Helfer-Drohne (kommt nach einem Abschuss nach 15 s wieder)
+    // Rang 9: Helfer-Drohne (kommt nach einem Abschuss nach 15 s wieder)
     S.sp.forEach((sp, i) => {
       if (sp.drohneT > 0) sp.drohneT--;
-      else if (sp.lvl >= 8 && S.t % 30 === 0 && !S.panzer.some(q => q.drohne && q.sp === i && !q.tot)) drohneSetzen(S, i);
+      else if (sp.lvl >= 9 && S.t % 30 === 0 && !S.panzer.some(q => q.drohne && q.sp === i && !q.tot)) drohneSetzen(S, i);
     });
     // Spieler kommen nach einem Treffer wieder
     S.sp.forEach((sp, i) => {
@@ -2270,7 +2277,7 @@ function blockMalen(V) {
   seitenleisteHD(V);
   einblendungenHD(V, blink);
 }
-function panzerForm(V, p) { return p.drohne ? 's1' : p.sp >= 0 ? 's' + Math.min(8, (V.sp[p.sp] || {}).lvl || 0) : 'g' + Math.min(3, p.typ); }
+function panzerForm(V, p) { return p.drohne ? 's1' : p.sp >= 0 ? 's' + Math.min(9, (V.sp[p.sp] || {}).lvl || 0) : 'g' + Math.min(3, p.typ); }
 function panzerFarbe(V, p, blink) {
   if (p.sp >= 0) return (V.farben || ['p1', 'p2'])[p.sp] || 'p1';
   if (p.typ === 4) return 'boss';
