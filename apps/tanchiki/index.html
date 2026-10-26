@@ -176,7 +176,7 @@
       <p><b>Angriff 🎯</b> (allein oder zu zweit zusammen): Oben steht die Basis der Computer-Panzer. Zerstöre sie – dann ist das Level geschafft. Die Computer-Panzer kommen ohne Ende, ein Teil bewacht ihre Basis, der Rest greift deine Basis unten an.</p>
       <p><b>Duell ⚔️</b> (zu zweit gegeneinander): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
       <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
-      <p><b>Normal:</b> Die Mauer um den Adler wächst langsam nach. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
+      <p><b>Normal:</b> Der Adler hält 3 Treffer aus (♥♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
         <li><b>Touch:</b> Links irgendwo hinlegen und schieben = fahren. Rechts tippen/halten = schießen.</li>
@@ -279,7 +279,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.6';
+const APP_VERSION = '5.7';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -669,7 +669,8 @@ const STUFEN = {
   // sterne: was ein Spieler-Panzer beim Abschuss von seinen Sternen verliert (99 = alle, wie früher)
   // mauer: so viele Bilder, bis an der Basis-Mauer ein Stückchen nachwächst (0 = nie)
   leicht: { leben: 5, tempo: 0.75, feuer: 0.5, ziel: 0.25, maxG: 2, pause: 70, kugel: 0.85, stahl: true, bonus: [1, 4, 8, 12, 16, 19], bossHp: 10, sterne: 0, mauer: 0 },
-  normal: { leben: 3, tempo: 0.8, feuer: 0.6, ziel: 0.3, maxG: 3, pause: 40, kugel: 0.9, bonus: [3, 8, 13, 17], sterne: 1, mauer: 50 },
+  // basis: Anteil der Gegner, die zum Adler wollen · linie: wie viel öfter sie schießen, wenn der Adler vor dem Rohr ist · mix: wie schnell starke Gegner dazukommen
+  normal: { leben: 3, tempo: 0.8, feuer: 0.6, ziel: 0.3, maxG: 3, pause: 40, kugel: 0.9, bonus: [3, 8, 13, 17], sterne: 1, mauer: 25, basis: 0.3, linie: 2, mix: 0.7, adler: 3 },   // adler: so viele Treffer hält der eigene Adler
   schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17], bossHp: 20, sterne: 99, mauer: 0 },
 };
 // Gegner-Arten: normal, flink, Kanone, schwer gepanzert
@@ -687,8 +688,8 @@ let S = null;               // der Spielstand (beim Gastgeber bzw. allein)
 let rekord = speicher.lies('rekord', 0);
 
 // Welche 20 Gegner kommen? Je höher das Level, desto mehr starke.
-function gegnerMix(level) {
-  const L = level - 1;
+function gegnerMix(level, st = {}) {
+  const L = (level - 1) * (st.mix || 1);                 // Normal: starke Gegner kommen langsamer dazu
   const flink = Math.min(7, L > 0 ? 2 + Math.floor(L * 0.5) : 2), kanone = Math.min(6, Math.floor(L * 0.45)), schwer = Math.min(7, Math.floor(L * 0.5));
   const liste = [];
   for (let i = 0; i < 20 - flink - kanone - schwer; i++) liste.push(0);
@@ -708,7 +709,7 @@ function neuesSpiel(opt) {
 function levelStart(S) {
   const L = S.duell || S.angriff ? duellKarte(S.level) : levelHolen(S.level);
   Object.assign(S, { levelName: L.n, karte: basisVorbereiten(viertelZuKarte(L.v), S.duell, S.angriff), mapVoll: true, panzer: [], kugeln: [], effekte: [], bonus: null,
-    basisKaputt: false, basis2Kaputt: false, sieger: -1, bonusT: 420, schaufel: 0, schaufel2: 0, uhr: 0, liste: gegnerMix(S.level), gegnerIdx: 0, spawnT: 30, spawnOrt: 0,
+    basisKaputt: false, basis2Kaputt: false, basisHp: S.duell ? 1 : S.st.adler || 1, adlerMax: S.duell ? 1 : S.st.adler || 1, sieger: -1, bonusT: 420, schaufel: 0, schaufel2: 0, uhr: 0, liste: gegnerMix(S.level, S.st), gegnerIdx: 0, spawnT: 30, spawnOrt: 0,
     maxG: S.st.maxG + 1 + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
     phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false, boss: 0, bossWarn: 0, bossMax: 0 });
   S.md.length = 0; S.kv++;
@@ -730,7 +731,7 @@ function spielerSetzen(S, i) {
 function gegnerSetzen(S, x, y) {
   const typ = S.liste[S.gegnerIdx % 20], w = Math.random();
   // Angriff: ein Teil der Gegner bewacht die eigene Basis oben (fährt dort herum)
-  const ziel = S.angriff && w < 0.35 ? 'wache' : w < (S.angriff ? 0.7 : 0.5) ? 'basis' : 'spieler';
+  const ziel = S.angriff && w < 0.35 ? 'wache' : w < (S.angriff ? 0.35 : 0) + (S.st.basis ?? 0.5) * (S.angriff ? 0.7 : 1) ? 'basis' : 'spieler';
   S.panzer.push({ id: S.nid++, sp: -1, typ, x, y, r: 2, spawn: 50, schild: 0, starr: 0, sub: 0, anim: 0, animT: 0, feuerT: 30, kugeln: 0,
     hp: GEGNER[typ].hp, bonus: S.st.bonus.includes(S.gegnerIdx % 20), blockiert: 0, ziel });
   S.gegnerIdx++;
@@ -837,7 +838,8 @@ function gegnerZug(S, p) {
   }
   if (p.kugeln === 0 && p.feuerT === 0) {
     let w = 0.022 * S.st.feuer * (p.typ === 4 ? 1.6 : 1);
-    if (inLinie(S, p)) w *= 5;
+    const linie = inLinie(S, p);
+    if (linie) w *= linie === 'basis' ? (S.st.linie || 5) : 5;
     if (p.fest) w *= p.vor === 'ziegel' ? 6 : 2;
     if (Math.random() < w) {
       if (p.typ === 4) { schiessen(S, p, g.kugel * (S.st.kugel || 1), false, -7); schiessen(S, p, g.kugel * (S.st.kugel || 1), false, 7); S.ton.push('boss'); }
@@ -882,7 +884,7 @@ function inLinie(S, p) {
   const px = p.x + (GROESSE(p) - 16) / 2, py = p.y + (GROESSE(p) - 16) / 2, b = GROESSE(p) / 2;
   const vor = (x, y) => p.r === 0 ? Math.abs(x - px) < b && y < py : p.r === 2 ? Math.abs(x - px) < b && y > py
                       : p.r === 1 ? Math.abs(y - py) < b && x > px : Math.abs(y - py) < b && x < px;
-  if (vor(BX, BY)) return true;
+  if (vor(BX, BY)) return 'basis';
   return S.panzer.some(q => q.sp >= 0 && !q.tot && vor(q.x, q.y));
 }
 
@@ -928,7 +930,9 @@ function kugelTrifft(S, k) {
   // Adler?
   for (const [i, [bx, by]] of basen(S).entries()) if (ueber(x0, y0, 4, 4, bx, by, 16, 16)) {
     if (S.angriff && i === 1 && k.sp < 0) { knall(S, 'k', k.x, k.y); return kugelWeg(S, k); }   // eigene Basis trifft der Computer nicht
-    if (!basisHin(S, i)) basisWeg(S, i); else knall(S, 'k', k.x, k.y);
+    if (!i && !S.basisKaputt && S.basisHp > 1) {             // Normal: Der Adler hält mehr als einen Treffer aus
+      S.basisHp--; knall(S, 'g', bx + 8, by + 8); S.ton.push('panzerung');
+    } else if (!basisHin(S, i)) basisWeg(S, i); else knall(S, 'k', k.x, k.y);
     return kugelWeg(S, k);
   }
   // Panzer?
@@ -1168,6 +1172,7 @@ function spielMalen(V) {
   sg.save(); sg.translate(16, 8);
   karteMalen(V);
   sg.drawImage(kartenBild, 0, 0);
+  if (V.adlerMax > 1 && !V.basisKaputt) schreibe(sg, '♥'.repeat(V.basisHp), BX + 8, BY - 8, '#F83800', true);
   basen(V).forEach(([bx, by], i) => { sg.drawImage(basisHin(V, i) ? ADLER_KAPUTT : ADLER, bx, by); if (V.angriff && i === 1) { sg.fillStyle = 'rgba(255,40,30,0.4)'; sg.fillRect(bx, by, 16, 16); } });
   if (V.zeigeStart) for (const [x, y] of START_SP.concat(START_GEG)) { sg.globalAlpha = 0.35; sg.drawImage(FUNKEN[3], x, y); sg.globalAlpha = 1; }
   for (const p of V.panzer) {
@@ -2051,6 +2056,7 @@ function blockMalen(V) {
     c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(bx * GR + 9, by * GR + 15, 64, 64);
     c.drawImage(hin ? BASIS_KAPUTT_HD : BASIS_HD, bx * GR, by * GR);
     if (V.angriff && i === 1) { c.fillStyle = 'rgba(255,40,30,0.38)'; c.fillRect(bx * GR, by * GR, 64, 64); }   // Feind-Basis: rot
+    if (!i && !hin && V.adlerMax > 1) schrift(c, '♥'.repeat(V.basisHp), bx * GR + 32, by * GR - 34, 4, '#FF4A3A', true);   // Leben des Adlers
     if (!hin && modus === 'spiel') { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18 + 0.08 * Math.sin(HD.zeit * 0.08); c.drawImage(GLUT.gelb, bx * GR - 16, by * GR - 16, 96, 96); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; }
   }
   if (V.zeigeStart) for (const [x, y] of START_SP.concat(START_GEG)) { c.globalAlpha = 0.35; c.drawImage(GLUT.blau, x * GR, y * GR, 64, 64); c.globalAlpha = 1; }
@@ -2552,7 +2558,7 @@ const Netz = {
 
 // Was der Gastgeber 30× pro Sekunde schickt
 function zuAnsicht(S) {
-  const a = { k: 's', t: S.t, ph: S.phase, pt: S.pt, lv: S.level, ln: S.levelName, pa: S.pause ? 1 : 0, bk: S.basisKaputt ? 1 : 0, du: S.duell ? 1 : 0, an: S.angriff ? 1 : 0, b2: S.basis2Kaputt ? 1 : 0, sg: S.siege, si: S.sieger,
+  const a = { k: 's', t: S.t, ph: S.phase, pt: S.pt, lv: S.level, ln: S.levelName, pa: S.pause ? 1 : 0, bk: S.basisKaputt ? 1 : 0, du: S.duell ? 1 : 0, bh: S.basisHp, am: S.adlerMax || 1, an: S.angriff ? 1 : 0, b2: S.basis2Kaputt ? 1 : 0, sg: S.siege, si: S.sieger,
     uhr: S.uhr, gi: S.gegnerIdx, vb: S.vorbei ? 1 : 0, rek: rekord,
     P: S.panzer.map(p => [p.id, p.sp, p.typ, p.x, p.y, p.r, p.anim, p.spawn, p.schild > 0 ? 1 : 0, p.starr > 0 ? 1 : 0, p.hp, p.bonus ? 1 : 0, GROESSE(p), (p.turbo > 0 ? 1 : 0) + (p.doppel > 0 ? 2 : 0)]),
     BW: S.bossWarn || 0, BM: S.bossMax || 0, F: S.farben,
@@ -2629,7 +2635,7 @@ function ansichtLesen(a, vorher) {
   V.effekte = a.E.map(([art, x, y, t, w]) => ({ art, x, y, t, w }));
   V.bonus = a.B ? { art: a.B[0], x: a.B[1], y: a.B[2] } : null;
   V.sp = a.SP.map(s => ({ leben: s[0], punkte: s[1], lvl: s[2], aus: !!s[3], kills: s.slice(4, 8) }));
-  Object.assign(V, { t: a.t, phase: a.ph, pt: a.pt, level: a.lv, levelName: a.ln, pause: !!a.pa, basisKaputt: !!a.bk, duell: !!a.du, angriff: !!a.an, basis2Kaputt: !!a.b2, siege: a.sg, sieger: a.si, uhr: a.uhr,
+  Object.assign(V, { t: a.t, phase: a.ph, pt: a.pt, level: a.lv, levelName: a.ln, pause: !!a.pa, basisKaputt: !!a.bk, duell: !!a.du, basisHp: a.bh, adlerMax: a.am, angriff: !!a.an, basis2Kaputt: !!a.b2, siege: a.sg, sieger: a.si, uhr: a.uhr,
                      gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, bossWarn: a.BW, bossMax: a.BM, farben: a.F, empfangen: performance.now(), alpha: 0 });
 }
 

@@ -675,6 +675,10 @@ const D3 = {
     return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H];
   },
   texte(c, V, W, H) {
+    if (V.adlerMax > 1 && !V.basisKaputt) {                 // Leben des Adlers (Normal: 3 Treffer)
+      const [x, y] = this.aufBild(BX + 8, 12, BY - 4, W, H);
+      schrift(c, '♥'.repeat(V.basisHp || 0), x, y, 4, '#FF4A3A', true);
+    }
     for (const e of V.effekte) if (e.art === 'p' && e.t > 20) {
       const [x, y] = this.aufBild(e.x, 10 + (e.t - 20) * 0.08, e.y, W, H);
       schrift(c, e.w, x, y, 3, '#fff', true);
