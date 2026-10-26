@@ -176,7 +176,7 @@
       <p><b>Angriff 🎯</b> (allein oder zu zweit zusammen): Oben steht die Basis der Computer-Panzer. Zerstöre sie – dann ist das Level geschafft. Die Computer-Panzer kommen ohne Ende, ein Teil bewacht ihre Basis, der Rest greift deine Basis unten an.</p>
       <p><b>Duell ⚔️</b> (zu zweit gegeneinander): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
       <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
-      <p><b>Sterne ⭐:</b> bis zu 8. 1 = schnellere Kugeln, 2 = zwei Kugeln, 3 = Stahl kaputt, 4 = Panzerung (ein Treffer kostet nur einen Stern), 5 = schneller fahren. <b>Ränge:</b> 6 = Durchschuss (die Kugel fliegt durch einen Gegner hindurch und trifft auch den nächsten), 7 = Schutzschild (lädt sich alle 20 Sekunden auf und hält einen Treffer ab), 8 = Raketen (explodieren und reißen Mauern und Gegner ringsum weg), 9 = Helfer-Drohne (kleiner Panzer, der mitfährt und selbst schießt). Ab Rang 6 werden die Gegner etwas stärker. Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt.</p>
+      <p><b>Sterne ⭐:</b> bis zu 8. 1 = schnellere Kugeln, 2 = zwei Kugeln, 3 = Stahl kaputt, 4 = Panzerung (ein Treffer kostet nur einen Stern), 5 = schneller fahren. <b>Ränge:</b> 6 = Durchschuss (die Kugel fliegt durch einen Gegner hindurch und trifft auch den nächsten), 7 = Schutzschild (lädt sich alle 20 Sekunden auf und hält einen Treffer ab), 8 = Raketen (explodieren und reißen Mauern und Gegner ringsum weg), 9 = Helfer-Drohne (kleiner Panzer, der mitfährt und selbst schießt), 10 = Schwimmen (dein Panzer fährt über Wasser). Ab Rang 6 werden die Gegner etwas stärker. Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt.</p>
       <p><b>Normal:</b> Der Adler hält 2 Treffer aus (♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '6.1';
+const APP_VERSION = '6.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -407,6 +407,7 @@ const FORMEN = {
   s7: { k: [0, 2, 1, 17], r: [2, 3, 12, 12], t: [7.5, 9.0, 4.0], l: [5, 0, 6, 10], p: 1, m: [5, 0, 6, 2] },         // Rang 7: Schild
   s8: { k: [0, 2, 1, 17], r: [2, 3, 12, 12], t: [7.5, 9.0, 4.1], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },   // Rang 8: Raketen
   s9: { k: [0, 2, 1, 17], r: [2, 2, 12, 13], t: [7.5, 9.0, 4.3], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },   // Rang 9: Drohne
+  s10: { k: [0, 1, 1, 18], r: [2, 2, 12, 13], t: [7.5, 9.0, 4.4], l: [5, 0, 6, 10], p: 1, m: [4, 0, 8, 2], q: 1 },  // Rang 10: Schwimm-Panzer (breite Ketten)
   g0: { k: [1, 3, 3, 15], r: [4, 5, 8, 9], t: [7.5, 9.5, 2.5], l: [7, 1, 2, 7] },                         // Gegner: normal
   g1: { k: [2, 3, 1, 15], r: [5, 3, 6, 12], t: [7.5, 9.0, 2.2], l: [7, 0, 2, 6], n: 1 },                  // flink
   g2: { k: [1, 3, 3, 16], r: [4, 6, 8, 10], t: [7.5, 10.5, 2.6], l: [7, 0, 2, 10], q: 1 },                // Kanone
@@ -467,7 +468,7 @@ const ADLER_KAPUTT = ausText([
 const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer', 'turbo', 'doppel'];
 const BONUS_TEXT = {
   helm: 'Helm: 10 Sekunden unverwundbar', uhr: 'Uhr: alle Gegner frieren ein', schaufel: 'Schaufel: Stahlmauer um den Adler',
-  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 zwei Kugeln, 3 Stahl kaputt, 4 Panzerung (ein Treffer kostet nur einen Stern), 5 schneller fahren, 6 Durchschuss, 7 Schutzschild, 8 Raketen, 9 Helfer-Drohne', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
+  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 zwei Kugeln, 3 Stahl kaputt, 4 Panzerung (ein Treffer kostet nur einen Stern), 5 schneller fahren, 6 Durchschuss, 7 Schutzschild, 8 Raketen, 9 Helfer-Drohne, 10 über Wasser fahren', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
   turbo: 'Turbo: 15 Sekunden viel schneller fahren', doppel: 'Doppelschuss: 20 Sekunden zwei Kugeln auf einmal',
 };
 const BONUS_BILD = {
@@ -751,10 +752,10 @@ function setze(S, i, t) { if (S.karte[i] !== t) { S.karte[i] = t; S.md.push(i, t
 
 // Darf ein Panzer hier stehen? (Ziegel, Stahl, Wasser und der Adler sind im Weg)
 const GROESSE = p => p.gr || 16;                   // normale Panzer 16, der Boss 32
-function frei(S, x, y, gr = 16) {
+function frei(S, x, y, gr = 16, schwimmt = false) {
   if (x < 0 || y < 0 || x > FB - gr || y > FH - gr) return false;
   for (let r = y >> 2; r <= (y + gr - 1) >> 2; r++) for (let c = x >> 2; c <= (x + gr - 1) >> 2; c++) {
-    const t = S.karte[r * NX + c]; if (t === ZIEGEL || t === STAHL || t === WASSER) return false;
+    const t = S.karte[r * NX + c]; if (t === ZIEGEL || t === STAHL || (t === WASSER && !schwimmt)) return false;
   }
   return !ueber(x, y, gr, gr, BX, BY, 16, 16) && !((S.duell || S.angriff) && ueber(x, y, gr, gr, BX2, BY2, 16, 16));
 }
@@ -764,14 +765,17 @@ function imWeg(S, p, x, y) {
   for (const q of S.panzer) { const h = GROESSE(q); if (q !== p && !q.tot && ueber(x, y, g, g, q.x, q.y, h, h) && !ueber(p.x, p.y, g, g, q.x, q.y, h, h)) return true; }
   return false;
 }
+// Rang 10: Spieler-Panzer schwimmen. (Wer noch im Wasser steckt, nachdem er den Rang verloren hat, darf herausfahren.)
+const imWasser = (S, p) => { const g = GROESSE(p); for (let r = p.y >> 2; r <= (p.y + g - 1) >> 2; r++) for (let c = p.x >> 2; c <= (p.x + g - 1) >> 2; c++) if (S.karte[r * NX + c] === WASSER) return true; return false; };
+const schwimmt = (S, p) => p.sp >= 0 && !p.drohne && ((S.sp[p.sp] || {}).lvl >= 10 || imWasser(S, p));
 const aufEis = (S, p) => S.karte[((p.y + GROESSE(p) / 2) >> 2) * NX + ((p.x + GROESSE(p) / 2) >> 2)] === EIS;
 
 // Drehen: quer zur alten Richtung rastet der Panzer auf ein 8er-Gitter ein – so passt er leichter durch Lücken
 function drehen(S, p, r) {
   if (r === p.r) return;
   if ((r & 1) !== (p.r & 1)) {
-    if (p.r & 1) { const nx = Math.round(p.x / 8) * 8; if (frei(S, nx, p.y, GROESSE(p)) && !imWeg(S, p, nx, p.y)) p.x = nx; }
-    else { const ny = Math.round(p.y / 8) * 8; if (frei(S, p.x, ny, GROESSE(p)) && !imWeg(S, p, p.x, ny)) p.y = ny; }
+    if (p.r & 1) { const nx = Math.round(p.x / 8) * 8; if (frei(S, nx, p.y, GROESSE(p), schwimmt(S, p)) && !imWeg(S, p, nx, p.y)) p.x = nx; }
+    else { const ny = Math.round(p.y / 8) * 8; if (frei(S, p.x, ny, GROESSE(p), schwimmt(S, p)) && !imWeg(S, p, p.x, ny)) p.y = ny; }
   }
   p.r = r;
 }
@@ -782,7 +786,7 @@ function fahren(S, p, tempo) {
   while (p.sub >= 1) {
     p.sub -= 1;
     const nx = p.x + DX[p.r], ny = p.y + DY[p.r];
-    if (!frei(S, nx, ny, GROESSE(p)) || imWeg(S, p, nx, ny)) { p.sub = 0; return false; }
+    if (!frei(S, nx, ny, GROESSE(p), schwimmt(S, p)) || imWeg(S, p, nx, ny)) { p.sub = 0; return false; }
     p.x = nx; p.y = ny;
   }
   return true;
@@ -1071,8 +1075,8 @@ function rundeEnde(S, sieger) {
   S.ton.push('geschafft');
 }
 function spielVorbei(S) { S.phase = 'gameover'; S.pt = 0; S.ton.push('gameover'); }
-const MAX_STERNE = 9;
-const RANG_TEXT = { 6: 'DURCHSCHUSS!', 7: 'SCHILD!', 8: 'RAKETEN!', 9: 'DROHNE!' };
+const MAX_STERNE = 10;
+const RANG_TEXT = { 6: 'DURCHSCHUSS!', 7: 'SCHILD!', 8: 'RAKETEN!', 9: 'DROHNE!', 10: 'SCHWIMMEN!' };
 // Ab Rang 6 werden die Gegner etwas stärker – sonst ist man unbesiegbar (0 = normal, bis 0.32 bei Rang 9)
 const gegnerPlus = S => S.duell ? 0 : Math.max(0, Math.max(...S.sp.map(s => s.lvl || 0)) - 5) * 0.08;
 function spielerTreffer(S, p) {
@@ -2277,7 +2281,7 @@ function blockMalen(V) {
   seitenleisteHD(V);
   einblendungenHD(V, blink);
 }
-function panzerForm(V, p) { return p.drohne ? 's1' : p.sp >= 0 ? 's' + Math.min(9, (V.sp[p.sp] || {}).lvl || 0) : 'g' + Math.min(3, p.typ); }
+function panzerForm(V, p) { return p.drohne ? 's1' : p.sp >= 0 ? 's' + Math.min(10, (V.sp[p.sp] || {}).lvl || 0) : 'g' + Math.min(3, p.typ); }
 function panzerFarbe(V, p, blink) {
   if (p.sp >= 0) return (V.farben || ['p1', 'p2'])[p.sp] || 'p1';
   if (p.typ === 4) return 'boss';
@@ -2390,7 +2394,7 @@ function hudZeichnen(c, V, W, H, k) {
       schrift(c, (i + 1) + 'P', x + hoch + 2, ty, gr, spielerFarbe(i));
       schrift(c, '♥' + (s.aus ? '-' : Math.min(9, s.leben)), x + hoch + 6 + 13 * gr, ty, gr, '#fff');
       schrift(c, '★' + (s.lvl || 0), x + hoch + 10 + 26 * gr, ty, gr, '#FFD84A');
-      schrift(c, String(s.punkte), x + hoch + 14 + 42 * gr, ty, gr, '#D8C49A');
+      schrift(c, String(s.punkte), x + hoch + 14 + 44 * gr, ty, gr, '#D8C49A');
     };
     zeile(x1, 0);
     if (V.sp[1]) zeile(W - (rand.r + 10) * k - breit, 1);
