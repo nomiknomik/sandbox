@@ -521,8 +521,8 @@ const D3 = {
       if (p.turbo && dt > 0 && Math.random() < 0.6) this.teil('feuer', { x: x - DX[p.r] * 9, y: 2.5, z: z - DY[p.r] * 9, vx: -DX[p.r] * 0.5 + (Math.random() - 0.5) * 0.2, vz: -DY[p.r] * 0.5 + (Math.random() - 0.5) * 0.2, vy: 0.05, gr: 1.1, farbe: [255, 150, 40], l: 10, reib: 0.9 });
       const rk = this.rueck.get(p.id) || 0; o.oben.position.z = rk * 0.25;
       if (rk) this.rueck.set(p.id, Math.max(0, rk - dt));
-      o.schild.visible = !spawn && p.schild > 0;
-      if (o.schild.visible) { o.schild.position.set(x, 4, z); o.schild.rotation.set(this.zeit * 0.02, this.zeit * 0.035, 0); o.schild.material.opacity = 0.35 + 0.25 * Math.sin(this.zeit * 0.3); }
+      o.schild.visible = !spawn && (p.schild > 0 || !!p.schutz);   // Rang 7: bereitstehender Schild
+      if (o.schild.visible) { o.schild.position.set(x, 4, z); o.schild.rotation.set(this.zeit * 0.02, this.zeit * 0.035, 0); o.schild.material.opacity = (p.schild > 0 ? 1 : 0.45) * (0.35 + 0.25 * Math.sin(this.zeit * 0.3)); }
       o.eis.visible = !spawn && p.sp >= 0 && p.starr > 0; if (o.eis.visible) o.eis.position.set(x, 4.5, z);
       if (p.sp < 0 && p.bonus && farbe === 'rot') this.lampe(x, z, 800, '#ff3020', 2);
       this.scheinwerferSetzen(p, x, z);
