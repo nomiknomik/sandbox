@@ -176,7 +176,7 @@
       <p><b>Angriff 🎯</b> (allein oder zu zweit zusammen): Oben steht die Basis der Computer-Panzer. Zerstöre sie – dann ist das Level geschafft. Die Computer-Panzer kommen ohne Ende, ein Teil bewacht ihre Basis, der Rest greift deine Basis unten an.</p>
       <p><b>Duell ⚔️</b> (zu zweit gegeneinander): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
       <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
-      <p><b>Normal:</b> Der Adler hält 3 Treffer aus (♥♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
+      <p><b>Normal:</b> Der Adler hält 2 Treffer aus (♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
         <li><b>Touch:</b> Links irgendwo hinlegen und schieben = fahren. Rechts tippen/halten = schießen.</li>
@@ -279,7 +279,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.7';
+const APP_VERSION = '5.8';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -670,7 +670,7 @@ const STUFEN = {
   // mauer: so viele Bilder, bis an der Basis-Mauer ein Stückchen nachwächst (0 = nie)
   leicht: { leben: 5, tempo: 0.75, feuer: 0.5, ziel: 0.25, maxG: 2, pause: 70, kugel: 0.85, stahl: true, bonus: [1, 4, 8, 12, 16, 19], bossHp: 10, sterne: 0, mauer: 0 },
   // basis: Anteil der Gegner, die zum Adler wollen · linie: wie viel öfter sie schießen, wenn der Adler vor dem Rohr ist · mix: wie schnell starke Gegner dazukommen
-  normal: { leben: 3, tempo: 0.8, feuer: 0.6, ziel: 0.3, maxG: 3, pause: 40, kugel: 0.9, bonus: [3, 8, 13, 17], sterne: 1, mauer: 25, basis: 0.3, linie: 2, mix: 0.7, adler: 3 },   // adler: so viele Treffer hält der eigene Adler
+  normal: { leben: 3, tempo: 0.8, feuer: 0.6, ziel: 0.3, maxG: 3, pause: 40, kugel: 0.9, bonus: [3, 8, 13, 17], sterne: 1, mauer: 25, basis: 0.3, linie: 2, mix: 0.7, adler: 2 },   // adler: so viele Treffer hält der eigene Adler
   schwer: { leben: 2, tempo: 1.2, feuer: 1.5, ziel: 0.6, maxG: 5, pause: -40, bonus: [3, 10, 17], bossHp: 20, sterne: 99, mauer: 0 },
 };
 // Gegner-Arten: normal, flink, Kanone, schwer gepanzert
