@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '6.3';
+const APP_VERSION = '6.4';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -729,6 +729,8 @@ function levelStart(S) {
     spielerSetzen(S, i);
   });
   S.ton.push('start');
+  // Start-Level im Menü immer auf das zuletzt erreichte Level setzen (nicht erst bei Game Over)
+  if (!S.opt.demo && !S.duell && !S.angriff && S.level <= alleLevel().length && einst.level !== S.level) { einst.level = S.level; einstSpeichern(); }
   if (!S.opt.demo && !S.duell && !S.angriff) speicher.schreib('weit', Math.max(speicher.lies('weit', 1), S.level));
 }
 const startPlatz = (S, i) => S.duell ? START_DUELL[i] : START_SP[i];
