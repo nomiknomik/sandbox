@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.9';
+const APP_VERSION = '5.10';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -3177,6 +3177,10 @@ function spielSichern() {
 function spielLaden() {
   const k = speicher.lies('stand', null); if (!k || !k.karte || k.karte.length !== NX * NY) { speicher.schreib('stand', null); return false; }
   S = { ...k, karte: Uint8Array.from(k.karte, c => +c), kartenId: Math.random(), kv: (k.kv || 0) + 1, pause: true };
+  // Gespeichert mit einer älteren Version? Dann gelten trotzdem die neuen Regeln der Schwierigkeit
+  if (STUFEN[S.opt.stufe]) S.st = STUFEN[S.opt.stufe];
+  if (S.adlerMax == null) S.basisHp = S.adlerMax = S.duell ? 1 : S.st.adler || 1;
+  if (!S.duell) S.liste = gegnerMix(S.level, S.st);
   rolle = 'lokal'; modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
   return true;
 }
