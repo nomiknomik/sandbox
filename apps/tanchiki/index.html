@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '5.10';
+const APP_VERSION = '5.11';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1074,6 +1074,7 @@ function bonusNehmen(S, p) {
 /* ---------- Ein Spiel-Schritt (60 mal pro Sekunde) ---------- */
 const DAUER = { k: 12, g: 25, p: 70 };
 function schritt(S, ein) {
+  if (S.pause && S.phase === 'bilanz') S.pause = false;    // in der Bilanz gibt es keine Pause (sonst hängt sie nach dem Laden fest)
   if (S.pause) return;
   S.t++; S.pt++;
   for (const e of S.effekte) e.t++;
@@ -3176,7 +3177,7 @@ function spielSichern() {
 }
 function spielLaden() {
   const k = speicher.lies('stand', null); if (!k || !k.karte || k.karte.length !== NX * NY) { speicher.schreib('stand', null); return false; }
-  S = { ...k, karte: Uint8Array.from(k.karte, c => +c), kartenId: Math.random(), kv: (k.kv || 0) + 1, pause: true };
+  S = { ...k, karte: Uint8Array.from(k.karte, c => +c), kartenId: Math.random(), kv: (k.kv || 0) + 1, pause: k.phase !== 'bilanz' };
   // Gespeichert mit einer älteren Version? Dann gelten trotzdem die neuen Regeln der Schwierigkeit
   if (STUFEN[S.opt.stufe]) S.st = STUFEN[S.opt.stufe];
   if (S.adlerMax == null) S.basisHp = S.adlerMax = S.duell ? 1 : S.st.adler || 1;
