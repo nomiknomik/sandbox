@@ -617,7 +617,7 @@ const D3 = {
     const nacht = nachtLevel(V.level);
     if (nacht !== this.nacht) {
       this.nacht = nacht;
-      this.himmel.intensity = nacht ? 0.4 : 1.45; this.sonne.intensity = nacht ? 0.44 : 2.1;   // Nacht: etwas heller als früher
+      this.himmel.intensity = nacht ? 0.46 : 1.45; this.sonne.intensity = nacht ? 0.5 : 2.1;   // Nacht: etwas heller als früher
       this.sonne.color.set(nacht ? '#7f9cff' : '#fff1d6'); this.szene.background.set(nacht ? '#05070d' : '#151923');
       for (const s of this.scheinwerfer) { this.szene.remove(s, s.target); }
       this.scheinwerfer = [];

@@ -176,7 +176,7 @@
       <p><b>Angriff 🎯</b> (allein oder zu zweit zusammen): Oben steht die Basis der Computer-Panzer. Zerstöre sie – dann ist das Level geschafft. Die Computer-Panzer kommen ohne Ende, ein Teil bewacht ihre Basis, der Rest greift deine Basis unten an.</p>
       <p><b>Duell ⚔️</b> (zu zweit gegeneinander): Jeder hat eine eigene Basis – Spieler 1 unten, Spieler 2 oben. Triff die Basis des anderen oder schieß alle 3 Panzer des anderen ab, dann gewinnst du die Runde. Wer zuerst 3 Runden gewinnt, ist Sieger. Extras: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt deine Basis.</p>
       <p><b>Leicht 🛡</b> ist fürs Kind: Der Adler steht hinter Stahl (Gegner kommen nicht durch), Gegner sind langsamer, schießen seltener, 5 Leben, Sterne bleiben auch nach einem Treffer.</p>
-      <p><b>Sterne ⭐:</b> bis zu 8. 1 = schnellere Kugeln, 2 = zwei Kugeln, 3 = Stahl kaputt, 4 = Panzerung (ein Treffer kostet nur einen Stern), 5 = schneller fahren. <b>Ränge:</b> 6 = Durchschuss (die Kugel fliegt durch einen Gegner hindurch und trifft auch den nächsten), 7 = Schutzschild (lädt sich alle 20 Sekunden auf und hält einen Treffer ab), 8 = Raketen (explodieren und reißen Mauern und Gegner ringsum weg), 9 = Helfer-Drohne (kleiner Panzer, der mitfährt und selbst schießt), 10 = Schwimmen (dein Panzer fährt über Wasser). Ab Rang 6 werden die Gegner etwas stärker. <b>Lila Gegner</b> sind gestärkt (Schild, schneller, dicker gepanzert oder schärfere Kugeln) – das passiert selten von selbst oder wenn ein Gegner ein Extra schnappt, das länger als 5 Sekunden herumliegt. Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt.</p>
+      <p><b>Sterne ⭐ – Ränge nach Kampfkraft:</b> 1 schnellere Kugeln, 2 schneller schießen, 3 zwei Kugeln, 4 Stahl kaputt, 5 Panzerung (ein Treffer kostet Sterne statt Panzer), 6 Doppelschuss, 7 schneller fahren, 8 Schutzschild (lädt sich alle 20 Sekunden auf), 9 Dreischuss, 10 Schwimmen über Wasser. Danach sammeln sich bis zu 5 <b>Reserve-Sterne</b> – sie gehen bei Treffern zuerst weg. Ab Rang 8 kostet ein Treffer zwei Sterne. Alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt. <b>Raketen</b> und <b>Drohne</b> sind Extras für kurze Zeit. Ab Rang 6 werden die Gegner etwas stärker. <b>Lila Gegner</b> sind gestärkt (Schild, schneller, dicker gepanzert oder schärfere Kugeln) – das passiert selten von selbst oder wenn ein Gegner ein Extra schnappt, das länger als 5 Sekunden herumliegt.</p>
       <p><b>Normal:</b> Der Adler hält 2 Treffer aus (♥♥ über ihm), die Mauer um ihn wächst nach, und weniger Gegner greifen ihn an. Wirst du getroffen, verlierst du nur einen Stern. <b>Schwer:</b> wie früher – alle Sterne weg.</p></div>
     <div class="karte"><h3>Steuerung</h3>
       <ul>
@@ -280,7 +280,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '7.0';
+const APP_VERSION = '7.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -465,11 +465,12 @@ const ADLER_KAPUTT = ausText([
   '..dww.ww.wwdd...', '.dddwwddwwwddd..', '...dddddddddd...', '..dddddddddddd..'], { w: '#8C8C8C', l: '#BCBCBC', d: '#4C4C4C' });
 
 // --- Extras (Bonus) ---
-const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer', 'turbo', 'doppel'];
+const BONUS_ARTEN = ['helm', 'uhr', 'schaufel', 'stern', 'granate', 'panzer', 'turbo', 'doppel', 'rakete', 'drohne'];
 const BONUS_TEXT = {
   helm: 'Helm: 10 Sekunden unverwundbar', uhr: 'Uhr: alle Gegner frieren ein', schaufel: 'Schaufel: Stahlmauer um den Adler',
-  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 zwei Kugeln, 3 Stahl kaputt, 4 Panzerung (ein Treffer kostet nur einen Stern), 5 schneller fahren, 6 Durchschuss, 7 Schutzschild, 8 Raketen, 9 Helfer-Drohne, 10 über Wasser fahren', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
-  turbo: 'Turbo: 15 Sekunden viel schneller fahren', doppel: 'Doppelschuss: 20 Sekunden zwei Kugeln auf einmal',
+  stern: 'Stern: stärkerer Panzer – 1 schnellere Kugeln, 2 schneller schießen, 3 zwei Kugeln, 4 Stahl kaputt, 5 Panzerung, 6 Doppelschuss, 7 schneller fahren, 8 Schutzschild, 9 Dreischuss, 10 über Wasser fahren; danach bis zu 5 Reserve-Sterne', granate: 'Granate: alle Gegner auf dem Feld explodieren', panzer: 'Panzer: ein Leben mehr',
+  turbo: 'Turbo: 15 Sekunden viel schneller fahren', doppel: 'Doppelschuss: 20 Sekunden zwei Kugeln auf einmal (mit Rang 6 sogar drei)',
+  rakete: 'Raketen: 15 Sekunden explodieren deine Schüsse', drohne: 'Drohne: 30 Sekunden fährt ein kleiner Helfer-Panzer mit',
 };
 const BONUS_BILD = {
   helm: ['............', '....yyyy....', '..yyyyyyyy..', '.yyywwyyyyy.', '.yywwyyyyyy.', 'yyywyyyyyyyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', 'dddddddddddd', 'yyy......yyy', '............'],
@@ -479,9 +480,11 @@ const BONUS_BILD = {
   granate: ['.....ggg....', '....g..dd...', '.....dddd...', '...GGGGGG...', '..GGhGGhGG..', '..GGGGGGGG..', '..GhGGhGGG..', '..GGGGGGGG..', '..GGhGGhGG..', '..GGGGGGGG..', '...GGGGGG...'],
   turbo: ['.....yyyy...', '....yyyy....', '...yyyy.....', '..yyyy......', '.yyyyyyyyy..', '.yyyyyyyyy..', '......yyyy..', '.....yyyy...', '....yyyy....', '...yyy......', '..yy........'],
   doppel: ['..ww....ww..', '.wwww..wwww.', '.wwww..wwww.', '.oooo..oooo.', '.oooo..oooo.', '.oooo..oooo.', '.oooo..oooo.', '.dddd..dddd.', '.dddd..dddd.', '............'],
+  rakete: ['.....ww.....', '....wrrw....', '....wrrw....', '....wwww....', '....wggw....', '....wggw....', '....wggw....', '...wwggww...', '..wrwggwrw..', '..rr.oo.rr..', '.....oo.....', '.....y......'],
+  drohne: ['..gggggggg..', '.....gg.....', '...wwwwww...', '..wggggggw..', '.wgddggddgw.', '.wggggggggw.', '.wgggwwgggw.', '..wggggggw..', '...wwwwww...', '............'],
   panzer: ['.....ww.....', '.....ww.....', '.....ww.....', '.ww.wwww.ww.', '.wwwwyywwww.', '.ww.wyyw.ww.', '.wwwwyywwww.', '.ww.wwww.ww.', '.wwwwwwwwww.', '.ww......ww.'],
 };
-const BONUS_FARBEN = { o: '#F08020', y: '#F8D030', w: '#FCFCFC', d: '#404040', g: '#9C9C9C', b: '#8C5020', G: '#2C7C2C', h: '#6CC86C' };
+const BONUS_FARBEN = { r: '#E83820', o: '#F08020', y: '#F8D030', w: '#FCFCFC', d: '#404040', g: '#9C9C9C', b: '#8C5020', G: '#2C7C2C', h: '#6CC86C' };
 const bonusBilder = {};
 for (const art of BONUS_ARTEN) {
   const c = leinwand(16, 16), g = c.getContext('2d');
@@ -867,7 +870,8 @@ function schiessen(S, p, v, kraft, versatz = 0) {
 function spielerZug(S, p, e) {
   if (p.starr > 0) { p.starr--; return; }
   if (S.phase !== 'spiel' || !e) e = { r: -1, f: false };
-  const sp = S.sp[p.sp], tempo = SP_TEMPO * (p.turbo > 0 ? 1.6 : 1) * (sp.lvl >= 5 ? 1.2 : 1);   // 5 Sterne: schneller
+  const sp = S.sp[p.sp], tempo = SP_TEMPO * (p.turbo > 0 ? 1.6 : 1) * (sp.lvl >= 7 ? 1.2 : 1);   // Rang 7: schneller fahren
+  if (p.rakete > 0) p.rakete--;
   if (p.turbo > 0) p.turbo--;
   if (p.doppel > 0) p.doppel--;
   if (e.r >= 0) {
@@ -877,19 +881,21 @@ function spielerZug(S, p, e) {
   } else if (p.rutsch > 0) {                               // auf dem Eis rutscht man noch ein Stück weiter
     p.rutsch--; if (!fahren(S, p, tempo) || !aufEis(S, p)) p.rutsch = 0;
   }
-  const max = (sp.lvl >= 2 ? 2 : 1) * (p.doppel > 0 ? 2 : 1), v = sp.lvl >= 1 ? 4.5 : 3;
+  // Kugeln nebeneinander: Rang 6 (oder Extra) Doppelschuss, Rang 9 Dreischuss; Rang 6 + Extra = drei
+  const reihe = sp.lvl >= 9 || (sp.lvl >= 6 && p.doppel > 0) ? [-7, 0, 7] : sp.lvl >= 6 || p.doppel > 0 ? [-4, 4] : [0];
+  const max = (sp.lvl >= 3 ? 2 : 1) * reihe.length, v = sp.lvl >= 1 ? 4.5 : 3;
   if (e.f && p.feuerT === 0 && p.kugeln < max) {
     const vorher = S.kid;
-    if (p.doppel > 0) { schiessen(S, p, v, sp.lvl >= 3, -4); schiessen(S, p, v, sp.lvl >= 3, 4); }   // Doppelschuss: zwei Kugeln nebeneinander
-    else schiessen(S, p, v, sp.lvl >= 3);
-    for (const k of S.kugeln) if (k.id >= vorher) { if (sp.lvl >= 8) k.rk = 1; else if (sp.lvl >= 6) k.durch = 1; }   // Rang 8: Raketen, Rang 6: Durchschuss
+    for (const versatz of reihe) schiessen(S, p, v, sp.lvl >= 4, versatz);          // Rang 4: Stahl kaputt
+    if (sp.lvl >= 2) p.feuerT = 6;                                                   // Rang 2: schneller schießen
+    if (p.rakete > 0) for (const k of S.kugeln) if (k.id >= vorher) k.rk = 1;      // Extra: Raketen
   }
-  // Rang 7: Schutzschild lädt sich alle 20 Sekunden von selbst auf
-  if (sp.lvl >= 7 && !p.schutz && (p.schutzT = (p.schutzT || 0) + 1) >= 1200) { p.schutz = true; p.schutzT = 0; }
+  // Rang 8: Schutzschild lädt sich alle 20 Sekunden von selbst auf
+  if (sp.lvl >= 8 && !p.schutz && (p.schutzT = (p.schutzT || 0) + 1) >= 1200) { p.schutz = true; p.schutzT = 0; }
   if (S.bonus && ueber(p.x, p.y, 16, 16, S.bonus.x, S.bonus.y, 16, 16)) bonusNehmen(S, p);
 }
 
-/* ---------- Rang 9: Helfer-Drohne – ein kleiner Panzer, der mitfährt und selbst schießt ---------- */
+/* ---------- Extra „Drohne“: Helfer – ein kleiner Panzer, der mitfährt und selbst schießt ---------- */
 const eigeneBasis = (S, i) => basen(S)[S.duell ? i : 0];
 function feindeVon(S, i) { return S.panzer.filter(q => !q.tot && q.spawn === 0 && (S.duell ? q.sp >= 0 && q.sp !== i : q.sp < 0)); }
 function vorRohr(p, x, y) {                              // Liegt der Punkt (Panzer-Ecke) genau vor dem Rohr?
@@ -908,7 +914,7 @@ function drohneSetzen(S, i) {
 }
 function drohneZug(S, p) {
   const sp = S.sp[p.sp];
-  if (sp.lvl < 9) { p.tot = true; knall(S, 'k', p.x + 6, p.y + 6); return; }      // Rang verloren: Drohne fliegt weg
+  if (!(sp.drohneZeit > 0)) { p.tot = true; knall(S, 'k', p.x + 6, p.y + 6); return; }   // Zeit um: Drohne fliegt weg
   if (p.starr > 0) { p.starr--; return; }
   if (S.phase !== 'spiel') return;
   const chef = S.panzer.find(q => q.sp === p.sp && !q.drohne && !q.tot);
@@ -1072,9 +1078,7 @@ function kugelTrifft(S, k) {
   for (const p of S.panzer) {
     if (p.tot || p.id === k.von || p.spawn > 0 || !ueber(x0, y0, 4, 4, p.x, p.y, GROESSE(p), GROESSE(p))) continue;
     if (k.sp < 0 && p.sp < 0) continue;              // Gegner schießen sich nicht gegenseitig ab
-    if (p.id === k.durchId) continue;                // gerade durchgeflogen
     if (p.sp < 0 && p.schild > 0 && k.sp >= 0) { kugelWeg(S, k); knall(S, 'k', k.x, k.y); S.ton.push('stahl'); return; }   // Gegner mit Schild hält ab
-    if (k.durch && p.sp < 0) { k.durch = 0; k.durchId = p.id; return gegnerTreffer(S, p, k.sp); }   // Rang 6: Kugel fliegt weiter
     kugelWeg(S, k);
     if (p.sp >= 0 && k.sp === p.sp) return;                // eigene Drohne/eigener Panzer: nichts passiert
     if (p.sp >= 0 && k.sp >= 0 && S.duell) {                 // Duell: Gegner getroffen!
@@ -1086,7 +1090,7 @@ function kugelTrifft(S, k) {
     return gegnerTreffer(S, p, k.sp);
   }
 }
-// Rang 8: Rakete explodiert – Mauern ringsum weg, Feinde in der Nähe getroffen (die eigene Basis bleibt heil)
+// Extra „Raketen“: Rakete explodiert – Mauern ringsum weg, Feinde in der Nähe getroffen (die eigene Basis bleibt heil)
 function rakete(S, k) {
   const R = 13, eigen = S.duell ? k.sp : 0, schutz = new Set();
   ringZellen((x, y) => schutz.add(y * NX + x), eigen);
@@ -1142,22 +1146,36 @@ function rundeEnde(S, sieger) {
   S.ton.push('geschafft');
 }
 function spielVorbei(S) { S.phase = 'gameover'; S.pt = 0; S.ton.push('gameover'); }
-const MAX_STERNE = 10;
-const RANG_TEXT = { 6: 'DURCHSCHUSS!', 7: 'SCHILD!', 8: 'RAKETEN!', 9: 'DROHNE!', 10: 'SCHWIMMEN!' };
+const MAX_STERNE = 10, MAX_RESERVE = 5;
+const RANG_TEXT = { 2: 'SCHNELLFEUER!', 5: 'PANZERUNG!', 6: 'DOPPELSCHUSS!', 7: 'TURBO!', 8: 'SCHILD!', 9: 'DREISCHUSS!', 10: 'SCHWIMMEN!' };
+// Ein Stern dazu: erst Ränge bis 10, danach in die Reserve (fängt spätere Verluste ab)
+function sternPlus(S, sp, x, y) {
+  let text = '+★';
+  if (sp.lvl < MAX_STERNE) { sp.lvl++; text = RANG_TEXT[sp.lvl] || text; }
+  else if ((sp.reserve || 0) < MAX_RESERVE) { sp.reserve = (sp.reserve || 0) + 1; text = '+★ RESERVE'; }
+  else return false;
+  S.effekte.push({ art: 'p', x, y, t: 0, w: text }); S.ton.push('nehmen');
+  return true;
+}
+// Sterne verlieren: zuerst aus der Reserve
+function sterneWeg(sp, n) {
+  if (n >= 99) { sp.lvl = 0; sp.reserve = 0; return; }
+  for (let i = 0; i < n; i++) { if (sp.reserve > 0) sp.reserve--; else sp.lvl = Math.max(0, sp.lvl - 1); }
+}
 // Ab Rang 6 werden die Gegner etwas stärker – sonst ist man unbesiegbar (0 = normal, bis 0.32 bei Rang 9)
 const gegnerPlus = S => S.duell ? 0 : Math.max(0, Math.max(...S.sp.map(s => s.lvl || 0)) - 5) * 0.08;
 function spielerTreffer(S, p) {
   if (p.tot) return;                                       // schon weg (z. B. Rakete + Treffer gleichzeitig)
   const s0 = S.sp[p.sp];
-  if (p.drohne) { p.tot = true; knall(S, 'g', p.x + 6, p.y + 6); S.ton.push('explosion'); s0.drohneT = 900; return; }   // neue Drohne in 15 s
-  if (p.schutz) { p.schutz = false; p.schutzT = 0; p.schild = 60; knall(S, 'k', p.x + 8, p.y + 8); S.ton.push('panzerung'); return; }   // Rang 7: Schild fängt ab
-  if (s0.lvl >= 4) {                                       // Panzerung (4+ Sterne): Treffer kostet nur einen Stern
-    s0.lvl--; s0.serie = 0; p.schild = 90; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('panzerung');
+  if (p.drohne) { p.tot = true; knall(S, 'g', p.x + 6, p.y + 6); S.ton.push('explosion'); s0.drohneZeit = 0; return; }
+  if (p.schutz) { p.schutz = false; p.schutzT = 0; p.schild = 60; knall(S, 'k', p.x + 8, p.y + 8); S.ton.push('panzerung'); return; }   // Rang 8: Schild fängt ab
+  if (s0.lvl >= 5) {                                       // Rang 5 Panzerung: Treffer kostet Sterne statt Panzer (ab Rang 8 zwei)
+    sterneWeg(s0, s0.lvl >= 8 ? 2 : 1); s0.serie = 0; p.schild = 90; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('panzerung');
     return;
   }
   s0.serie = 0;                                            // Abschuss-Serie ist vorbei
   p.tot = true; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('explosion');
-  const sp = S.sp[p.sp]; sp.lvl = Math.max(0, sp.lvl - (S.st.sterne ?? 99));   // Leicht: Sterne bleiben, Normal: einer weg, Schwer: alle weg
+  const sp = S.sp[p.sp]; sterneWeg(sp, S.st.sterne ?? 99);  // Leicht: Sterne bleiben, Normal: einer weg, Schwer: alle weg
   if (sp.leben > 0) { sp.leben--; sp.warte = 70; }
   else { sp.aus = true; if (S.duell) rundeEnde(S, 1 - p.sp); else if (S.sp.every(s => s.aus) && S.phase === 'spiel') spielVorbei(S); }
 }
@@ -1174,8 +1192,7 @@ function gegnerTreffer(S, p, von, schaden = 1) {
     const pkt = GEGNER[p.typ].pkt, sp = S.sp[von]; punkte(S, von, pkt); if (p.typ < 4) sp.kills[p.typ]++;
     // Serie: alle 8 Abschüsse ohne getroffen zu werden gibt es einen Stern geschenkt
     sp.serie = (sp.serie || 0) + 1;
-    if (sp.serie % 8 === 0 && sp.lvl < MAX_STERNE) { sp.lvl++; S.ton.push('nehmen'); S.effekte.push({ art: 'p', x: p.x + m, y: p.y + m, t: 0, w: RANG_TEXT[sp.lvl] || '+★' }); }
-    else S.effekte.push({ art: 'p', x: p.x + m, y: p.y + m, t: 0, w: pkt });
+    if (!(sp.serie % 8 === 0 && sternPlus(S, sp, p.x + m, p.y + m))) S.effekte.push({ art: 'p', x: p.x + m, y: p.y + m, t: 0, w: pkt });
   }
 }
 // Der Boss kommt, wenn alle 20 Gegner weg sind: oben in der Mitte, er rammt die Mauern dort weg
@@ -1222,7 +1239,9 @@ function bonusNehmen(S, p) {
   }
   if (art === 'uhr') S.uhr = 600;
   if (art === 'schaufel') { S.schaufel = 1200; ring(S, STAHL); }
-  if (art === 'stern') { sp.lvl = Math.min(MAX_STERNE, sp.lvl + 1); if (RANG_TEXT[sp.lvl]) S.effekte.push({ art: 'p', x: p.x + 8, y: p.y - 4, t: 0, w: RANG_TEXT[sp.lvl] }); }
+  if (art === 'stern') sternPlus(S, sp, p.x + 8, p.y - 4);
+  if (art === 'rakete') p.rakete = 900;        // 15 s Raketen
+  if (art === 'drohne') { sp.drohneZeit = 1800; sp.drohneDa = false; }   // 30 s Helfer-Drohne
   if (art === 'panzer') sp.leben++;
   if (art === 'turbo') p.turbo = 900;          // 15 s schneller fahren
   if (art === 'doppel') p.doppel = 1200;       // 20 s Doppelschuss
@@ -1276,10 +1295,11 @@ function schritt(S, ein) {
       }
       if (S.spawnT <= 0) S.spawnT = 20;
     }
-    // Rang 9: Helfer-Drohne (kommt nach einem Abschuss nach 15 s wieder)
+    // Extra „Drohne“: 30 Sekunden ein Helfer-Panzer (abgeschossen = weg)
     S.sp.forEach((sp, i) => {
-      if (sp.drohneT > 0) sp.drohneT--;
-      else if (sp.lvl >= 9 && S.t % 30 === 0 && !S.panzer.some(q => q.drohne && q.sp === i && !q.tot)) drohneSetzen(S, i);
+      if (!(sp.drohneZeit > 0)) return;
+      sp.drohneZeit--;
+      if (!sp.drohneDa && S.t % 10 === 0 && !S.panzer.some(q => q.drohne && q.sp === i && !q.tot)) { drohneSetzen(S, i); sp.drohneDa = S.panzer.some(q => q.drohne && q.sp === i); }
     });
     // Spieler kommen nach einem Treffer wieder
     S.sp.forEach((sp, i) => {
@@ -2323,7 +2343,7 @@ function blockMalen(V) {
   if (nachtLevel(V.level) && !HD.sparen) {
     const n = lichtG;
     n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, FRB, FRH);
-    n.fillStyle = 'rgba(3,5,22,0.76)'; n.fillRect(0, 0, FRB, FRH);
+    n.fillStyle = 'rgba(3,5,22,0.68)'; n.fillRect(0, 0, FRB, FRH);
     n.globalCompositeOperation = 'destination-out';
     const loch = (x, y, r, a = 1) => { n.globalAlpha = a; n.drawImage(GLUT.weiss, x - r, y - r, r * 2, r * 2); };
     for (const { p, x, y } of liste) {
@@ -2436,7 +2456,7 @@ function hudZeichnen(c, V, W, H, k) {
       c.drawImage(panzerHD('s' + (s.lvl || 0), farben[i] || 'p1', 0, 0).bild, x + 6, y + 6, 46, 46);
       schrift(c, (i + 1) + 'P', x + 58, y + 10, 3, spielerFarbe(i));
       schrift(c, '♥' + (s.aus ? '-' : Math.min(9, s.leben)), x + 58, y + 36, 3, '#fff');
-      schrift(c, '★' + (s.lvl || 0), x + 118, y + 36, 3, '#FFD84A');
+      schrift(c, '★' + ((s.lvl || 0) + (s.reserve || 0)), x + 118, y + 36, 3, '#FFD84A');
       schrift(c, String(s.punkte).padStart(6, '0'), x + 10, y + 66, 3, '#D8C49A');
     };
     const xl = (rand.l + 8) * k, xr = W - (rand.r + 8) * k - sp;
@@ -2465,7 +2485,7 @@ function hudZeichnen(c, V, W, H, k) {
       const ty = y + (hoch - 7 * gr) / 2;
       schrift(c, (i + 1) + 'P', x + hoch + 2, ty, gr, spielerFarbe(i));
       schrift(c, '♥' + (s.aus ? '-' : Math.min(9, s.leben)), x + hoch + 6 + 13 * gr, ty, gr, '#fff');
-      schrift(c, '★' + (s.lvl || 0), x + hoch + 10 + 26 * gr, ty, gr, '#FFD84A');
+      schrift(c, '★' + ((s.lvl || 0) + (s.reserve || 0)), x + hoch + 10 + 26 * gr, ty, gr, '#FFD84A');
       schrift(c, String(s.punkte), x + hoch + 14 + 44 * gr, ty, gr, '#D8C49A');
     };
     zeile(x1, 0);
@@ -2758,7 +2778,7 @@ function zuAnsicht(S) {
     K: S.kugeln.map(k => [k.id, Math.round(k.x), Math.round(k.y), k.r]),
     E: S.effekte.map(e => [e.art, Math.round(e.x), Math.round(e.y), e.t, e.w || 0]),
     B: S.bonus ? [S.bonus.art, S.bonus.x, S.bonus.y] : 0,
-    SP: S.sp.map(s => [s.leben, s.punkte, s.lvl, s.aus ? 1 : 0, ...s.kills]),
+    SP: S.sp.map(s => [s.leben, s.punkte, s.lvl, s.aus ? 1 : 0, ...s.kills, s.reserve || 0]),
     ack: fernSeq };
   return a;
 }
@@ -2827,7 +2847,7 @@ function ansichtLesen(a, vorher) {
   V.kugeln = a.K.map(([id, x, y, r]) => { const o = altK.get(id); return { id, x, y, r, x0: o ? o[1] : x, y0: o ? o[2] : y }; });
   V.effekte = a.E.map(([art, x, y, t, w]) => ({ art, x, y, t, w }));
   V.bonus = a.B ? { art: a.B[0], x: a.B[1], y: a.B[2] } : null;
-  V.sp = a.SP.map(s => ({ leben: s[0], punkte: s[1], lvl: s[2], aus: !!s[3], kills: s.slice(4, 8) }));
+  V.sp = a.SP.map(s => ({ leben: s[0], punkte: s[1], lvl: s[2], aus: !!s[3], kills: s.slice(4, 8), reserve: s[8] || 0 }));
   Object.assign(V, { t: a.t, phase: a.ph, pt: a.pt, level: a.lv, levelName: a.ln, pause: !!a.pa, basisKaputt: !!a.bk, duell: !!a.du, basisHp: a.bh, adlerMax: a.am, angriff: !!a.an, basis2Kaputt: !!a.b2, siege: a.sg, sieger: a.si, uhr: a.uhr,
                      gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, bossWarn: a.BW, bossMax: a.BM, farben: a.F, empfangen: performance.now(), alpha: 0 });
 }
