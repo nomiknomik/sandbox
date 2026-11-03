@@ -117,3 +117,17 @@ lernt man, wie zwei Geräte miteinander reden.
 - Spielart „Angriff 🎯“ (allein oder zu zweit zusammen, auch über zwei Geräte):
   oben steht die rote Computer-Basis, die zerstört werden muss; die eigene unten schützen.
 - Computer-Panzer kommen ohne Ende; etwa ein Drittel bewacht die eigene Basis.
+
+## Umgesetzt in Stadtbaron (v1.0) – Brettspiel mit Straßen und Häusern
+- 2–6 Spieler, jeder Mensch 👤 oder Computer 🤖. Ein Gerät (abwechselnd) **oder** mehrere Geräte.
+- Gleiche Technik wie Морской бой: verschlüsselte Datei `stadtbaron/aktuell.json` im privaten
+  Repo (AES-GCM), gleiche Einladung `MB1~…`. Ein schon eingerichtetes Gerät (mb/wu/tk) ist sofort bereit.
+  „📶 Ohne Internet“ über `lokal.js` (QR-Tausch), wie in Würmer/Морской бой.
+- Die Spielregeln stecken in **einer** Funktion `anwenden(stand, aktion)`. Das Gerät, dessen Spieler
+  dran ist, rechnet die Aktion aus und schreibt den neuen Stand; die anderen fragen alle 2 s nach
+  und spielen Würfel/Laufen/Karten aus der Liste `ablauf` nach. Computer-Spieler rechnet der Gastgeber.
+  Lernthema: *Ein Zug = eine Nachricht.* Ob ein Knopf erlaubt ist, prüft die App, indem sie die
+  Aktion „zur Probe“ auf einer Kopie ausführt.
+- Lobby: Gastgeber legt Spieler an, jedes Gerät tippt „Ich spiele …“ (ein Gerät darf mehrere übernehmen).
+- Vereinfachungen: kein 10 %-Aufschlag, wenn eine belastete Straße per Handel/Pleite den Besitzer
+  wechselt; bei „Geburtstag“ zahlt jeder höchstens, was er hat; gebaut und gehandelt wird nur im eigenen Zug.

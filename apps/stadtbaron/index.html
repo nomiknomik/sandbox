@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Stadtbaron">
+<meta name="theme-color" content="#2E9D5B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Stadtbaron</title>
+<style>
+  /* Farben an einer Stelle – so kann man sie leicht gemeinsam ändern */
+  :root{--bg:#EAF3EC;--karte:#FFFFFF;--text:#1B2A22;--muted:#5B6B62;--accent:#2E9D5B;--brett:#CFE6D3;--feld:#FBF7EC;--linie:#2A3B2F55;--u:40px}
+  @media (prefers-color-scheme:dark){:root{--bg:#0F1A14;--karte:#1A2820;--text:#E8F2EC;--muted:#9AB5A6;--linie:#2A3B2F88}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);font:17px/1.35 -apple-system,system-ui,sans-serif;
+       -webkit-user-select:none;user-select:none;touch-action:manipulation;overflow:hidden}
+  button{font:inherit;padding:11px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.4}
+  button.zweit{background:#0001;color:var(--text);box-shadow:inset 0 0 0 1.5px #0002}
+  @media (prefers-color-scheme:dark){button.zweit{background:#fff1;box-shadow:inset 0 0 0 1.5px #fff2}}
+  button.rot{background:#D33B3B}
+  input,textarea{font:inherit;padding:10px;border-radius:10px;border:1.5px solid #0003;background:var(--karte);color:var(--text);-webkit-user-select:text;user-select:text}
+  #portal{position:fixed;top:calc(8px + env(safe-area-inset-top));left:10px;padding:8px 12px;border-radius:12px;background:#0002;color:inherit;text-decoration:none;font-size:15px;z-index:5}
+  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:var(--muted);cursor:pointer;z-index:5}
+
+  /* ---------- Bildschirme ---------- */
+  .screen{display:none;position:fixed;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;
+          padding:calc(56px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom))}
+  .screen.on{display:block}
+  .spalte{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  h1{margin:0;font-size:40px;letter-spacing:1px;text-align:center}
+  h1 small{display:block;font-size:15px;color:var(--muted);letter-spacing:0;font-weight:500}
+  h2{margin:4px 0}
+  .box{background:var(--karte);border-radius:16px;padding:14px;box-shadow:0 2px 10px #0001}
+  .menue button{font-size:20px;padding:16px}
+  .klein{font-size:14px;color:var(--muted)}
+  .fehler{color:#D33B3B}
+  .reihe{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .reihe>*{flex:1}
+
+  /* Neues Spiel: Spieler einstellen */
+  .sp-zeile{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .sp-zeile .fig{font-size:28px;padding:4px 10px;background:#0001;border-radius:12px;min-width:56px}
+  .sp-zeile input{flex:1;min-width:0;border-left:8px solid var(--f)}
+  .sp-zeile .art{min-width:96px;padding:10px 8px}
+  .anzahl button{padding:10px 0}
+  .anzahl button.an{outline:3px solid var(--text)}
+  label.schalter{display:flex;gap:10px;align-items:center;font-size:16px}
+  label.schalter input{width:24px;height:24px}
+
+  /* ---------- Spiel ---------- */
+  #s-spiel{padding:calc(48px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));overflow:hidden}
+  #spielflaeche{display:flex;gap:10px;height:100%;align-items:flex-start;justify-content:center}
+  #spielflaeche.hoch{flex-direction:column;align-items:center}
+  #brett{position:relative;flex:none;display:grid;grid-template-columns:1.5fr repeat(9,1fr) 1.5fr;grid-template-rows:1.5fr repeat(9,1fr) 1.5fr;
+         background:var(--brett);border:2px solid #2A3B2F;border-radius:6px;color:#1B2A22;box-shadow:0 4px 18px #0003}
+  .feld{position:relative;background:var(--feld);border:.5px solid var(--linie);display:flex;overflow:hidden;cursor:pointer;min-width:0;min-height:0}
+  .feld.unten{flex-direction:column}.feld.oben{flex-direction:column-reverse}
+  .feld.links{flex-direction:row-reverse}.feld.rechts{flex-direction:row}
+  .bar{flex:0 0 24%;display:flex;align-items:center;justify-content:center;gap:1px;border:.5px solid var(--linie)}
+  .links .bar,.rechts .bar{flex-direction:column}
+  .inhalt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
+          padding:calc(var(--u)*.05) 1px;font-size:calc(var(--u)*.17);line-height:1.05;min-width:0}
+  .inhalt b{font-weight:600;word-break:break-word;hyphens:auto;-webkit-hyphens:auto}
+  .inhalt .sym{font-size:calc(var(--u)*.42);line-height:1}
+  .inhalt .pr{font-size:calc(var(--u)*.16);opacity:.75}
+  .mini .inhalt b{display:none}
+  .mini .inhalt{justify-content:center}
+  .mini .inhalt .sym+.pr{display:none}
+  .feld.ecke .inhalt{justify-content:center;font-size:calc(var(--u)*.2)}
+  .feld.ecke .sym{font-size:calc(var(--u)*.6)}
+  .feld .besitzer{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 calc(var(--u)*.07) var(--o)}
+  .feld.hyp .inhalt{opacity:.35}
+  .feld.hyp::after{content:'H';position:absolute;right:2px;bottom:1px;font-size:calc(var(--u)*.22);font-weight:800;color:#D33B3B}
+  .haus{width:calc(var(--u)*.16);height:calc(var(--u)*.16);background:#2FA84F;border:1px solid #0006;border-radius:2px}
+  .hotel{width:calc(var(--u)*.34);height:calc(var(--u)*.2);background:#D33B3B;border:1px solid #0006;border-radius:2px}
+  .links .hotel,.rechts .hotel{width:calc(var(--u)*.2);height:calc(var(--u)*.34)}
+  .feld.blink{animation:blink .9s ease 2}
+  @keyframes blink{50%{background:#FFE58A}}
+
+  /* Mitte vom Brett: Würfel, Text, Knöpfe */
+  #mitte{grid-area:2/2/11/11;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*.18);
+         padding:calc(var(--u)*.25);text-align:center;position:relative}
+  #logo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:calc(var(--u)*1.05);
+        color:#2E9D5B22;transform:rotate(-30deg);pointer-events:none;letter-spacing:2px}
+  #wer{font-weight:700;font-size:clamp(14px,calc(var(--u)*.36),22px);display:flex;align-items:center;gap:6px}
+  #info{font-size:clamp(13px,calc(var(--u)*.3),18px);min-height:2.6em;max-width:100%}
+  #knoepfe{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:100%}
+  #knoepfe button{font-size:clamp(14px,calc(var(--u)*.32),19px);padding:clamp(8px,calc(var(--u)*.2),13px) clamp(10px,calc(var(--u)*.3),18px)}
+  #knoepfe .voll{flex-basis:100%}
+  #knoepfe .klein{color:#1B2A22aa}
+  .mini-feld{display:inline-block;padding:2px 8px;border-radius:8px;border-left:10px solid var(--g);background:#fff;font-weight:700}
+
+  /* 3D-Würfel */
+  #wuerfelbox{display:flex;gap:calc(var(--u)*.45);perspective:600px;height:calc(var(--u)*1.1);align-items:center}
+  .wuerfel{--w:calc(var(--u)*.85);width:var(--w);height:var(--w);position:relative;transform-style:preserve-3d;
+           transition:transform 1.1s cubic-bezier(.2,.75,.25,1)}
+  .wuerfel.hops{animation:hops 1.1s ease-out}
+  @keyframes hops{0%{translate:0 0}25%{translate:0 calc(var(--u)*-.5)}50%{translate:0 0}68%{translate:0 calc(var(--u)*-.3)}82%{translate:0 0}91%{translate:0 calc(var(--u)*-.08)}100%{translate:0 0}}
+  .seite{position:absolute;inset:0;background:linear-gradient(145deg,#fff,#ECE6DA);border-radius:18%;box-shadow:inset 0 0 calc(var(--u)*.08) #0003;
+         display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:14%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .seite i{width:72%;height:72%;margin:auto;border-radius:50%;background:radial-gradient(circle at 35% 35%,#555,#111)}
+  .seite.s1 i{background:radial-gradient(circle at 35% 35%,#F55,#A00)}
+  .s1{transform:translateZ(calc(var(--w)/2))}
+  .s6{transform:rotateY(180deg) translateZ(calc(var(--w)/2))}
+  .s2{transform:rotateX(90deg) translateZ(calc(var(--w)/2))}
+  .s5{transform:rotateX(-90deg) translateZ(calc(var(--w)/2))}
+  .s3{transform:rotateY(90deg) translateZ(calc(var(--w)/2))}
+  .s4{transform:rotateY(-90deg) translateZ(calc(var(--w)/2))}
+  .pasch{color:#D33B3B;font-weight:800;animation:pop .5s}
+  @keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+  /* Spielfiguren */
+  .figur{position:absolute;left:0;top:0;width:calc(var(--u)*.62);height:calc(var(--u)*.62);border-radius:50%;
+         display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*.38);background:var(--f);
+         border:2px solid #fff;box-shadow:0 2px 5px #0006;transition:transform .16s ease;z-index:3;pointer-events:none}
+  .figur.springt{transition:transform .55s cubic-bezier(.3,1.4,.5,1)}
+  .figur.dran{z-index:4;box-shadow:0 0 0 3px #FFD54A,0 2px 6px #0007}
+  .figur.weg{display:none}
+
+  /* Seitenleiste: Spieler + Verlauf */
+  #seite{flex:1;min-width:250px;max-width:380px;display:flex;flex-direction:column;gap:8px;height:100%;overflow:auto}
+  .hoch #seite{max-width:none;width:100%;min-width:0;flex:1}
+  #spielerliste{display:grid;grid-template-columns:1fr;gap:6px}
+  .hoch #spielerliste{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .sp{background:var(--karte);border-radius:12px;padding:7px 10px;border-left:7px solid var(--f);box-shadow:0 1px 5px #0001;position:relative}
+  .sp.dran{box-shadow:0 0 0 3px var(--f)}
+  .sp.pleite{opacity:.4}
+  .sp .kopf{display:flex;gap:6px;align-items:center;font-weight:700;font-size:15px;white-space:nowrap}
+  .sp .kopf .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .sp .geld{margin-left:auto;font-variant-numeric:tabular-nums}
+  .sp .plus{position:absolute;right:10px;top:-6px;font-weight:800;animation:steig 1.6s forwards;pointer-events:none}
+  @keyframes steig{0%{opacity:0;transform:translateY(8px)}20%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+  .sp .karten{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;min-height:10px}
+  .sp .karten span{width:12px;height:12px;border-radius:3px;background:var(--g)}
+  .sp .karten span.h{opacity:.35}
+  #verlauf{background:var(--karte);border-radius:12px;padding:8px 10px;font-size:13px;color:var(--muted);flex:1;min-height:80px;overflow:auto}
+  #verlauf div{padding:2px 0;border-bottom:1px solid #0001}
+  #spielmenue{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;padding:8px 12px;border-radius:12px;background:#0002;color:inherit;font-size:15px;z-index:5}
+  #verbindung{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:13px;color:var(--muted);z-index:5;white-space:nowrap}
+  #verbindung.problem{color:#D33B3B}
+
+  /* ---------- Dialog ---------- */
+  #dlg{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+  #dlg.on{display:flex}
+  #dlg .inner{background:var(--karte);color:var(--text);border-radius:18px;padding:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px #0006}
+  #dlg .knoepfe{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  #dlg .knoepfe button{flex:1}
+  .karte-gross{border-radius:14px;padding:18px;text-align:center;color:#1B2A22;font-size:19px}
+  .karte-gross .titel{font-size:13px;letter-spacing:2px;font-weight:800;opacity:.7}
+  .karte-gross .sym{font-size:46px}
+  .er{background:#FFD8A8}.ks{background:#BFE3FF}
+  #karte{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:#0004}
+  #karte.on{display:flex}
+  #karte .karte-gross{width:min(340px,86vw);box-shadow:0 12px 40px #0007;animation:dreh .5s ease-out}
+  @keyframes dreh{0%{transform:rotateY(90deg) scale(.6)}100%{transform:none}}
+  .mieten{width:100%;border-collapse:collapse;font-size:15px}
+  .mieten td{padding:3px 4px;border-bottom:1px solid #0001}
+  .mieten td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .titelkarte{border-radius:12px;padding:10px;text-align:center;color:#1B2A22;font-weight:800;font-size:20px;margin-bottom:8px;border:2px solid #0003}
+  .verw{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #0001;font-size:15px}
+  .verw .nm{flex:1;border-left:8px solid var(--g);padding-left:6px}
+  .verw button{padding:6px 9px;font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{padding:6px 8px;border-radius:10px;border-left:8px solid var(--g);background:#0001;font-size:14px;cursor:pointer}
+  .chip.an{background:#FFD54A;color:#1B2A22}
+  .handel-spalten{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:520px){.handel-spalten{grid-template-columns:1fr}}
+  .betrag{display:flex;gap:4px;align-items:center;margin-top:6px}
+  .betrag input{width:90px}
+  .betrag button{padding:6px 10px}
+
+  canvas#qr{width:min(320px,80vw);height:auto;image-rendering:pixelated;background:#fff;border-radius:10px;padding:8px;align-self:center}
+  #scanner{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:30;gap:12px;color:#fff}
+  #scanner.on{display:flex}
+  #scanner video{width:min(420px,90vw);border-radius:14px}
+  .regeln h3{margin:14px 0 4px}
+  .regeln p,.regeln li{font-size:15px}
+</style>
+</head>
+<body>
+<a id="portal" href="../../">🕹 Alle Spiele</a>
+<div id="version"></div>
+
+<!-- Menü -->
+<section id="s-menue" class="screen on">
+  <div class="spalte menue">
+    <h1>🏙️ STADTBARON<small>Kaufen · Bauen · Miete kassieren</small></h1>
+    <button id="m-weiter" hidden>▶ WEITERSPIELEN</button>
+    <button id="m-neu">🎲 NEUES SPIEL (EIN GERÄT)</button>
+    <button id="m-online" class="zweit">🌐 MEHRERE GERÄTE (ONLINE)</button>
+    <button id="m-lokal" class="zweit">📶 MEHRERE GERÄTE (OHNE INTERNET)</button>
+    <button id="m-regeln" class="zweit">📖 SPIELREGELN</button>
+    <button id="m-ton" class="zweit">🔊 TON AN</button>
+  </div>
+</section>
+
+<!-- Neues Spiel -->
+<section id="s-neu" class="screen">
+  <div class="spalte">
+    <h2 id="n-titel">Neues Spiel</h2>
+    <div class="box">
+      <b>Wie viele spielen mit?</b>
+      <div class="reihe anzahl" id="n-anzahl"></div>
+      <div id="n-spieler"></div>
+      <p class="klein">Figur antippen = andere Figur. 👤 Mensch / 🤖 Computer umschalten.</p>
+    </div>
+    <div class="box">
+      <b>Startgeld</b>
+      <div class="reihe anzahl" id="n-geld"></div>
+      <label class="schalter" style="margin-top:10px"><input type="checkbox" id="n-topf"> Hausregel: Steuern kommen in den Topf auf 🧺 Pause</label>
+    </div>
+    <div class="reihe"><button class="zweit" id="n-zurueck">ZURÜCK</button><button id="n-los">LOS GEHT'S</button></div>
+  </div>
+</section>
+
+<!-- Spiel -->
+<section id="s-spiel" class="screen">
+  <button id="spielmenue">☰ Menü</button>
+  <div id="verbindung"></div>
+  <div id="spielflaeche">
+    <div id="brett">
+      <div id="mitte">
+        <div id="logo">STADTBARON</div>
+        <div id="wer"></div>
+        <div id="wuerfelbox"><div class="wuerfel" id="w1"></div><div class="wuerfel" id="w2"></div></div>
+        <div id="info"></div>
+        <div id="knoepfe"></div>
+      </div>
+    </div>
+    <div id="seite">
+      <div id="spielerliste"></div>
+      <div id="verlauf"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Online-Lobby -->
+<section id="s-online" class="screen">
+  <div class="spalte">
+    <h2 id="o-titel">Mehrere Geräte</h2>
+    <div class="box"><div id="o-status">…</div></div>
+    <div id="o-knoepfe" class="spalte"></div>
+    <div class="reihe" id="o-github"><button class="zweit" id="o-einladung">📨 GERÄT EINLADEN</button><button class="zweit" id="o-loeschen">🗑 EINRICHTUNG LÖSCHEN</button></div>
+    <button class="zweit zummenue">ZUM MENÜ</button>
+  </div>
+</section>
+
+<!-- Online: Gerät einrichten -->
+<section id="s-setup" class="screen">
+  <div class="spalte">
+    <h2>Gerät einrichten</h2>
+    <div class="box spalte">
+      <b>A · Ich habe eine Einladung</b>
+      <button id="s-scannen">📷 QR-CODE SCANNEN</button>
+      <span class="klein">Oder den Einladungs-Code einfügen (derselbe wie bei Морской бой / Würmer):</span>
+      <textarea id="s-code" placeholder="MB1~…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <div class="reihe"><button class="zweit" id="s-einfuegen">📋 EINFÜGEN</button><button id="s-annehmen">ANNEHMEN</button></div>
+    </div>
+    <div class="box spalte">
+      <b>B · Erstes Gerät (Eltern)</b>
+      <span class="klein">Privates Repo für die Spielstände und ein Token, der nur dieses Repo lesen und schreiben darf.</span>
+      <input id="s-repo" placeholder="besitzer/repo" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input id="s-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="s-verbinden">VERBINDEN</button>
+    </div>
+    <p id="s-meldung"></p>
+    <button class="zweit zummenue">ZUM MENÜ</button>
+  </div>
+</section>
+
+<!-- Online: Einladung fürs nächste Gerät -->
+<section id="s-einladung" class="screen">
+  <div class="spalte" style="align-items:center;text-align:center">
+    <h2>Einladung</h2>
+    <canvas id="qr"></canvas>
+    <p class="klein">Mit der Kamera des anderen Geräts scannen – oder Code kopieren und dort einfügen.<br>
+      <b class="fehler">Nur eigenen Geräten zeigen – enthält den Schlüssel!</b></p>
+    <div class="reihe" style="width:100%"><button class="zweit" id="i-kopieren">📋 CODE KOPIEREN</button><button id="i-fertig">FERTIG</button></div>
+  </div>
+</section>
+
+<!-- Spielregeln -->
+<section id="s-regeln" class="screen">
+  <div class="spalte regeln">
+    <h2>📖 So geht Stadtbaron</h2>
+    <div class="box">
+      <h3>Ziel</h3><p>Kaufe Straßen, baue Häuser und kassiere Miete. Wer am Ende als Einziger nicht pleite ist, gewinnt. (Oder: ☰ Menü → „Spiel auswerten“ – wer am meisten besitzt, gewinnt.)</p>
+      <h3>Dein Zug</h3><ul>
+        <li>Würfeln und so viele Felder vorgehen. Über 🏁 START gibt es <b>200 🪙</b>.</li>
+        <li>Freie Straße, Bahnhof oder Werk: <b>kaufen</b> – oder es wird <b>versteigert</b> (alle dürfen bieten).</li>
+        <li>Gehört es jemand anderem: <b>Miete</b> zahlen.</li>
+        <li><b>Pasch</b> (zwei gleiche Zahlen): nochmal würfeln. Dritter Pasch hintereinander: ab ins 🚓 Gefängnis.</li>
+      </ul>
+      <h3>Miete</h3><ul>
+        <li>Alle Straßen einer Farbe = doppelte Miete. Dann darfst du Häuser bauen – <b>gleichmäßig</b> (erst überall eins, dann das zweite …). 4 Häuser → Hotel.</li>
+        <li>Bahnhöfe: 25 / 50 / 100 / 200, je nachdem wie viele man hat.</li>
+        <li>Werke: 4× die Augen (beide Werke: 10×).</li>
+      </ul>
+      <h3>Gefängnis</h3><p>Raus kommst du mit 50 🪙, mit der Raus-Karte oder mit einem Pasch. Nach 3 Versuchen ohne Pasch zahlst du 50 und gehst los. Miete kassieren darfst du auch im Gefängnis.</p>
+      <h3>Geld knapp?</h3><p>Häuser zum halben Preis verkaufen oder eine Straße mit <b>Hypothek</b> belasten (halber Kaufpreis). Zurückkaufen kostet 10 % mehr. Auf Hypothek-Feldern gibt es keine Miete. Kannst du gar nicht zahlen, bist du pleite.</p>
+      <h3>Handeln</h3><p>Im eigenen Zug kannst du anderen Straßen, Geld und Raus-Karten anbieten. Bebaute Farben müssen vorher die Häuser verkaufen.</p>
+      <h3>Häuser sind knapp</h3><p>Es gibt nur 32 Häuser und 12 Hotels.</p>
+    </div>
+    <button class="zummenue">ZUM MENÜ</button>
+  </div>
+</section>
+
+<div id="dlg"><div class="inner"><div id="dlg-inhalt"></div><div class="knoepfe" id="dlg-knoepfe"></div></div></div>
+<div id="karte"></div>
+<div id="scanner"><video playsinline muted></video><p id="sc-text">QR-Code der Einladung in den Rahmen halten</p><button class="zweit" id="sc-stopp" style="color:#fff">ABBRECHEN</button></div>
+
+<script src="lokal.js"></script>
+<script>
+// Bei jeder Änderung hochzählen (und CACHE in sw.js).
+const APP_VERSION = '1.0';
+// Version unten rechts antippen = nach Update suchen.
+const versionEl = document.getElementById('version');
+versionEl.textContent = 'v' + APP_VERSION;
+versionEl.onclick = async () => {
+  const zeig = (text, ms) => { versionEl.textContent = text; if (ms) setTimeout(() => versionEl.textContent = 'v' + APP_VERSION, ms); };
+  zeig('suche Update …');
+  try {
+    const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
+    const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
+    if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
+    zeig('lade v' + neu + ' …');
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update().catch(() => {});
+    await new Promise(r => setTimeout(r, 1200));
+    location.replace(location.pathname + '?v=' + encodeURIComponent(neu));
+  } catch { zeig('offline – v' + APP_VERSION, 2500); }
+};
+
+/* ---------- Kleine Helfer ---------- */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const warte = ms => new Promise(r => setTimeout(r, ms));
+const kopie = o => JSON.parse(JSON.stringify(o));
+const speicher = {
+  lies(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  schreib(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  weg(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const geld = n => n + ' 🪙';
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- Töne (selbst gemacht mit WebAudio, keine Dateien) ---------- */
+const Ton = {
+  an: speicher.lies('sb-ton') !== false, ctx: null,
+  piep(f, dauer = .08, art = 'sine', laut = .12, wann = 0) {
+    if (!this.an) return;
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = this.ctx.currentTime + wann, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = art; o.frequency.value = f; g.gain.setValueAtTime(laut, t); g.gain.exponentialRampToValueAtTime(.001, t + dauer);
+      o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t + dauer);
+    } catch {}
+  },
+  klick() { this.piep(660, .05, 'triangle', .08); },
+  wuerfeln() { for (let i = 0; i < 9; i++) this.piep(180 + Math.random() * 260, .03, 'square', .05, i * .08 + Math.random() * .03); },
+  schritt() { this.piep(880, .03, 'triangle', .05); },
+  muenze() { this.piep(1320, .07, 'square', .06); this.piep(1760, .12, 'square', .06, .07); },
+  zahlen() { this.piep(400, .1, 'triangle', .1); this.piep(300, .15, 'triangle', .1, .1); },
+  fehler() { this.piep(160, .2, 'sawtooth', .08); },
+  fanfare() { [523, 659, 784, 1046].forEach((f, i) => this.piep(f, .18, 'triangle', .1, i * .12)); },
+};
+function tonKnopf() { $('#m-ton').textContent = Ton.an ? '🔊 TON AN' : '🔇 TON AUS'; }
+$('#m-ton').onclick = () => { Ton.an = !Ton.an; speicher.schreib('sb-ton', Ton.an); tonKnopf(); Ton.klick(); };
+tonKnopf();
+
+/* =====================================================================
+   DAS SPIELFELD – 40 Felder im Kreis. Feld 0 ist START.
+   t: s = Straße, b = Bahnhof, w = Werk, er/ks = Karte ziehen, st = Steuer
+   m = Miete: ohne Haus, 1, 2, 3, 4 Häuser, Hotel
+   ===================================================================== */
+const GRUPPEN = {
+  braun: ['#8B5A2B', 50], hellblau: ['#86D3F5', 50], pink: ['#E0559B', 100], orange: ['#F39C2B', 100],
+  rot: ['#E2342D', 150], gelb: ['#F5D90A', 150], gruen: ['#22A35A', 200], blau: ['#2552C9', 200],
+};
+const F = [
+  { t: 'start', n: 'START', i: '🏁' },
+  { t: 's', n: 'Kieselweg', g: 'braun', p: 60, m: [2, 10, 30, 90, 160, 250] },
+  { t: 'ks', n: 'Stadtkasse', i: '💰' },
+  { t: 's', n: 'Sandgasse', g: 'braun', p: 60, m: [4, 20, 60, 180, 320, 450] },
+  { t: 'st', n: 'Steuer', i: '🧾', b: 200 },
+  { t: 'b', n: 'Busbahnhof', i: '🚌', p: 200 },
+  { t: 's', n: 'Mühlenweg', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
+  { t: 'er', n: 'Überraschung', i: '❓' },
+  { t: 's', n: 'Gartenstraße', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
+  { t: 's', n: 'Brunnenplatz', g: 'hellblau', p: 120, m: [8, 40, 100, 300, 450, 600] },
+  { t: 'knast', n: 'Gefängnis', i: '🚓' },
+  { t: 's', n: 'Rosenallee', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
+  { t: 'w', n: 'Kraftwerk', i: '⚡', p: 150 },
+  { t: 's', n: 'Tulpenweg', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
+  { t: 's', n: 'Fliederplatz', g: 'pink', p: 160, m: [12, 60, 180, 500, 700, 900] },
+  { t: 'b', n: 'Hafen', i: '⚓', p: 200 },
+  { t: 's', n: 'Fischmarkt', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
+  { t: 'ks', n: 'Stadtkasse', i: '💰' },
+  { t: 's', n: 'Muschelweg', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
+  { t: 's', n: 'Leuchtturmweg', g: 'orange', p: 200, m: [16, 80, 220, 600, 800, 1000] },
+  { t: 'park', n: 'Pause', i: '🧺' },
+  { t: 's', n: 'Burgstraße', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
+  { t: 'er', n: 'Überraschung', i: '❓' },
+  { t: 's', n: 'Ritterweg', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
+  { t: 's', n: 'Drachenplatz', g: 'rot', p: 240, m: [20, 100, 300, 750, 925, 1100] },
+  { t: 'b', n: 'Flughafen', i: '✈️', p: 200 },
+  { t: 's', n: 'Sonnenallee', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
+  { t: 's', n: 'Goldgasse', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
+  { t: 'w', n: 'Wasserwerk', i: '💧', p: 150 },
+  { t: 's', n: 'Sternenweg', g: 'gelb', p: 280, m: [24, 120, 360, 850, 1025, 1200] },
+  { t: 'gehknast', n: 'Ab ins Gefängnis', i: '👮' },
+  { t: 's', n: 'Parkring', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
+  { t: 's', n: 'Waldallee', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
+  { t: 'ks', n: 'Stadtkasse', i: '💰' },
+  { t: 's', n: 'Seeufer', g: 'gruen', p: 320, m: [28, 150, 450, 1000, 1200, 1400] },
+  { t: 'b', n: 'Seilbahn', i: '🚡', p: 200 },
+  { t: 'er', n: 'Überraschung', i: '❓' },
+  { t: 's', n: 'Kristallturm', g: 'blau', p: 350, m: [35, 175, 500, 1100, 1300, 1500] },
+  { t: 'st', n: 'Luxussteuer', i: '💎', b: 100 },
+  { t: 's', n: 'Königsplatz', g: 'blau', p: 400, m: [50, 200, 600, 1400, 1700, 2000] },
+];
+const kaufbar = i => ['s', 'b', 'w'].includes(F[i].t);
+const gruppeFelder = g => F.map((f, i) => f.g === g ? i : -1).filter(i => i >= 0);
+const BAHNEN = [5, 15, 25, 35], WERKE = [12, 28];
+const HAEUSER = 32, HOTELS = 12;
+
+// Karten: a = was passiert
+const KARTEN = {
+  er: [
+    { x: 'Fahre bis zum START.', a: 'geh', z: 0 },
+    { x: 'Ausflug zum Drachenplatz! Kommst du über START, bekommst du 200.', a: 'geh', z: 24 },
+    { x: 'Besuch auf der Rosenallee. Kommst du über START, bekommst du 200.', a: 'geh', z: 11 },
+    { x: 'Fahre zum Königsplatz.', a: 'geh', z: 39 },
+    { x: 'Fahre zum Busbahnhof. Kommst du über START, bekommst du 200.', a: 'geh', z: 5 },
+    { x: 'Fahre zum nächsten Bahnhof. Gehört er jemandem, zahlst du doppelte Miete.', a: 'bahn' },
+    { x: 'Fahre zum nächsten Bahnhof. Gehört er jemandem, zahlst du doppelte Miete.', a: 'bahn' },
+    { x: 'Fahre zum nächsten Werk. Gehört es jemandem: würfeln und 10× die Augen zahlen.', a: 'werk' },
+    { x: 'Dein Erfinder-Preis! Die Bank zahlt dir 50.', a: 'geld', b: 50 },
+    { x: 'RAUS AUS DEM GEFÄNGNIS. Behalte die Karte, bis du sie brauchst.', a: 'frei' },
+    { x: 'Ups, falsch abgebogen: Gehe 3 Felder zurück.', a: 'zurueck' },
+    { x: 'Ab ins Gefängnis! Du kommst nicht über START.', a: 'knast' },
+    { x: 'Frühjahrsputz: Zahle 25 pro Haus und 100 pro Hotel.', a: 'repar', h: 25, ho: 100 },
+    { x: 'Zu schnell mit dem Roller: Zahle 15.', a: 'geld', b: -15 },
+    { x: 'Du gibst ein Eis aus: Zahle jedem Mitspieler 50.', a: 'jeder', b: -50 },
+    { x: 'Dein Sparschwein ist voll: Du bekommst 150.', a: 'geld', b: 150 },
+  ],
+  ks: [
+    { x: 'Fahre bis zum START.', a: 'geh', z: 0 },
+    { x: 'Die Bank hat sich verrechnet – zu deinen Gunsten! Du bekommst 200.', a: 'geld', b: 200 },
+    { x: 'Zahnarzt-Besuch: Zahle 50.', a: 'geld', b: -50 },
+    { x: 'Flohmarkt-Verkauf: Du bekommst 50.', a: 'geld', b: 50 },
+    { x: 'RAUS AUS DEM GEFÄNGNIS. Behalte die Karte, bis du sie brauchst.', a: 'frei' },
+    { x: 'Ab ins Gefängnis! Du kommst nicht über START.', a: 'knast' },
+    { x: 'Die Ferienkasse zahlt aus: Du bekommst 100.', a: 'geld', b: 100 },
+    { x: 'Steuer-Rückzahlung: Du bekommst 20.', a: 'geld', b: 20 },
+    { x: 'Du hast Geburtstag! Jeder Mitspieler schenkt dir 10.', a: 'jeder', b: 10 },
+    { x: 'Die Versicherung zahlt dir 100.', a: 'geld', b: 100 },
+    { x: 'Krankenhaus-Rechnung: Zahle 100.', a: 'geld', b: -100 },
+    { x: 'Klassenfahrt: Zahle 50.', a: 'geld', b: -50 },
+    { x: 'Du hilfst beim Umzug: Du bekommst 25.', a: 'geld', b: 25 },
+    { x: 'Straßen-Reparatur: Zahle 40 pro Haus und 115 pro Hotel.', a: 'repar', h: 40, ho: 115 },
+    { x: '2. Platz im Kuchen-Wettbewerb: Du bekommst 10.', a: 'geld', b: 10 },
+    { x: 'Du erbst 100.', a: 'geld', b: 100 },
+  ],
+};
+const KARTEN_NAME = { er: ['ÜBERRASCHUNG', '❓', 'er'], ks: ['STADTKASSE', '💰', 'ks'] };
+
+const FIGUREN = ['🚗', '🐶', '🎩', '🚀', '🦖', '⛵', '🐱', '🎸', '🦄', '🐢'];
+const FARBEN = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
+
+/* =====================================================================
+   SPIELREGELN ALS PROGRAMM
+   Der ganze Spielstand ist ein Objekt st. Jede Aktion (würfeln, kaufen …)
+   geht durch anwenden(st, a). Ist sie nicht erlaubt, kommt null zurück.
+   So rechnen alle Geräte gleich – und man kann prüfen, ob ein Knopf geht.
+   Phasen: wuerfeln → (kaufen | auktion | schulden) → zugEnde → nächster
+   ===================================================================== */
+function mischen(n) { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function neuesSpiel(spieler, opt) {
+  const st = {
+    id: Math.random().toString(36).slice(2, 10), status: 'laeuft', phase: 'wuerfeln', nr: 0,
+    dran: Math.floor(Math.random() * spieler.length),
+    spieler: spieler.map(s => ({ n: s.n, fig: s.fig, f: s.f, ki: !!s.ki, g: s.g || null, geld: opt.start, pos: 0, knast: false, versuche: 0, frei: [], pleite: false })),
+    besitz: {}, stapel: { er: mischen(16), ks: mischen(16) }, pasch: 0, nochmal: false, topf: 0,
+    opt, wurf: [1, 1], wurfNr: 0, ablauf: [], log: [], info: '',
+  };
+  st.info = spName(st, st.dran) + ' fängt an.';
+  return st;
+}
+const spName = (st, p) => st.spieler[p].fig + ' ' + st.spieler[p].n;
+function log(st, text) { st.info = text; st.log.push(text); if (st.log.length > 40) st.log.shift(); }
+const ev = (st, e) => st.ablauf.push(e);
+const aktive = st => st.spieler.map((s, i) => s.pleite ? -1 : i).filter(i => i >= 0);
+
+// Wer muss gerade etwas tun?
+function amZug(st) {
+  if (st.phase === 'auktion') return st.auktion.reihe[st.auktion.i];
+  if (st.phase === 'handel') return st.handel.an;
+  return st.dran;
+}
+
+// Häuser und Hotels, die noch in der Bank liegen
+function vorrat(st) {
+  let h = 0, ho = 0;
+  for (const b of Object.values(st.besitz)) { if (b.h === 5) ho++; else h += b.h; }
+  return { h: HAEUSER - h, ho: HOTELS - ho };
+}
+const besitzer = (st, i) => st.besitz[i] ? st.besitz[i].o : -1;
+const hatGruppe = (st, p, g) => gruppeFelder(g).every(i => besitzer(st, i) === p);
+const gruppeHaeuser = (st, g) => gruppeFelder(g).some(i => st.besitz[i] && st.besitz[i].h > 0);
+
+function miete(st, i, augen, extra) {
+  const f = F[i], b = st.besitz[i], o = b.o;
+  if (f.t === 's') return b.h > 0 ? f.m[b.h] : f.m[0] * (hatGruppe(st, o, f.g) ? 2 : 1);
+  if (f.t === 'b') { const n = BAHNEN.filter(k => besitzer(st, k) === o).length; return 25 * 2 ** (n - 1) * (extra === 'doppelt' ? 2 : 1); }
+  if (f.t === 'w') { const n = WERKE.filter(k => besitzer(st, k) === o).length; return augen * (extra === 'werk10' || n === 2 ? 10 : 4); }
+  return 0;
+}
+
+// Bezahlen. an: Spieler-Nummer, -1 = Bank, 'topf', 'alle' (gleichmäßig an alle anderen)
+function zahle(st, p, betrag, an, grund) {
+  const s = st.spieler[p];
+  if (s.geld >= betrag) { geldGeben(st, p, betrag, an); return true; }
+  st.schuld = { betrag, an, grund, zurueck: st.phase };
+  st.phase = 'schulden';
+  log(st, `${spName(st, p)} muss ${geld(betrag)} zahlen (${grund}), hat aber nur ${geld(s.geld)}.`);
+  return false;
+}
+function geldGeben(st, p, betrag, an) {
+  st.spieler[p].geld -= betrag;
+  if (an === 'topf') { if (st.opt.topf) st.topf += betrag; }
+  else if (an === 'alle') { const andere = aktive(st).filter(q => q !== p); andere.forEach(q => st.spieler[q].geld += betrag / andere.length); }
+  else if (an >= 0) st.spieler[an].geld += betrag;
+}
+
+// Nach dem Landen: Pasch → nochmal würfeln, sonst Zug beenden
+function fertig(st) { st.phase = st.nochmal ? 'wuerfeln' : 'zugEnde'; }
+
+function insKnast(st, p) {
+  const s = st.spieler[p];
+  s.pos = 10; s.knast = true; s.versuche = 0; st.nochmal = false; st.pasch = 0;
+  ev(st, { a: 'sprung', p, nach: 10 });
+  st.phase = 'zugEnde';
+}
+
+function bewege(st, p, schritte, augen) {
+  const s = st.spieler[p];
+  s.pos += schritte;
+  ev(st, { a: 'lauf', p, nach: s.pos % 40 });
+  if (s.pos >= 40) { s.pos -= 40; s.geld += 200; log(st, `${spName(st, p)} kommt über START: +200 🪙`); }
+  landen(st, p, augen);
+}
+function gehZu(st, p, ziel, augen, extra) {
+  const s = st.spieler[p];
+  ev(st, { a: 'lauf', p, nach: ziel });
+  if (ziel < s.pos) { s.geld += 200; log(st, `${spName(st, p)} kommt über START: +200 🪙`); }
+  s.pos = ziel;
+  landen(st, p, augen, extra);
+}
+
+function landen(st, p, augen, extra) {
+  const s = st.spieler[p], i = s.pos, f = F[i];
+  fertig(st);
+  if (kaufbar(i)) {
+    const b = st.besitz[i];
+    if (!b) { st.phase = 'kaufen'; log(st, `${spName(st, p)} steht auf ${f.n}. Kaufen für ${geld(f.p)}?`); return; }
+    if (b.o === p) { log(st, `${spName(st, p)} ist auf der eigenen ${f.n}.`); return; }
+    if (b.hyp) { log(st, `${f.n} hat eine Hypothek – keine Miete.`); return; }
+    if (extra === 'werk10') augen = 2 + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6);
+    const m = miete(st, i, augen, extra);
+    log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${f.n}).`);
+    ev(st, { a: 'geld', p, b: -m }); ev(st, { a: 'geld', p: b.o, b: m });
+    zahle(st, p, m, b.o, 'Miete für ' + f.n);
+    return;
+  }
+  if (f.t === 'st') { log(st, `${spName(st, p)} zahlt ${geld(f.b)} ${f.n}.`); ev(st, { a: 'geld', p, b: -f.b }); zahle(st, p, f.b, 'topf', f.n); return; }
+  if (f.t === 'er' || f.t === 'ks') return karteZiehen(st, p, f.t, augen);
+  if (f.t === 'gehknast') { log(st, `${spName(st, p)} muss ins Gefängnis!`); return insKnast(st, p); }
+  if (f.t === 'park' && st.opt.topf && st.topf > 0) { log(st, `${spName(st, p)} macht Pause und bekommt den Topf: ${geld(st.topf)}!`); ev(st, { a: 'geld', p, b: st.topf }); s.geld += st.topf; st.topf = 0; return; }
+  if (f.t === 'knast') log(st, `${spName(st, p)} ist nur zu Besuch im Gefängnis.`);
+  else log(st, `${spName(st, p)} steht auf ${f.n}.`);
+}
+
+function karteZiehen(st, p, d, augen) {
+  const s = st.spieler[p], k = st.stapel[d].shift(), kt = KARTEN[d][k];
+  if (kt.a === 'frei') s.frei.push(d); else st.stapel[d].push(k);   // Karte kommt unten wieder in den Stapel
+  ev(st, { a: 'karte', d, k, p });
+  log(st, `${spName(st, p)} zieht ${KARTEN_NAME[d][0]}: ${kt.x}`);
+  switch (kt.a) {
+    case 'geh': return gehZu(st, p, kt.z, augen);
+    case 'bahn': return gehZu(st, p, BAHNEN.find(b => b > s.pos) ?? 5, augen, 'doppelt');
+    case 'werk': return gehZu(st, p, WERKE.find(b => b > s.pos) ?? 12, augen, 'werk10');
+    case 'zurueck': s.pos = (s.pos + 37) % 40; ev(st, { a: 'sprung', p, nach: s.pos }); return landen(st, p, augen);
+    case 'knast': return insKnast(st, p);
+    case 'geld':
+      ev(st, { a: 'geld', p, b: kt.b });
+      if (kt.b > 0) s.geld += kt.b; else zahle(st, p, -kt.b, 'topf', 'Karte');
+      return;
+    case 'repar': {
+      let summe = 0;
+      for (const b of Object.values(st.besitz)) if (b.o === p) summe += b.h === 5 ? kt.ho : b.h * kt.h;
+      if (summe) { ev(st, { a: 'geld', p, b: -summe }); zahle(st, p, summe, 'topf', 'Reparatur'); }
+      return;
+    }
+    case 'jeder': {
+      const andere = aktive(st).filter(q => q !== p);
+      if (kt.b < 0) { ev(st, { a: 'geld', p, b: kt.b * andere.length }); zahle(st, p, -kt.b * andere.length, 'alle', 'Karte'); }
+      else for (const q of andere) { const x = Math.min(kt.b, st.spieler[q].geld); st.spieler[q].geld -= x; s.geld += x; ev(st, { a: 'geld', p: q, b: -x }); }
+      return;
+    }
+  }
+}
+
+function naechster(st) {
+  let q = st.dran;
+  do q = (q + 1) % st.spieler.length; while (st.spieler[q].pleite);
+  st.dran = q; st.pasch = 0; st.nochmal = false; st.phase = 'wuerfeln';
+  const s = st.spieler[q];
+  log(st, `${spName(st, q)} ist dran.` + (s.knast ? ' (im Gefängnis 🚓)' : ''));
+}
+
+// Vermögen: Geld + Straßen + Häuser (für die Auswertung)
+function vermoegen(st, p) {
+  let v = st.spieler[p].geld;
+  for (const [i, b] of Object.entries(st.besitz)) if (b.o === p) {
+    const f = F[i]; v += b.hyp ? f.p / 2 : f.p;
+    if (f.t === 's') v += b.h * GRUPPEN[f.g][1];
+  }
+  return v;
+}
+
+function pleiteGehen(st, p) {
+  const s = st.spieler[p], an = st.schuld ? st.schuld.an : -1;
+  const anSpieler = typeof an === 'number' && an >= 0;
+  for (const [i, b] of Object.entries(st.besitz)) if (b.o === p) {
+    const f = F[i];
+    if (b.h) { s.geld += (b.h === 5 ? 5 : b.h) * GRUPPEN[f.g][1] / 2; b.h = 0; }   // Häuser gehen an die Bank zurück
+    if (anSpieler) b.o = an; else delete st.besitz[i];                             // Straßen an Gläubiger oder Bank
+  }
+  if (anSpieler) { st.spieler[an].geld += Math.max(0, s.geld); st.spieler[an].frei.push(...s.frei); }
+  else s.frei.forEach(d => st.stapel[d].push(d === 'er' ? 9 : 4));
+  s.geld = 0; s.frei = []; s.pleite = true; s.knast = false; st.schuld = null;
+  log(st, `💀 ${spName(st, p)} ist pleite!` + (anSpieler ? ` Alles geht an ${spName(st, an)}.` : ''));
+  const rest = aktive(st);
+  if (rest.length === 1) { st.phase = 'ende'; st.status = 'ende'; st.sieger = rest[0]; log(st, `🏆 ${spName(st, rest[0])} gewinnt!`); return; }
+  if (st.dran === p) naechster(st);
+}
+
+// Darf Spieler p gerade Häuser bauen / Hypotheken / handeln? (nur im eigenen Zug)
+const verwalten = (st, p) => p === st.dran && ['wuerfeln', 'kaufen', 'zugEnde', 'schulden'].includes(st.phase);
+const handelbar = (st, i, p) => besitzer(st, i) === p && !(F[i].t === 's' && gruppeHaeuser(st, F[i].g));
+
+function anwenden(st, a) {
+  if (!st || st.status !== 'laeuft') return null;
+  const p = a.p, s = st.spieler[p];
+  if (!s || s.pleite) return null;
+  st.ablauf = [];
+  const ok = (() => {
+    switch (a.t) {
+      case 'wurf': {
+        if (st.phase !== 'wuerfeln' || p !== st.dran) return false;
+        const [w1, w2] = a.w, augen = w1 + w2, pasch = w1 === w2;
+        st.wurf = a.w; st.wurfNr++; ev(st, { a: 'wurf', w: a.w });
+        if (s.knast) {
+          if (pasch) { s.knast = false; st.nochmal = false; log(st, `${spName(st, p)} würfelt einen Pasch und ist frei!`); bewege(st, p, augen, augen); return true; }
+          s.versuche++;
+          if (s.versuche < 3) { log(st, `${spName(st, p)} würfelt ${w1}+${w2} – kein Pasch, bleibt im Gefängnis.`); st.phase = 'zugEnde'; return true; }
+          s.knast = false; st.nochmal = false;
+          log(st, `${spName(st, p)}: dritter Versuch ohne Pasch – zahlt 50 🪙 und geht los.`);
+          ev(st, { a: 'geld', p, b: -50 });
+          st.phase = 'zugEnde';
+          if (!zahle(st, p, 50, 'topf', 'Gefängnis')) { st.schuld.weiter = augen; return true; }
+          bewege(st, p, augen, augen); return true;
+        }
+        st.nochmal = pasch;
+        if (pasch) { st.pasch++; if (st.pasch === 3) { log(st, `${spName(st, p)} würfelt den dritten Pasch – ab ins Gefängnis!`); insKnast(st, p); return true; } }
+        bewege(st, p, augen, augen);
+        if (pasch && st.phase !== 'schulden' && st.nochmal) st.info += ' Pasch – nochmal würfeln!';
+        return true;
+      }
+      case 'knastZahlen':
+        if (st.phase !== 'wuerfeln' || p !== st.dran || !s.knast || s.geld < 50) return false;
+        geldGeben(st, p, 50, 'topf'); s.knast = false; ev(st, { a: 'geld', p, b: -50 });
+        log(st, `${spName(st, p)} zahlt 50 🪙 und ist frei. Jetzt würfeln!`); return true;
+      case 'knastKarte': {
+        if (st.phase !== 'wuerfeln' || p !== st.dran || !s.knast || !s.frei.length) return false;
+        const d = s.frei.shift(); st.stapel[d].push(d === 'er' ? 9 : 4); s.knast = false;
+        log(st, `${spName(st, p)} benutzt die Raus-Karte. Jetzt würfeln!`); return true;
+      }
+      case 'kaufen': {
+        const i = s.pos, f = F[i];
+        if (st.phase !== 'kaufen' || p !== st.dran || s.geld < f.p) return false;
+        s.geld -= f.p; st.besitz[i] = { o: p, h: 0, hyp: false }; ev(st, { a: 'geld', p, b: -f.p }); ev(st, { a: 'blink', i });
+        log(st, `${spName(st, p)} kauft ${f.n} für ${geld(f.p)}.`); fertig(st); return true;
+      }
+      case 'versteigern': {
+        if (st.phase !== 'kaufen' || p !== st.dran) return false;
+        const reihe = []; for (let k = 0; k < st.spieler.length; k++) { const q = (st.dran + k) % st.spieler.length; if (!st.spieler[q].pleite) reihe.push(q); }
+        st.auktion = { f: s.pos, gebot: 0, wer: -1, reihe, i: 0 }; st.phase = 'auktion';
+        log(st, `${F[s.pos].n} wird versteigert! ${spName(st, reihe[0])} bietet zuerst.`); return true;
+      }
+      case 'gebot': {
+        const A = st.auktion;
+        if (st.phase !== 'auktion' || p !== amZug(st) || a.b <= A.gebot || a.b > s.geld) return false;
+        A.gebot = a.b; A.wer = p; A.i = (A.i + 1) % A.reihe.length;
+        log(st, `${spName(st, p)} bietet ${geld(a.b)}.`); auktionPruefen(st); return true;
+      }
+      case 'passen': {
+        const A = st.auktion;
+        if (st.phase !== 'auktion' || p !== amZug(st)) return false;
+        A.reihe.splice(A.i, 1); if (A.i >= A.reihe.length) A.i = 0;
+        log(st, `${spName(st, p)} steigt aus.`); auktionPruefen(st); return true;
+      }
+      case 'bauen': {
+        const i = a.f, f = F[i], b = st.besitz[i];
+        if (!verwalten(st, p) || st.phase === 'schulden' || f.t !== 's' || !b || b.o !== p || b.h >= 5 || !hatGruppe(st, p, f.g)) return false;
+        const fs = gruppeFelder(f.g);
+        if (fs.some(k => st.besitz[k].hyp) || b.h > Math.min(...fs.map(k => st.besitz[k].h))) return false;
+        const preis = GRUPPEN[f.g][1], v = vorrat(st);
+        if (s.geld < preis || (b.h < 4 && v.h < 1) || (b.h === 4 && v.ho < 1)) return false;
+        s.geld -= preis; b.h++; ev(st, { a: 'geld', p, b: -preis }); ev(st, { a: 'blink', i });
+        log(st, `${spName(st, p)} baut ${b.h === 5 ? 'ein Hotel' : 'ein Haus'} auf ${f.n}.`); return true;
+      }
+      case 'abreissen': {
+        const i = a.f, f = F[i], b = st.besitz[i];
+        if (!verwalten(st, p) || f.t !== 's' || !b || b.o !== p || !b.h) return false;
+        const fs = gruppeFelder(f.g);
+        if (b.h < Math.max(...fs.map(k => st.besitz[k].h))) return false;
+        if (b.h === 5 && vorrat(st).h < 4) return false;           // Hotel → 4 Häuser geht nur, wenn genug Häuser da sind
+        const preis = GRUPPEN[f.g][1] / 2;
+        b.h--; s.geld += preis; ev(st, { a: 'geld', p, b: preis });
+        log(st, `${spName(st, p)} verkauft ${b.h === 4 ? 'das Hotel' : 'ein Haus'} auf ${f.n} (+${preis} 🪙).`); return true;
+      }
+      case 'hyp': {
+        const i = a.f, f = F[i], b = st.besitz[i];
+        if (!verwalten(st, p) || !b || b.o !== p || b.hyp || (f.t === 's' && gruppeHaeuser(st, f.g))) return false;
+        b.hyp = true; s.geld += f.p / 2; ev(st, { a: 'geld', p, b: f.p / 2 });
+        log(st, `${spName(st, p)} nimmt eine Hypothek auf ${f.n} (+${f.p / 2} 🪙).`); return true;
+      }
+      case 'einloesen': {
+        const i = a.f, f = F[i], b = st.besitz[i], preis = Math.ceil(f.p / 2 * 1.1);
+        if (!verwalten(st, p) || st.phase === 'schulden' || !b || b.o !== p || !b.hyp || s.geld < preis) return false;
+        b.hyp = false; s.geld -= preis; ev(st, { a: 'geld', p, b: -preis });
+        log(st, `${spName(st, p)} löst die Hypothek auf ${f.n} ein (−${preis} 🪙).`); return true;
+      }
+      case 'handel': {
+        if (!verwalten(st, p)) return false;
+        const q = a.an, o = st.spieler[q];
+        if (!o || q === p || o.pleite) return false;
+        const g = a.gib, n = a.nimm;
+        if (!g.f.every(i => handelbar(st, i, p)) || !n.f.every(i => handelbar(st, i, q))) return false;
+        if (g.g < 0 || n.g < 0 || g.g > s.geld || n.g > o.geld || g.k > s.frei.length || n.k > o.frei.length) return false;
+        if (!g.f.length && !n.f.length && !g.g && !n.g && !g.k && !n.k) return false;
+        st.handel = { von: p, an: q, gib: g, nimm: n, zurueck: st.phase }; st.phase = 'handel';
+        log(st, `${spName(st, p)} macht ${spName(st, q)} ein Angebot.`); return true;
+      }
+      case 'handelJa': case 'handelNein': case 'handelWeg': {
+        const H = st.handel;
+        if (st.phase !== 'handel' || (a.t === 'handelWeg' ? p !== H.von : p !== H.an)) return false;
+        st.phase = H.zurueck; st.handel = null;
+        if (a.t !== 'handelJa') { log(st, a.t === 'handelWeg' ? `${spName(st, p)} zieht das Angebot zurück.` : `${spName(st, p)} lehnt ab.`); return true; }
+        const v = st.spieler[H.von], z = st.spieler[H.an];
+        H.gib.f.forEach(i => st.besitz[i].o = H.an); H.nimm.f.forEach(i => st.besitz[i].o = H.von);
+        v.geld += H.nimm.g - H.gib.g; z.geld += H.gib.g - H.nimm.g;
+        z.frei.push(...v.frei.splice(0, H.gib.k)); v.frei.push(...z.frei.splice(0, H.nimm.k));
+        [...H.gib.f, ...H.nimm.f].forEach(i => ev(st, { a: 'blink', i }));
+        log(st, `🤝 ${spName(st, H.an)} nimmt das Angebot von ${spName(st, H.von)} an!`); return true;
+      }
+      case 'zahlen': {
+        const S = st.schuld;
+        if (st.phase !== 'schulden' || p !== st.dran || s.geld < S.betrag) return false;
+        geldGeben(st, p, S.betrag, S.an); st.schuld = null; st.phase = S.zurueck;
+        log(st, `${spName(st, p)} hat bezahlt.`);
+        if (S.weiter) bewege(st, p, S.weiter, S.weiter);
+        return true;
+      }
+      case 'pleite':
+        if (st.phase !== 'schulden' || p !== st.dran) return false;
+        pleiteGehen(st, p); return true;
+      case 'fertig':
+        if (st.phase !== 'zugEnde' || p !== st.dran) return false;
+        naechster(st); return true;
+    }
+    return false;
+  })();
+  if (!ok) return null;
+  st.nr++;
+  return st;
+}
+
+function auktionPruefen(st) {
+  const A = st.auktion;
+  if (A.reihe.length > 1 || (A.reihe.length === 1 && A.wer !== A.reihe[0])) return;
+  const f = F[A.f];
+  if (A.wer >= 0) {
+    st.spieler[A.wer].geld -= A.gebot; st.besitz[A.f] = { o: A.wer, h: 0, hyp: false };
+    ev(st, { a: 'geld', p: A.wer, b: -A.gebot }); ev(st, { a: 'blink', i: A.f });
+    log(st, `🔨 ${spName(st, A.wer)} ersteigert ${f.n} für ${geld(A.gebot)}!`);
+  } else log(st, `Niemand wollte ${f.n} – es bleibt bei der Bank.`);
+  st.auktion = null; fertig(st);
+}
+
+// Spiel vorzeitig auswerten: Wer am meisten besitzt, gewinnt
+function auswerten(st) {
+  const rang = aktive(st).sort((a, b) => vermoegen(st, b) - vermoegen(st, a));
+  st.status = 'ende'; st.phase = 'ende'; st.sieger = rang[0]; st.nr++; st.ablauf = [];
+  log(st, `🏆 Auswertung: ${spName(st, rang[0])} ist am reichsten!`);
+  return st;
+}
+
+/* =====================================================================
+   COMPUTER-SPIELER 🤖 – einfache, aber ganz schlaue Regeln
+   ===================================================================== */
+function kiAktion(st) {
+  const p = amZug(st), s = st.spieler[p];
+  const reserve = 120 + 40 * Object.values(st.besitz).filter(b => b.o !== p && b.h > 0).length;
+  const probier = a => anwenden(kopie(st), { ...a, p }) ? a : null;
+  const wert = i => {                                   // Wie wichtig ist mir dieses Feld?
+    const f = F[i]; let w = f.p;
+    if (f.t === 's') {
+      const fs = gruppeFelder(f.g), meine = fs.filter(k => besitzer(st, k) === p).length, fremd = fs.filter(k => besitzer(st, k) >= 0 && besitzer(st, k) !== p);
+      if (meine === fs.length - 1) w *= 2;               // macht meine Farbe komplett
+      else if (fremd.length === fs.length - 1 && new Set(fremd.map(k => besitzer(st, k))).size === 1) w *= 1.5;   // blockiert jemanden
+      else w *= 1.15;
+    } else w *= 1.2;
+    return w;
+  };
+  const bauen = () => {
+    for (const g of Object.keys(GRUPPEN).reverse()) {
+      if (!hatGruppe(st, p, g)) continue;
+      const fs = gruppeFelder(g).sort((x, y) => st.besitz[x].h - st.besitz[y].h);
+      if (s.geld - GRUPPEN[g][1] < reserve) continue;
+      for (const i of fs) { const a = probier({ t: 'bauen', f: i }); if (a) return a; }
+    }
+    for (const [i, b] of Object.entries(st.besitz)) if (b.o === p && b.hyp && s.geld - F[i].p * .55 > reserve + 150) { const a = probier({ t: 'einloesen', f: +i }); if (a) return a; }
+    return null;
+  };
+  switch (st.phase) {
+    case 'wuerfeln':
+      if (s.knast) {
+        if (s.frei.length) return { t: 'knastKarte' };
+        const frei = F.filter((f, i) => kaufbar(i) && !st.besitz[i]).length;
+        if (frei > 8 && s.geld > 300) return { t: 'knastZahlen' };
+      }
+      return bauen() || { t: 'wurf', w: wuerfeln() };
+    case 'zugEnde': return bauen() || { t: 'fertig' };
+    case 'kaufen': { const f = F[s.pos]; return s.geld - f.p >= Math.min(reserve, 80) || (wert(s.pos) > f.p * 1.4 && s.geld >= f.p) ? { t: 'kaufen' } : { t: 'versteigern' }; }
+    case 'auktion': {
+      const A = st.auktion, max = Math.min(wert(A.f), s.geld - 50);
+      const schritt = A.gebot < 50 ? 10 : A.gebot < 200 ? 20 : 50, neu = A.gebot + schritt;
+      return neu <= max ? { t: 'gebot', b: neu } : { t: 'passen' };
+    }
+    case 'handel': {
+      const H = st.handel, w = l => l.f.reduce((x, i) => x + (st.besitz[i].hyp ? F[i].p / 2 : wert(i)), 0) + l.g + l.k * 50;
+      const bekomme = w(H.gib), gebe = H.nimm.f.reduce((x, i) => x + wert(i), 0) * 1.1 + H.nimm.g + H.nimm.k * 50;
+      return { t: bekomme >= gebe * 1.15 && bekomme > 0 ? 'handelJa' : 'handelNein' };
+    }
+    case 'schulden': {
+      if (s.geld >= st.schuld.betrag) return { t: 'zahlen' };
+      const meine = Object.entries(st.besitz).filter(([, b]) => b.o === p).map(([i]) => +i).sort((x, y) => F[x].p - F[y].p);
+      for (const i of meine) { const a = probier({ t: 'abreissen', f: i }); if (a) return a; }
+      for (const i of meine) { const a = probier({ t: 'hyp', f: i }); if (a) return a; }
+      return { t: 'pleite' };
+    }
+  }
+  return null;
+}
+const wuerfeln = () => [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+</script>
+<script>
+/* =====================================================================
+   ANZEIGE: Brett, Figuren, Würfel, Knöpfe
+   ===================================================================== */
+let st = null;                 // aktueller Spielstand
+let modus = 'lokal';           // 'lokal' = ein Gerät, 'online' = mehrere Geräte
+let beschaeftigt = false;      // läuft gerade eine Animation / ein Speichern?
+const anzeige = { nr: -1, id: null, pos: [], geld: [] };
+
+// Gehört Spieler p zu diesem Gerät?
+function meins(p) {
+  if (!st) return false;
+  const s = st.spieler[p];
+  if (modus === 'lokal') return !s.ki;
+  return !s.ki && s.g === Sync.geraet;
+}
+const istGastgeber = () => modus === 'lokal' || (st && st.geraete && st.geraete[0] === Sync.geraet);
+
+// Feld i → Platz im 11×11-Gitter
+function gitter(i) {
+  if (i <= 10) return [11, 11 - i, i === 0 || i === 10 ? 'ecke' : 'unten'];
+  if (i <= 20) return [11 - (i - 10), 1, i === 20 ? 'ecke' : 'links'];
+  if (i <= 30) return [1, 1 + (i - 20), i === 30 ? 'ecke' : 'oben'];
+  return [1 + (i - 30), 11, 'rechts'];
+}
+function brettBauen() {
+  const brett = $('#brett');
+  F.forEach((f, i) => {
+    const [r, c, seite] = gitter(i), el = document.createElement('div');
+    el.className = 'feld ' + seite; el.id = 'f' + i;
+    el.style.gridArea = `${r}/${c}`;
+    const bar = f.t === 's' ? `<div class="bar" style="background:${GRUPPEN[f.g][0]}"></div>` : '';
+    const sym = f.t === 's' ? '' : `<span class="sym">${f.i || ''}</span>`;
+    const pr = f.p ? `<span class="pr">${f.p}</span>` : f.b ? `<span class="pr">${f.b}</span>` : '';
+    el.innerHTML = `${bar}<div class="inhalt"><b>${f.n}</b>${sym}${pr}</div><div class="besitzer"></div>`;
+    el.onclick = () => feldInfo(i);
+    brett.appendChild(el);
+  });
+  for (const w of ['#w1', '#w2']) $(w).innerHTML = [1, 2, 3, 4, 5, 6].map(z => `<div class="seite s${z}">${augenHTML(z)}</div>`).join('');
+}
+function augenHTML(z) {
+  const pos = { 1: [5], 2: [3, 7], 3: [3, 5, 7], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] }[z];
+  return Array.from({ length: 9 }, (_, k) => pos.includes(k + 1) ? '<i></i>' : '<span></span>').join('');
+}
+
+// Größe: Brett so groß wie möglich, Seitenleiste daneben (quer) oder darunter (hoch)
+function layout() {
+  const W = innerWidth - 16, H = innerHeight - 56 - 16;
+  const quer = W > H * 1.25;
+  $('#spielflaeche').classList.toggle('hoch', !quer);
+  const groesse = Math.floor(quer ? Math.min(H, W - 260) : Math.min(W, H - 150));
+  const brett = $('#brett');
+  brett.style.width = brett.style.height = groesse + 'px';
+  document.documentElement.style.setProperty('--u', (groesse / 12) + 'px');
+  brett.classList.toggle('mini', groesse < 560);
+  if (st) figurenSetzen(false);
+}
+addEventListener('resize', layout);
+
+/* ---------- Figuren ---------- */
+function figurPunkt(i, nr, anzahl) {
+  const el = $('#f' + i), b = $('#brett');
+  const x = el.offsetLeft + el.offsetWidth / 2, y = el.offsetTop + el.offsetHeight / 2;
+  const u = b.offsetWidth / 12, r = anzahl > 1 ? u * .22 : 0, w = (nr / anzahl) * Math.PI * 2;
+  return [x + Math.cos(w) * r - u * .31, y + Math.sin(w) * r - u * .31];
+}
+function figurenSetzen(sanft = true) {
+  if (!st) return;
+  st.spieler.forEach((s, p) => {
+    let el = $('#fig' + p);
+    if (!el) { el = document.createElement('div'); el.className = 'figur'; el.id = 'fig' + p; $('#brett').appendChild(el); }
+    el.textContent = s.fig; el.style.setProperty('--f', s.f);
+    el.classList.toggle('weg', s.pleite); el.classList.toggle('dran', p === st.dran);
+    const pos = anzeige.pos[p] ?? s.pos, gleich = st.spieler.map((t, q) => q).filter(q => !st.spieler[q].pleite && (anzeige.pos[q] ?? st.spieler[q].pos) === pos);
+    const [x, y] = figurPunkt(pos, gleich.indexOf(p), gleich.length);
+    if (!sanft) el.style.transition = 'none';
+    el.style.transform = `translate(${x}px,${y}px)`;
+    if (!sanft) { el.offsetWidth; el.style.transition = ''; }
+  });
+}
+async function laufen(p, nach) {
+  const el = $('#fig' + p);
+  let pos = anzeige.pos[p];
+  if (pos === undefined) { anzeige.pos[p] = nach; return figurenSetzen(); }
+  const schritte = (nach - pos + 40) % 40;
+  for (let k = 0; k < schritte; k++) {
+    pos = (pos + 1) % 40; anzeige.pos[p] = pos; figurenSetzen(); Ton.schritt();
+    if (el) el.animate([{ translate: '0 0' }, { translate: '0 -10px' }, { translate: '0 0' }], { duration: 150 });
+    await warte(schritte > 14 ? 70 : 150);
+  }
+}
+async function springen(p, nach) {
+  const el = $('#fig' + p); el.classList.add('springt');
+  anzeige.pos[p] = nach; figurenSetzen(); await warte(600); el.classList.remove('springt');
+}
+
+/* ---------- Würfel mit 3D-Animation ---------- */
+const DREH = { 1: [0, 0], 6: [0, 180], 2: [-90, 0], 5: [90, 0], 3: [0, -90], 4: [0, 90] };
+const drehung = { w1: [0, 0], w2: [0, 0] };
+function wuerfelZeigen(w, rollen) {
+  ['w1', 'w2'].forEach((id, k) => {
+    const el = $('#' + id), [fx, fy] = DREH[w[k]], d = drehung[id];
+    // immer ein paar ganze Umdrehungen weiter – so rollt er sichtbar und landet richtig
+    const plusX = rollen ? 720 + 360 * Math.floor(Math.random() * 2) : 0, plusY = rollen ? 360 + 360 * Math.floor(Math.random() * 2) : 0;
+    d[0] = Math.ceil((d[0] + plusX) / 360) * 360 + fx; d[1] = Math.ceil((d[1] + plusY) / 360) * 360 + fy;
+    if (!rollen) el.style.transition = 'none';
+    el.style.transform = `rotateX(${d[0]}deg) rotateY(${d[1]}deg)`;
+    if (rollen) { el.classList.remove('hops'); el.offsetWidth; el.style.animationDelay = (k * .08) + 's'; el.classList.add('hops'); }
+    else { el.offsetWidth; el.style.transition = ''; }
+  });
+}
+async function wuerfelRollen(w) {
+  Ton.wuerfeln();
+  wuerfelZeigen(w, true);
+  await warte(1150);
+  if (w[0] === w[1]) { $('#info').innerHTML = '<span class="pasch">PASCH! 🎉</span>'; Ton.fanfare(); await warte(600); }
+}
+
+/* ---------- Karte groß zeigen ---------- */
+function karteZeigen(d, k) {
+  const [titel, sym, kl] = KARTEN_NAME[d];
+  const el = $('#karte');
+  el.innerHTML = `<div class="karte-gross ${kl}"><div class="titel">${titel}</div><div class="sym">${sym}</div><p>${KARTEN[d][k].x}</p><div class="klein">antippen</div></div>`;
+  el.classList.add('on'); Ton.piep(990, .15, 'triangle', .1);
+  return new Promise(ok => { const zu = () => { el.classList.remove('on'); el.onclick = null; ok(); }; el.onclick = zu; setTimeout(zu, 3800); });
+}
+
+/* ---------- Neuen Stand anzeigen (mit Animationen) ---------- */
+let kette = Promise.resolve();
+function standZeigen(neu) { kette = kette.then(() => standAbspielen(neu)).catch(e => console.error(e)); return kette; }
+async function standAbspielen(neu) {
+  if (!neu) return;
+  const neuesSpiel = !st || neu.id !== anzeige.id;
+  if (!neuesSpiel && neu.nr <= anzeige.nr) return;
+  const lueckenlos = !neuesSpiel && neu.nr === anzeige.nr + 1;
+  st = neu;
+  if (neuesSpiel) { anzeige.id = neu.id; anzeige.pos = neu.spieler.map(s => s.pos); anzeige.geld = neu.spieler.map(s => s.geld); $$('.figur').forEach(f => f.remove()); figurenSetzen(false); wuerfelZeigen(neu.wurf, false); }
+  anzeige.nr = neu.nr;
+  beschaeftigt = true; zeichneKnoepfe();
+  if (lueckenlos) {
+    for (const e of neu.ablauf || []) {
+      if (e.a === 'wurf') await wuerfelRollen(e.w);
+      else if (e.a === 'lauf') await laufen(e.p, e.nach);
+      else if (e.a === 'sprung') await springen(e.p, e.nach);
+      else if (e.a === 'karte') await karteZeigen(e.d, e.k);
+      else if (e.a === 'blink') { const f = $('#f' + e.i); f.classList.remove('blink'); f.offsetWidth; f.classList.add('blink'); Ton.muenze(); }
+    }
+  } else wuerfelZeigen(neu.wurf, false);
+  anzeige.pos = neu.spieler.map(s => s.pos);
+  figurenSetzen();
+  beschaeftigt = false;
+  zeichneAlles();
+  if (modus === 'lokal' && st.status !== 'wartet') speicher.schreib('sb-spiel', st);
+  if (st.status === 'ende') return endeZeigen();
+  kiPruefen();
+}
+
+function zeichneAlles() {
+  if (!st) return;
+  // Felder: Besitzer, Häuser, Hypothek
+  F.forEach((f, i) => {
+    if (!kaufbar(i)) return;
+    const el = $('#f' + i), b = st.besitz[i];
+    el.querySelector('.besitzer').style.setProperty('--o', b ? st.spieler[b.o].f : 'transparent');
+    el.classList.toggle('hyp', !!(b && b.hyp));
+    const bar = el.querySelector('.bar');
+    if (bar) bar.innerHTML = !b || !b.h ? '' : b.h === 5 ? '<span class="hotel"></span>' : '<span class="haus"></span>'.repeat(b.h);
+  });
+  figurenSetzen();
+  // Spielerliste
+  $('#spielerliste').innerHTML = st.spieler.map((s, p) => {
+    const felder = Object.entries(st.besitz).filter(([, b]) => b.o === p).map(([i, b]) => +i).sort((a, b) => a - b)
+      .map(i => `<span class="${st.besitz[i].hyp ? 'h' : ''}" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}"></span>`).join('');
+    const diff = s.geld - (anzeige.geld[p] ?? s.geld);
+    const plus = diff ? `<span class="plus" style="color:${diff > 0 ? '#2FA84F' : '#D33B3B'}">${diff > 0 ? '+' : ''}${diff}</span>` : '';
+    return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" style="--f:${s.f}">
+      <div class="kopf"><span>${s.fig}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
+      <div class="karten">${felder}</div>${plus}</div>`;
+  }).join('') + (st.opt.topf ? `<div class="klein">🧺 Topf: ${geld(st.topf)}</div>` : '');
+  anzeige.geld = st.spieler.map(s => s.geld);
+  $('#verlauf').innerHTML = st.log.slice().reverse().map(t => `<div>${esc(t)}</div>`).join('');
+  zeichneKnoepfe();
+}
+
+// Knöpfe in der Mitte – je nach Phase
+function zeichneKnoepfe() {
+  const box = $('#knoepfe'); box.innerHTML = '';
+  if (!st) return;
+  const p = amZug(st), s = st.spieler[p];
+  $('#wer').innerHTML = `<span class="figur" style="position:static;--f:${s.f};transform:none">${s.fig}</span> ${esc(s.n)}${st.phase === 'auktion' ? ' bietet' : st.phase === 'handel' ? ' entscheidet' : ' ist dran'}`;
+  if (!beschaeftigt) $('#info').innerHTML = phasenText(p);
+  if (beschaeftigt || st.status !== 'laeuft') return;
+  if (!meins(p)) {
+    const t = document.createElement('div'); t.className = 'klein';
+    t.textContent = s.ki ? '🤖 überlegt …' : modus === 'online' ? '⏳ Warte auf das andere Gerät …' : '';
+    box.appendChild(t);
+    return;
+  }
+  const knopf = (text, a, opt = {}) => {
+    const b = document.createElement('button'); b.innerHTML = text;
+    if (opt.kl) b.className = opt.kl;
+    if (a && typeof a === 'object' && !anwenden(kopie(st), { ...a, p })) b.disabled = true;
+    b.onclick = () => { Ton.klick(); typeof a === 'function' ? a() : tun({ ...a, p }); };
+    box.appendChild(b); return b;
+  };
+  const verw = () => { knopf('🏠 Verwalten', verwaltenDialog, { kl: 'zweit' }); if (aktive(st).length > 1) knopf('🤝 Handeln', () => handelDialog(), { kl: 'zweit' }); };
+  switch (st.phase) {
+    case 'wuerfeln':
+      if (s.knast) {
+        knopf('🎲 Pasch versuchen', { t: 'wurf', w: wuerfeln() });
+        knopf('💶 50 zahlen', { t: 'knastZahlen' }, { kl: 'zweit' });
+        if (s.frei.length) knopf('🎫 Raus-Karte', { t: 'knastKarte' }, { kl: 'zweit' });
+      } else knopf(st.nochmal ? '🎲 Nochmal würfeln' : '🎲 Würfeln', { t: 'wurf', w: wuerfeln() }, { kl: 'voll' });
+      verw(); break;
+    case 'kaufen': {
+      const f = F[s.pos];
+      knopf(`🛒 Kaufen (${geld(f.p)})`, { t: 'kaufen' });
+      knopf('🔨 Versteigern', { t: 'versteigern' }, { kl: 'zweit' });
+      knopf('ℹ️', () => feldInfo(s.pos), { kl: 'zweit' });
+      if (s.geld < f.p) knopf('🏠 Geld beschaffen', verwaltenDialog, { kl: 'zweit' });
+      break;
+    }
+    case 'auktion': {
+      const A = st.auktion;
+      for (const plus of [1, 10, 50, 100]) knopf(`+${plus} → ${A.gebot + plus}`, { t: 'gebot', b: A.gebot + plus });
+      knopf('✋ Aussteigen', { t: 'passen' }, { kl: 'zweit' });
+      break;
+    }
+    case 'zugEnde': knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }); verw(); break;
+    case 'schulden':
+      knopf(`💸 ${geld(st.schuld.betrag)} bezahlen`, { t: 'zahlen' });
+      verw();
+      knopf('😵 Aufgeben (pleite)', async () => {
+        if (await dialog('<h2>Wirklich pleite?</h2><p>Dann scheidest du aus. Alles, was du hast, geht an den, dem du Geld schuldest.</p>', [['Nein', false, 'zweit'], ['Ja, pleite', true, 'rot']])) tun({ t: 'pleite', p });
+      }, { kl: 'rot' });
+      break;
+    case 'handel': {
+      const H = st.handel;
+      if (p === H.an) { knopf('✅ Annehmen', { t: 'handelJa' }); knopf('❌ Ablehnen', { t: 'handelNein' }, { kl: 'zweit' }); }
+      break;
+    }
+  }
+  // Handel zurückziehen (der Anbieter, solange der andere überlegt)
+  if (st.phase === 'handel' && meins(st.handel.von) && st.handel.von !== p) {
+    const b = document.createElement('button'); b.className = 'zweit'; b.textContent = 'Angebot zurückziehen';
+    b.onclick = () => tun({ t: 'handelWeg', p: st.handel.von }); box.appendChild(b);
+  }
+}
+function phasenText(p) {
+  const s = st.spieler[p];
+  if (st.status === 'ende') return `🏆 ${esc(spName(st, st.sieger))} gewinnt!`;
+  if (st.phase === 'kaufen') { const f = F[s.pos]; return `<span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${f.i || ''} ${f.n}</span><br>Kaufen für ${geld(f.p)}? (${meins(p) ? 'Du hast' : 'hat'} ${geld(s.geld)})`; }
+  if (st.phase === 'auktion') { const A = st.auktion, f = F[A.f]; return `🔨 <span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${f.n}</span><br>Höchstes Gebot: <b>${geld(A.gebot)}</b>${A.wer >= 0 ? ' von ' + esc(spName(st, A.wer)) : ''}`; }
+  if (st.phase === 'schulden') return `⚠️ ${esc(st.schuld.grund)}: <b>${geld(st.schuld.betrag)}</b> zahlen.<br>Vorhanden: ${geld(s.geld)}. Häuser verkaufen oder Hypotheken aufnehmen.`;
+  if (st.phase === 'handel') return handelText(st.handel);
+  if (st.phase === 'wuerfeln' && s.knast) return `🚓 Im Gefängnis (Versuch ${s.versuche + 1} von 3)`;
+  return esc(st.info);
+}
+function handelText(H) {
+  const liste = (l, wer) => [...l.f.map(i => `<span class="mini-feld" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}">${F[i].n}</span>`), l.g ? geld(l.g) : '', l.k ? '🎫 Raus-Karte' : ''].filter(Boolean).join(' ') || 'nichts';
+  return `🤝 ${esc(spName(st, H.von))} gibt: ${liste(H.gib)}<br>und möchte dafür: ${liste(H.nimm)}`;
+}
+
+/* ---------- Aktion ausführen ---------- */
+async function tun(a) {
+  if (beschaeftigt || !st) return;
+  if (modus === 'lokal') {
+    const neu = anwenden(kopie(st), a);
+    if (!neu) return Ton.fehler();
+    return standZeigen(neu);
+  }
+  beschaeftigt = true; zeichneKnoepfe();
+  try {
+    const id = st.id;
+    const neu = await Sync.aendern(s => s && s.id === id ? anwenden(s, a) : null);
+    beschaeftigt = false;
+    if (neu) await standZeigen(neu); else zeichneAlles();
+  } catch (e) {
+    beschaeftigt = false; zeichneAlles(); Ton.fehler();
+    $('#info').textContent = '⚠ ' + e.message;
+  }
+}
+
+// Computer-Spieler: Wenn einer dran ist, rechnet dieses Gerät (nur der Gastgeber)
+let kiTimer = null;
+function kiPruefen() {
+  clearTimeout(kiTimer);
+  if (!st || st.status !== 'laeuft' || !$('#s-spiel').classList.contains('on')) return;
+  const p = amZug(st);
+  if (!st.spieler[p].ki || !istGastgeber()) return;
+  kiTimer = setTimeout(() => {
+    if (beschaeftigt || amZug(st) !== p) return kiPruefen();
+    const a = kiAktion(st);
+    if (a) tun({ ...a, p });
+  }, 650);
+}
+
+/* ---------- Feld-Info (Feld antippen) ---------- */
+function feldInfo(i) {
+  if (!st) return;
+  const f = F[i], b = st.besitz[i];
+  if (!kaufbar(i)) {
+    const texte = { start: 'Wer über START kommt, bekommt 200 🪙.', ks: 'Ziehe eine Karte aus der Stadtkasse.', er: 'Ziehe eine Überraschungs-Karte.', st: `Zahle ${geld(f.b)}.`,
+      knast: 'Im Gefängnis – oder nur zu Besuch.', park: st.opt.topf ? `Wer hier landet, bekommt den Topf (${geld(st.topf)}).` : 'Hier passiert nichts – Pause!', gehknast: 'Direkt ins Gefängnis, ohne über START.' };
+    return dialog(`<div class="titelkarte" style="background:#eee">${f.i} ${f.n}</div><p>${texte[f.t]}</p>`, [['OK', true]]);
+  }
+  const farbe = f.t === 's' ? GRUPPEN[f.g][0] : '#ddd';
+  let tab = '';
+  if (f.t === 's') tab = [['Miete', f.m[0]], ['Ganze Farbe', f.m[0] * 2], ['1 Haus', f.m[1]], ['2 Häuser', f.m[2]], ['3 Häuser', f.m[3]], ['4 Häuser', f.m[4]], ['Hotel', f.m[5]], ['Haus kostet', GRUPPEN[f.g][1]]]
+    .map(([a, z]) => `<tr><td>${a}</td><td>${geld(z)}</td></tr>`).join('');
+  else if (f.t === 'b') tab = [1, 2, 3, 4].map(n => `<tr><td>${n} Bahnhof${n > 1 ? 'e' : ''}</td><td>${geld(25 * 2 ** (n - 1))}</td></tr>`).join('');
+  else tab = '<tr><td>1 Werk</td><td>4× Augen</td></tr><tr><td>beide Werke</td><td>10× Augen</td></tr>';
+  tab += `<tr><td>Hypothek</td><td>${geld(f.p / 2)}</td></tr>`;
+  const html = `<div class="titelkarte" style="background:${farbe};color:${['braun', 'rot', 'gruen', 'blau', 'pink'].includes(f.g) ? '#fff' : '#1B2A22'}">${f.i || ''} ${f.n}</div>
+    <p>Preis: <b>${geld(f.p)}</b> · ${b ? 'Besitzer: <b>' + esc(spName(st, b.o)) + '</b>' + (b.hyp ? ' (Hypothek)' : '') : 'gehört der Bank'}</p>
+    <table class="mieten">${tab}</table>`;
+  if (b && meins(b.o) && verwalten(st, b.o)) {
+    dialog(html + '<div id="fi-knoepfe" class="reihe" style="margin-top:10px"></div>', [['Schließen', true, 'zweit']]);
+    verwaltenKnoepfe($('#fi-knoepfe'), i, () => feldInfo(i));
+  } else dialog(html, [['OK', true]]);
+}
+function verwaltenKnoepfe(box, i, neuMalen) {
+  const p = st.besitz[i].o, f = F[i];
+  const moeglich = [];
+  if (f.t === 's') moeglich.push(['🏠+', { t: 'bauen', f: i }], ['🏠−', { t: 'abreissen', f: i }]);
+  moeglich.push(['Hypothek', { t: 'hyp', f: i }], ['Einlösen', { t: 'einloesen', f: i }]);
+  for (const [text, a] of moeglich) {
+    if (!anwenden(kopie(st), { ...a, p })) continue;
+    const b = document.createElement('button'); b.textContent = text; b.className = 'zweit';
+    b.onclick = async () => { Ton.klick(); await tun({ ...a, p }); await kette; neuMalen(); };
+    box.appendChild(b);
+  }
+}
+function verwaltenDialog() {
+  const p = st.dran;
+  const meine = Object.keys(st.besitz).map(Number).filter(i => st.besitz[i].o === p).sort((a, b) => a - b);
+  const zeilen = meine.map(i => {
+    const b = st.besitz[i], f = F[i];
+    const info = b.hyp ? 'Hypothek' : f.t === 's' ? (b.h === 5 ? '🏨 Hotel' : b.h ? '🏠'.repeat(b.h) : '') : '';
+    return `<div class="verw"><span class="nm" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#888'}">${f.i || ''} ${f.n} <span class="klein">${info}</span></span><span id="vk${i}" class="reihe" style="flex:none"></span></div>`;
+  }).join('') || '<p>Du hast noch keine Straßen.</p>';
+  const v = vorrat(st);
+  dialog(`<h2>🏠 Verwalten · ${geld(st.spieler[p].geld)}</h2><p class="klein">🏠+ bauen (gleichmäßig, ganze Farbe nötig) · 🏠− verkaufen (halber Preis) · Hypothek = halber Kaufpreis · Einlösen = +10 %<br>Bank: ${v.h} Häuser, ${v.ho} Hotels</p>${zeilen}`, [['Fertig', true]]);
+  meine.forEach(i => verwaltenKnoepfe($('#vk' + i), i, verwaltenDialog));
+}
+
+/* ---------- Handeln ---------- */
+function handelDialog(an = null, auswahl = null) {
+  const p = st.dran, andere = aktive(st).filter(q => q !== p);
+  if (an === null) {
+    if (andere.length === 1) return handelDialog(andere[0]);
+    dialog('<h2>🤝 Mit wem handeln?</h2>', [...andere.map(q => [spName(st, q), q]), ['Abbrechen', null, 'zweit']]).then(q => q !== null && q !== undefined && handelDialog(q));
+    return;
+  }
+  const A = auswahl || { gib: { f: [], g: 0, k: 0 }, nimm: { f: [], g: 0, k: 0 } };
+  const spalte = (wer, l, key) => {
+    const s = st.spieler[wer];
+    const chips = Object.keys(st.besitz).map(Number).filter(i => handelbar(st, i, wer)).sort((a, b) => a - b)
+      .map(i => `<span class="chip ${l.f.includes(i) ? 'an' : ''}" data-k="${key}" data-i="${i}" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#888'}">${F[i].n}${st.besitz[i].hyp ? ' (H)' : ''}</span>`).join('') || '<span class="klein">keine Straßen</span>';
+    return `<div><b>${key === 'gib' ? 'Ich gebe' : esc(spName(st, wer)) + ' gibt'}</b> <span class="klein">(${geld(s.geld)})</span><div class="chips">${chips}</div>
+      <div class="betrag">🪙 <button class="zweit" data-k="${key}" data-g="-50">−50</button><button class="zweit" data-k="${key}" data-g="-10">−10</button><b style="min-width:50px;text-align:center">${l.g}</b><button class="zweit" data-k="${key}" data-g="10">+10</button><button class="zweit" data-k="${key}" data-g="50">+50</button></div>
+      ${s.frei.length ? `<label class="schalter"><input type="checkbox" data-k="${key}" data-karte ${l.k ? 'checked' : ''}> 🎫 Raus-Karte</label>` : ''}</div>`;
+  };
+  const a = { t: 'handel', p, an, gib: A.gib, nimm: A.nimm };
+  const geht = !!anwenden(kopie(st), a);
+  dialog(`<h2>🤝 Handel mit ${esc(spName(st, an))}</h2><div class="handel-spalten">${spalte(p, A.gib, 'gib')}${spalte(an, A.nimm, 'nimm')}</div>
+    <p class="klein">Bebaute Farben kann man erst nach dem Verkauf der Häuser tauschen.</p>`, [['Abbrechen', false, 'zweit'], [geht ? 'Angebot machen' : 'Angebot machen', 'los']]).then(w => { if (w === 'los') tun(a); });
+  if (!geht) $$('#dlg-knoepfe button')[1].disabled = true;
+  const box = $('#dlg-inhalt');
+  box.querySelectorAll('.chip').forEach(c => c.onclick = () => { const l = A[c.dataset.k], i = +c.dataset.i; l.f = l.f.includes(i) ? l.f.filter(x => x !== i) : [...l.f, i]; Ton.klick(); handelDialog(an, A); });
+  box.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const l = A[b.dataset.k], wer = b.dataset.k === 'gib' ? p : an; l.g = Math.max(0, Math.min(st.spieler[wer].geld, l.g + +b.dataset.g)); Ton.klick(); handelDialog(an, A); });
+  box.querySelectorAll('[data-karte]').forEach(c => c.onchange = () => { A[c.dataset.k].k = c.checked ? 1 : 0; handelDialog(an, A); });
+}
+
+/* ---------- Dialog ---------- */
+let dialogFertig = null;
+function dialog(html, knoepfe) {
+  if (dialogFertig) dialogFertig(undefined);
+  $('#dlg-inhalt').innerHTML = html;
+  const box = $('#dlg-knoepfe'); box.innerHTML = '';
+  $('#dlg').classList.add('on');
+  return new Promise(ok => {
+    dialogFertig = w => { dialogFertig = null; ok(w); };
+    for (const [text, wert, kl] of knoepfe) {
+      const b = document.createElement('button'); b.textContent = text; if (kl) b.className = kl;
+      b.onclick = () => { Ton.klick(); $('#dlg').classList.remove('on'); const f = dialogFertig; dialogFertig = null; f && f(wert); };
+      box.appendChild(b);
+    }
+  });
+}
+
+function endeZeigen() {
+  zeichneAlles();
+  Ton.fanfare();
+  const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
+  const liste = rang.map((p, k) => `<div class="verw"><b>${k + 1}.</b><span class="nm" style="--g:${st.spieler[p].f}">${esc(spName(st, p))}</span><span>${st.spieler[p].pleite ? '💀 pleite' : geld(vermoegen(st, p))}</span></div>`).join('');
+  $('#info').innerHTML = `🏆 <b>${esc(spName(st, st.sieger))}</b> gewinnt!`;
+  dialog(`<h2 style="text-align:center">🏆 ${esc(spName(st, st.sieger))} gewinnt!</h2><p class="klein">Vermögen = Geld + Straßen + Häuser</p>${liste}`, [['Zum Menü', 'menue', 'zweit'], ['Brett ansehen', 'brett']])
+    .then(w => { if (w === 'menue') menue(); });
+}
+
+/* =====================================================================
+   MENÜ & NEUES SPIEL
+   ===================================================================== */
+function zeige(id) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); $('#portal').hidden = id === 's-spiel'; if (id === 's-spiel') { layout(); } }
+function menue() {
+  Online.stop(); clearTimeout(kiTimer);
+  const g = speicher.lies('sb-spiel');
+  $('#m-weiter').hidden = !(g && g.status === 'laeuft');
+  zeige('s-menue');
+}
+let regelnAusSpiel = false;
+$$('.zummenue').forEach(b => b.onclick = () => { Ton.klick(); if (regelnAusSpiel && b.closest('#s-regeln')) { regelnAusSpiel = false; return zeige('s-spiel'); } menue(); });
+$('#m-regeln').onclick = () => { Ton.klick(); zeige('s-regeln'); };
+$('#m-weiter').onclick = () => { Ton.klick(); modus = 'lokal'; spielStarten(speicher.lies('sb-spiel')); };
+
+const einstellung = speicher.lies('sb-einstellung') || { anzahl: 2, start: 1500, topf: false,
+  spieler: FARBEN.map((f, k) => ({ n: 'Spieler ' + (k + 1), fig: FIGUREN[k], f, ki: k > 0 })) };
+let neuOnline = false;
+function neuZeigen(online) {
+  neuOnline = online;
+  $('#n-titel').textContent = online ? 'Neues Spiel für mehrere Geräte' : 'Neues Spiel';
+  $('#n-los').textContent = online ? 'SPIEL ERSTELLEN' : "LOS GEHT'S";
+  $('#n-topf').checked = einstellung.topf;
+  neuZeichnen(); zeige('s-neu');
+}
+function neuZeichnen() {
+  const E = einstellung;
+  $('#n-anzahl').innerHTML = [2, 3, 4, 5, 6].map(n => `<button class="zweit ${E.anzahl === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
+  $('#n-anzahl').querySelectorAll('button').forEach(b => b.onclick = () => { E.anzahl = +b.dataset.n; Ton.klick(); neuZeichnen(); });
+  $('#n-geld').innerHTML = [1000, 1500, 2000].map(n => `<button class="zweit ${E.start === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
+  $('#n-geld').querySelectorAll('button').forEach(b => b.onclick = () => { E.start = +b.dataset.n; Ton.klick(); neuZeichnen(); });
+  $('#n-spieler').innerHTML = E.spieler.slice(0, E.anzahl).map((s, k) =>
+    `<div class="sp-zeile" style="--f:${s.f}"><button class="fig zweit" data-k="${k}">${s.fig}</button>
+     <input value="${esc(s.n)}" data-k="${k}" maxlength="14"><button class="art zweit" data-k="${k}">${s.ki ? '🤖 Computer' : '👤 Mensch'}</button></div>`).join('');
+  $$('#n-spieler .fig').forEach(b => b.onclick = () => {
+    const s = E.spieler[b.dataset.k], belegt = E.spieler.slice(0, E.anzahl).map(x => x.fig);
+    let k = FIGUREN.indexOf(s.fig); do k = (k + 1) % FIGUREN.length; while (belegt.includes(FIGUREN[k]));
+    s.fig = FIGUREN[k]; Ton.klick(); neuZeichnen();
+  });
+  $$('#n-spieler .art').forEach(b => b.onclick = () => { const s = E.spieler[b.dataset.k]; s.ki = !s.ki; Ton.klick(); neuZeichnen(); });
+  $$('#n-spieler input').forEach(i => i.oninput = () => E.spieler[i.dataset.k].n = i.value.trim() || 'Spieler ' + (+i.dataset.k + 1));
+}
+$('#n-topf').onchange = () => einstellung.topf = $('#n-topf').checked;
+$('#m-neu').onclick = () => { Ton.klick(); neuZeigen(false); };
+$('#n-zurueck').onclick = () => { Ton.klick(); neuOnline ? onlineMenue() : menue(); };
+$('#n-los').onclick = () => {
+  Ton.klick();
+  const E = einstellung; speicher.schreib('sb-einstellung', E);
+  const spieler = E.spieler.slice(0, E.anzahl).map(s => ({ ...s }));
+  if (!spieler.some(s => !s.ki)) spieler[0].ki = false;      // mindestens ein Mensch
+  if (neuOnline) return onlineErstellen(spieler, { start: E.start, topf: E.topf });
+  modus = 'lokal';
+  Ton.fanfare();
+  spielStarten(neuesSpiel(spieler, { start: E.start, topf: E.topf }));
+};
+
+function spielStarten(neu) {
+  st = null; anzeige.id = null; anzeige.nr = -1;
+  zeige('s-spiel');
+  standZeigen(neu);
+}
+$('#spielmenue').onclick = async () => {
+  Ton.klick();
+  const w = await dialog('<h2>☰ Menü</h2><p class="klein">Das Spiel wird gespeichert – du kannst später weiterspielen.</p>',
+    [['🏆 Spiel jetzt auswerten', 'aus', 'zweit'], ['📖 Regeln', 'regeln', 'zweit'], ['⬅ Zum Menü', 'menue', 'zweit'], ['Weiterspielen', 'weiter']]);
+  if (w === 'menue') return menue();
+  if (w === 'regeln') { regelnAusSpiel = true; return zeige('s-regeln'); }
+  if (w === 'aus' && st && st.status === 'laeuft') {
+    if (!await dialog('<h2>Spiel beenden?</h2><p>Wer am meisten besitzt (Geld + Straßen + Häuser), gewinnt.</p>', [['Nein', false, 'zweit'], ['Auswerten', true]])) return;
+    if (modus === 'lokal') return standZeigen(auswerten(kopie(st)));
+    const id = st.id;
+    try { const neu = await Sync.aendern(s => s && s.id === id && s.status === 'laeuft' ? auswerten(s) : null); standZeigen(neu); } catch (e) { $('#info').textContent = '⚠ ' + e.message; }
+  }
+};
+</script>
+<script>
+/* =====================================================================
+   MEHRERE GERÄTE – wie bei Морской бой und Würmer:
+   Ein verschlüsselter Spielstand im privaten GitHub-Repo (Datei
+   stadtbaron/aktuell.json) – oder ohne Internet direkt per QR-Code (lokal.js).
+   Jedes Gerät steuert „seine“ Spieler. Wer dran ist, rechnet den Zug aus
+   und schreibt den neuen Stand. Die anderen fragen alle 2 s nach.
+   ===================================================================== */
+const b64 = u8 => { let s = ''; u8.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); };
+
+/* QR-CODE – selbst gebaut (gleich wie in Морской бой) */
+const QR = (() => {
+  const ECC = [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28];
+  const BLOECKE = [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49];
+  const roh = v => { let r = (16 * v + 128) * v + 64; if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; };
+  const datenWorte = v => Math.floor(roh(v) / 8) - ECC[v] * BLOECKE[v];
+  const mal = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z; };
+  const teiler = d => { const r = Array(d).fill(0); r[d - 1] = 1; let w = 1;
+    for (let i = 0; i < d; i++) { for (let j = 0; j < d; j++) { r[j] = mal(r[j], w); if (j + 1 < d) r[j] ^= r[j + 1]; } w = mal(w, 2); } return r; };
+  const rest = (daten, t) => { const r = t.map(() => 0);
+    for (const b of daten) { const f = b ^ r.shift(); r.push(0); t.forEach((k, i) => r[i] ^= mal(k, f)); } return r; };
+  const MASKEN = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, x => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+
+  function erzeuge(text) {
+    const bytes = [...new TextEncoder().encode(text)];
+    let v = 1;
+    while (v <= 40 && 4 + (v < 10 ? 8 : 16) + bytes.length * 8 > datenWorte(v) * 8) v++;
+    if (v > 40) throw new Error('Text zu lang');
+    // 1. Bits sammeln: Modus „Bytes“, Länge, Daten, Füllbytes
+    const bits = [], put = (w, n) => { for (let i = n - 1; i >= 0; i--) bits.push((w >>> i) & 1); };
+    const kap = datenWorte(v) * 8;
+    put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+    put(0, Math.min(4, kap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+    for (let p = 0xEC; bits.length < kap; p ^= 0xEC ^ 0x11) put(p, 8);
+    const daten = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = b << 1 | bits[i + j]; daten.push(b); }
+    // 2. Reparatur-Bits (Reed-Solomon) pro Block, dann verzahnen
+    const nb = BLOECKE[v], el = ECC[v], rw = Math.floor(roh(v) / 8), kurz = nb - rw % nb, kl = Math.floor(rw / nb), t = teiler(el), bl = [];
+    for (let i = 0, k = 0; i < nb; i++) { const d = daten.slice(k, k + kl - el + (i < kurz ? 0 : 1)); k += d.length; const e = rest(d, t); if (i < kurz) d.push(0); bl.push(d.concat(e)); }
+    const worte = []; for (let i = 0; i < bl[0].length; i++) bl.forEach((b, j) => { if (i !== kl - el || j >= kurz) worte.push(b[i]); });
+    // 3. Gitter: feste Muster (Ecken, Taktlinien, Ausrichtung)
+    const n = v * 4 + 17, m = [...Array(n)].map(() => Array(n).fill(false)), fest = [...Array(n)].map(() => Array(n).fill(false));
+    const setze = (x, y, d) => { m[y][x] = d; fest[y][x] = true; };
+    for (let i = 0; i < n; i++) { setze(6, i, i % 2 === 0); setze(i, 6, i % 2 === 0); }
+    const ecke = (x, y) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const d = Math.max(Math.abs(dx), Math.abs(dy)), xx = x + dx, yy = y + dy;
+      if (xx >= 0 && xx < n && yy >= 0 && yy < n) setze(xx, yy, d !== 2 && d !== 4); } };
+    ecke(3, 3); ecke(n - 4, 3); ecke(3, n - 4);
+    if (v > 1) {
+      const na = Math.floor(v / 7) + 2, schritt = v === 32 ? 26 : Math.ceil((v * 4 + 4) / (na * 2 - 2)) * 2, pos = [6];
+      for (let p = n - 7; pos.length < na; p -= schritt) pos.splice(1, 0, p);
+      for (let i = 0; i < na; i++) for (let j = 0; j < na; j++) {
+        if ((i === 0 && j === 0) || (i === 0 && j === na - 1) || (i === na - 1 && j === 0)) continue;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setze(pos[i] + dx, pos[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }
+    }
+    const format = mk => {
+      const d = mk; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);   // Stufe M = 00
+      const b = (d << 10 | r) ^ 0x5412, bit = i => ((b >>> i) & 1) === 1;
+      for (let i = 0; i <= 5; i++) setze(8, i, bit(i));
+      setze(8, 7, bit(6)); setze(8, 8, bit(7)); setze(7, 8, bit(8));
+      for (let i = 9; i < 15; i++) setze(14 - i, 8, bit(i));
+      for (let i = 0; i < 8; i++) setze(n - 1 - i, 8, bit(i));
+      for (let i = 8; i < 15; i++) setze(8, n - 15 + i, bit(i));
+      setze(8, n - 8, true);
+    };
+    format(0);
+    if (v >= 7) {
+      let r = v; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const b = v << 12 | r;
+      for (let i = 0; i < 18; i++) { const bit = ((b >>> i) & 1) === 1, a = n - 11 + i % 3, c = Math.floor(i / 3); setze(a, c, bit); setze(c, a, bit); }
+    }
+    // 4. Daten im Zickzack von unten rechts einfüllen
+    let i = 0;
+    for (let rechts = n - 1; rechts >= 1; rechts -= 2) {
+      if (rechts === 6) rechts = 5;
+      for (let s = 0; s < n; s++) for (let j = 0; j < 2; j++) {
+        const x = rechts - j, hoch = ((rechts + 1) & 2) === 0, y = hoch ? n - 1 - s : s;
+        if (!fest[y][x] && i < worte.length * 8) { m[y][x] = ((worte[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; }
+      }
+    }
+    // 5. Muster-Maske wählen, die am „ruhigsten“ aussieht
+    const maske = k => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!fest[y][x] && MASKEN[k](x, y)) m[y][x] = !m[y][x]; };
+    const strafe = () => {
+      let p = 0, dunkel = 0;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        if (m[y][x]) dunkel++;
+        if (x < n - 1 && y < n - 1 && m[y][x] === m[y][x + 1] && m[y][x] === m[y + 1][x] && m[y][x] === m[y + 1][x + 1]) p += 3;
+      }
+      for (let a = 0; a < n; a++) { let lx = 1, ly = 1;
+        for (let b = 1; b < n; b++) {
+          if (m[a][b] === m[a][b - 1]) { lx++; p += lx === 5 ? 3 : lx > 5 ? 1 : 0; } else lx = 1;
+          if (m[b][a] === m[b - 1][a]) { ly++; p += ly === 5 ? 3 : ly > 5 ? 1 : 0; } else ly = 1;
+        } }
+      return p + Math.floor(Math.abs(dunkel * 20 - n * n * 10) / (n * n)) * 10;
+    };
+    let beste = 0, bp = Infinity;
+    for (let k = 0; k < 8; k++) { maske(k); format(k); const p = strafe(); if (p < bp) { bp = p; beste = k; } maske(k); }
+    maske(beste); format(beste);
+    return m;
+  }
+  function malen(cv, text) {
+    const m = erzeuge(text), n = m.length, px = 8, s = (n + 8) * px;
+    cv.width = cv.height = s;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, s, s); c.fillStyle = '#000';
+    m.forEach((zeile, y) => zeile.forEach((d, x) => d && c.fillRect((x + 4) * px, (y + 4) * px, px, px)));
+  }
+  return { erzeuge, malen };
+})();
+
+const Sync = {
+  // Zugang: eigener oder der aus den anderen Spielen (gleiche Adresse, gleicher Gerätespeicher)
+  cfg: speicher.lies('sb-sync') || speicher.lies('mb-sync') || speicher.lies('wu-sync') || speicher.lies('tk-sync'),
+  geraet: speicher.lies('sb-geraet') || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('sb-geraet', id); return id; })(),
+  pfad: 'stadtbaron/aktuell.json',
+  etag: null, sha: null, stand: null, schluessel: null,
+
+  einladung() { const c = this.cfg; return ['MB1', c.o, c.r, c.t, c.k].join('~'); },
+  einladungsLink() { return location.origin + location.pathname + '#einladung=' + this.einladung(); },
+  lesEinladung(text) {
+    text = decodeURIComponent((text || '').trim()).replace(/^.*einladung=/, '').replace(/\s/g, '');
+    const t = text.split('~');
+    try { if (t.length !== 5 || t[0] !== 'MB1' || unb64(t[4]).length !== 32) return null; } catch { return null; }
+    return { o: t[1], r: t[2], t: t[3], k: t[4] };
+  },
+  speichern(cfg) { this.cfg = cfg; this.schluessel = null; this.etag = this.sha = this.stand = null; speicher.schreib('sb-sync', cfg); },
+
+  url() { return `https://api.github.com/repos/${this.cfg.o}/${this.cfg.r}/contents/${this.pfad}`; },
+  kopf() { return { Authorization: 'Bearer ' + this.cfg.t, Accept: 'application/vnd.github+json' }; },
+  async key() {
+    if (!this.schluessel) this.schluessel = await crypto.subtle.importKey('raw', unb64(this.cfg.k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    return this.schluessel;
+  },
+  async verschluesseln(obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const d = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.key(), new TextEncoder().encode(JSON.stringify(obj)));
+    return { v: 1, iv: b64(iv), d: b64(new Uint8Array(d)) };
+  },
+  async entschluesseln(roh) {
+    try {
+      const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(roh.iv) }, await this.key(), unb64(roh.d));
+      return JSON.parse(new TextDecoder().decode(d));
+    } catch {
+      const f = new Error('Der Spielstand auf GitHub hat einen anderen Schlüssel als dieses Gerät.'); f.schluessel = true; throw f;
+    }
+  },
+  async lesen(frisch = false) {
+    if (Lokal.an) return (this.stand = Lokal.lesen());
+    const h = this.kopf(); if (!frisch && this.etag) h['If-None-Match'] = this.etag;
+    const res = await fetch(this.url(), { headers: h, cache: 'no-store' });
+    if (res.status === 304) return this.stand;
+    if (res.status === 404) { this.sha = this.etag = this.stand = null; return null; }
+    if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json();
+    this.sha = j.sha;
+    this.stand = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    this.etag = res.headers.get('ETag');
+    return this.stand;
+  },
+  async schreiben(stand) {
+    if (Lokal.an) { const ok = await Lokal.schreiben(stand); this.stand = Lokal.stand; return ok; }
+    const body = { message: 'Stadtbaron: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
+    if (this.sha) body.sha = this.sha;
+    const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.status === 409 || res.status === 422) return false;          // jemand war schneller
+    if (res.status === 403 || res.status === 404) throw new Error('Token darf nicht schreiben (Contents: Read and write?).');
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null;
+    return true;
+  },
+  // Ändern = neu lesen, Funktion anwenden, zurückschreiben. Bei Gleichzeitigkeit: nochmal.
+  async aendern(fn) {
+    for (let i = 0; i < 6; i++) {
+      const alt = await this.lesen(true);
+      const neu = fn(alt ? kopie(alt) : null);
+      if (!neu) return alt;
+      if (await this.schreiben(neu)) return neu;
+      await warte(300 + Math.random() * 700);
+    }
+    throw new Error('Ein anderes Gerät schreibt gerade – bitte nochmal.');
+  },
+};
+
+const Online = {
+  timer: null, tickt: false,
+  start() { this.stop(); this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  async tick() {
+    if (this.tickt || document.hidden || !this.timer) return;
+    this.tickt = true;
+    try { this.empfang(await Sync.lesen()); verbindungAnzeigen(''); }
+    catch (e) { verbindungAnzeigen(e.message, e); }
+    finally { this.tickt = false; }
+  },
+  empfang(s) {
+    if (!this.timer) return;
+    if ($('#s-spiel').classList.contains('on')) {
+      if (s && st && s.id === st.id && s.nr > anzeige.nr && !beschaeftigt) standZeigen(s);
+      else if (!s || !st || s.id !== st.id) lobbyZeigen(s);
+    } else if ($('#s-online').classList.contains('on')) lobbyZeigen(s);
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Online.timer) Online.tick(); });
+
+function verbindungAnzeigen(fehler, e) {
+  const el = $('#verbindung');
+  if (modus !== 'online') { el.textContent = ''; return; }
+  if (Lokal.an) { const ok = Lokal.verbunden(); el.className = ok ? '' : 'problem'; el.textContent = ok ? '📶 direkt verbunden' : '📶 Nicht verbunden – hier tippen'; return; }
+  el.className = fehler ? 'problem' : ''; el.textContent = fehler ? '⚠ ' + fehler : '☁ über GitHub';
+  if (e && e.schluessel && $('#s-online').classList.contains('on'))
+    lobby('⚠ ' + fehler + ' Wahrscheinlich von einer früheren Einrichtung.', [['ALTEN SPIELSTAND ERSETZEN', async () => { await Sync.lesen(true).catch(() => {}); Sync.etag = null; await Sync.schreiben({ id: 'leer', status: 'ende', spieler: [] }).catch(() => {}); Online.tick(); }]]);
+}
+$('#verbindung').onclick = () => { if (Lokal.an && !Lokal.verbunden()) Lokal.dialog(() => {}); };
+
+function lobby(text, knoepfe) {
+  if (Lokal.an) {
+    if (!Lokal.verbunden()) text += '<br>⚠ Nicht verbunden';
+    knoepfe = [...knoepfe, ['📶 VERBINDUNG (QR-CODES)', () => Lokal.dialog(lokalLobby), 'zweit'], ['⏹ OHNE INTERNET BEENDEN', lokalBeenden, 'zweit']];
+  }
+  $('#o-status').innerHTML = text;
+  const box = $('#o-knoepfe'); box.innerHTML = '';
+  knoepfe.forEach(([t, fn, kl]) => { const b = document.createElement('button'); b.innerHTML = t; if (kl) b.className = kl; b.onclick = () => { Ton.klick(); fn(); }; box.appendChild(b); });
+}
+
+// Die Lobby zeigt, was mit dem gemeinsamen Spielstand los ist
+let lobbyJson = '';
+function lobbyZeigen(s) {
+  const json = JSON.stringify(s); if (json === lobbyJson && $('#s-online').classList.contains('on')) return; lobbyJson = json;
+  const ich = Sync.geraet;
+  const neuKnopf = ['🎲 NEUES SPIEL ERSTELLEN', () => neuZeigen(true)];
+  if (!s || !s.spieler || !s.spieler.length || s.status === 'ende') {
+    if ($('#s-spiel').classList.contains('on') && s && st && s.id === st.id) return;
+    zeige('s-online');
+    return lobby(s && s.status === 'ende' && s.sieger !== undefined ? `Letztes Spiel: 🏆 ${esc(spName(s, s.sieger))} hat gewonnen.` : 'Noch kein Spiel. Ein Gerät erstellt eins, die anderen treten bei.', [neuKnopf]);
+  }
+  if (s.status === 'wartet') {
+    zeige('s-online');
+    const liste = s.spieler.map((p, k) => `<div class="verw"><span class="nm" style="--g:${p.f}">${p.fig} ${esc(p.n)}</span><span>${p.ki ? '🤖' : p.g === ich ? '📱 dieses Gerät' : p.g ? '✅ beigetreten' : '⏳ frei'}</span></div>`).join('');
+    const frei = s.spieler.map((p, k) => (!p.ki && !p.g) ? k : -1).filter(k => k >= 0);
+    const knoepfe = frei.map(k => [`🙋 ICH SPIELE ${s.spieler[k].fig} ${esc(s.spieler[k].n)}`, () => platzNehmen(k)]);
+    if (s.geraete[0] === ich) knoepfe.push([frei.length ? `▶ STARTEN (${frei.length} Platz/Plätze noch frei)` : "▶ LOS GEHT'S", () => onlineStarten(), frei.length ? 'zweit' : ''], ['✕ SPIEL ABBRECHEN', onlineAbbrechen, 'zweit']);
+    return lobby(`<b>Spiel wartet auf Mitspieler</b>${liste}<p class="klein">Jedes Gerät tippt auf „Ich spiele …“. Ein Gerät darf auch mehrere Spieler übernehmen.</p>`, knoepfe);
+  }
+  // läuft
+  const dabei = s.spieler.some(p => p.g === ich) || s.geraete[0] === ich;
+  if (dabei) { modus = 'online'; if (!$('#s-spiel').classList.contains('on') || !st || st.id !== s.id) { spielStarten(s); } return; }
+  zeige('s-online');
+  lobby('Es läuft ein Spiel ohne dieses Gerät.', [['👀 ZUSCHAUEN', () => { modus = 'online'; spielStarten(s); }], ['🎲 NEUES SPIEL (beendet das alte)', () => neuZeigen(true), 'zweit']]);
+}
+
+async function onlineErstellen(spieler, opt) {
+  modus = 'online';
+  const neu = neuesSpiel(spieler, opt);
+  neu.status = 'wartet'; neu.geraete = [Sync.geraet];
+  neu.spieler.forEach((s, k) => s.g = k === 0 && !s.ki ? Sync.geraet : null);
+  if (neu.spieler[0].ki) { const k = neu.spieler.findIndex(s => !s.ki); neu.spieler[k].g = Sync.geraet; }
+  zeige('s-online'); lobby('Erstelle Spiel …', []);
+  try { await Sync.lesen(true).catch(() => {}); if (!await Sync.schreiben(neu)) await Sync.aendern(() => neu); Ton.fanfare(); lobbyJson = ''; Online.start(); }
+  catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => onlineErstellen(spieler, opt)]]); }
+}
+async function platzNehmen(k) {
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.status !== 'wartet' || s.spieler[k].g || s.spieler[k].ki) return null;
+      s.spieler[k].g = Sync.geraet; if (!s.geraete.includes(Sync.geraet)) s.geraete.push(Sync.geraet); return s;
+    });
+    lobbyJson = ''; Online.tick();
+  } catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => Online.tick()]]); }
+}
+async function onlineStarten() {
+  try {
+    await Sync.aendern(s => {
+      if (!s || s.status !== 'wartet') return null;
+      s.spieler.forEach(p => { if (!p.ki && !p.g) p.g = Sync.geraet; });   // freie Plätze übernimmt der Gastgeber
+      s.status = 'laeuft'; s.nr = 1; return s;
+    });
+    Ton.fanfare(); Online.tick();
+  } catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => Online.tick()]]); }
+}
+async function onlineAbbrechen() {
+  try { await Sync.aendern(s => s ? { ...s, status: 'ende', sieger: undefined, spieler: [] } : null); } catch {}
+  lobbyJson = ''; Online.tick();
+}
+
+function onlineMenue() {
+  modus = 'online'; clearTimeout(kiTimer);
+  if (Lokal.an) return lokalLobby();
+  $('#o-titel').textContent = 'Online · mehrere Geräte'; $('#o-github').hidden = false;
+  if (!Sync.cfg) return setupZeigen();
+  zeige('s-online'); lobbyJson = ''; lobby('Verbinde mit GitHub …', []);
+  Online.start();
+}
+$('#m-online').onclick = () => { Ton.klick(); Lokal.an = false; onlineMenue(); };
+
+/* ---------- Ohne Internet: Geräte per QR-Code direkt verbinden (lokal.js) ---------- */
+Lokal.einrichten({
+  praefix: 'sb', geraet: Sync.geraet, titel: 'Ohne Internet',
+  qr: (cv, text) => QR.malen(cv, text),
+  wennStand: s => Online.empfang(s),
+  wennVerbunden: () => { verbindungAnzeigen(''); setTimeout(() => Online.tick(), 300); },
+  wennGetrennt: () => verbindungAnzeigen(''),
+  wennAbbruch: () => { if (!$('#s-spiel').classList.contains('on')) menue(); },
+});
+function lokalMenue() {
+  modus = 'online'; Online.stop(); Lokal.an = !!Lokal.rolle;
+  if (Lokal.an && Lokal.verbunden()) return lokalLobby();
+  Lokal.an = true; $('#o-titel').textContent = 'Ohne Internet'; $('#o-github').hidden = true;
+  zeige('s-online'); lobby('Verbinden …', []);
+  Lokal.dialog(lokalLobby);
+}
+function lokalLobby() {
+  modus = 'online'; Lokal.an = true; $('#o-titel').textContent = 'Ohne Internet'; $('#o-github').hidden = true;
+  zeige('s-online'); lobbyJson = ''; lobby('Verbunden ✓ …', []); Online.start();
+}
+async function lokalBeenden() {
+  if (!await dialog('<h2>Ohne Internet beenden?</h2><p>Die Verbindung wird getrennt und das gespeicherte Spiel auf diesem Gerät gelöscht.</p>', [['Nein', false, 'zweit'], ['Beenden', true, 'rot']])) return;
+  Online.stop(); Lokal.beenden(); menue();
+}
+$('#m-lokal').onclick = () => { Ton.klick(); lokalMenue(); };
+
+/* ---------- Einrichten & Einladung (gleich wie in den anderen Spielen) ---------- */
+function setupZeigen(text = '') { meldung(text); zeige('s-setup'); }
+function meldung(text, fehler) { const m = $('#s-meldung'); m.textContent = text; m.classList.toggle('fehler', !!fehler); }
+$('#s-verbinden').onclick = async () => {
+  Ton.klick();
+  const teile = $('#s-repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+  const token = $('#s-token').value.trim();
+  if (teile.length !== 2 || !teile[0] || !teile[1]) return meldung('Repo bitte als besitzer/name eingeben.', true);
+  if (!token) return meldung('Bitte den Token einfügen.', true);
+  meldung('Prüfe …');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${teile[0]}/${teile[1]}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (res.status === 401) return meldung('Token wird nicht akzeptiert.', true);
+    if (!res.ok) return meldung('Repo nicht gefunden – darf der Token darauf zugreifen?', true);
+    const j = await res.json();
+    if (!j.private) return meldung('Das Repo ist öffentlich! Bitte ein PRIVATES Repo nehmen.', true);
+    Sync.speichern({ o: teile[0], r: teile[1], t: token, k: b64(crypto.getRandomValues(new Uint8Array(32))) });
+    $('#s-token').value = ''; Ton.fanfare(); einladungZeigen();
+  } catch (e) { meldung('Keine Verbindung: ' + e.message, true); }
+};
+$('#s-einfuegen').onclick = async () => { Ton.klick(); try { $('#s-code').value = await navigator.clipboard.readText(); } catch { $('#s-code').focus(); } };
+$('#s-annehmen').onclick = () => einladungAnnehmen($('#s-code').value);
+function einladungAnnehmen(text) {
+  const cfg = Sync.lesEinladung(text);
+  if (!cfg) { Ton.fehler(); return meldung('Das ist kein gültiger Einladungs-Code.', true); }
+  Sync.speichern(cfg); $('#s-code').value = ''; Ton.fanfare(); onlineMenue();
+}
+function einladungZeigen() { QR.malen($('#qr'), Sync.einladungsLink()); zeige('s-einladung'); }
+$('#o-einladung').onclick = () => { Ton.klick(); Online.stop(); einladungZeigen(); };
+$('#i-fertig').onclick = () => { Ton.klick(); onlineMenue(); };
+$('#i-kopieren').onclick = async () => {
+  try { await navigator.clipboard.writeText(Sync.einladung()); $('#i-kopieren').textContent = '✓ KOPIERT'; } catch { Ton.fehler(); }
+  setTimeout(() => $('#i-kopieren').textContent = '📋 CODE KOPIEREN', 2000);
+};
+$('#o-loeschen').onclick = async () => {
+  if (!await dialog('<h2>Einrichtung löschen?</h2><p>Token und Schlüssel werden von diesem Gerät entfernt (auch für die anderen Spiele).</p>', [['Nein', false, 'zweit'], ['Löschen', true, 'rot']])) return;
+  ['sb-sync', 'mb-sync', 'wu-sync', 'tk-sync'].forEach(k => speicher.weg(k)); Sync.cfg = null; menue();
+};
+
+// QR-Code mit der Kamera lesen (jsQR wird erst hier geladen, Bilder bleiben im Gerät)
+const Scanner = {
+  strom: null, an: false,
+  async start() {
+    const video = $('#scanner video');
+    $('#scanner').classList.add('on');
+    try {
+      if (!window.jsQR) await new Promise((ok, f) => { const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = ok; s.onerror = f; document.head.appendChild(s); });
+      this.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = this.strom; await video.play();
+    } catch { this.stopp(); Ton.fehler(); return meldung('Kamera nicht verfügbar – in den Einstellungen erlauben oder den Code einfügen.', true); }
+    this.an = true;
+    const cv = document.createElement('canvas'), c = cv.getContext('2d', { willReadFrequently: true });
+    const suchen = () => {
+      if (!this.an) return;
+      if (video.readyState >= 2 && video.videoWidth) {
+        const f = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+        cv.width = video.videoWidth * f; cv.height = video.videoHeight * f;
+        c.drawImage(video, 0, 0, cv.width, cv.height);
+        const code = jsQR(c.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: 'dontInvert' });
+        if (code && Sync.lesEinladung(code.data)) { this.stopp(); return einladungAnnehmen(code.data); }
+      }
+      requestAnimationFrame(suchen);
+    };
+    requestAnimationFrame(suchen);
+  },
+  stopp() { this.an = false; if (this.strom) this.strom.getTracks().forEach(t => t.stop()); this.strom = null; $('#scanner').classList.remove('on'); },
+};
+$('#s-scannen').onclick = () => { Ton.klick(); Scanner.start(); };
+$('#sc-stopp').onclick = () => Scanner.stopp();
+
+// Einladung per Link (#einladung=…), z. B. mit der Kamera-App gescannt
+function einladungAusLink() {
+  if (!location.hash.startsWith('#einladung=')) return;
+  const cfg = Sync.lesEinladung(location.hash.slice(1));
+  history.replaceState(null, '', location.pathname);           // Schlüssel nicht im Verlauf lassen
+  if (!cfg) return;
+  Sync.speichern(cfg);
+  const app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (app) return onlineMenue();
+  dialog('<h2>Einladung erhalten ✓</h2><p>Dieses Gerät ist eingerichtet (in Safari).<br>Spielst du über die App auf dem Home-Bildschirm? Dann „Code kopieren“ und dort unter „Mehrere Geräte“ → „Einfügen“ → „Annehmen“.</p>',
+    [['📋 Code kopieren', 'kopie', 'zweit'], ['Hier spielen', 'hier']]).then(async w => {
+      if (w === 'kopie') { try { await navigator.clipboard.writeText(Sync.einladung()); } catch {} menue(); } else onlineMenue();
+    });
+}
+
+/* ---------- Start ---------- */
+brettBauen();
+layout();
+menue();
+einladungAusLink();
+addEventListener('hashchange', einladungAusLink);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

@@ -87,3 +87,26 @@ Subject: <EIN großes Hauptmotiv des Spiels, kurz beschreiben>.
 Background: <einfacher Hintergrund, der zum Spiel passt>.
 One clear silhouette, readable at 60 px, no letters, kid-friendly.
 ```
+
+## Stadtbaron – App-Icon  (noch offen, bis dahin Platzhalter „SB“)
+```
+Create a square 1024x1024 app icon, full-bleed background, no rounded corners, no text.
+Style: high-quality voxel / 3D pixel-art (Minecraft-like), toy-like, chunky, soft lighting from
+the top left, subtle gloss. Palette: midnight #151923, orange #FF7A24, cyan #47D7E8,
+green #2E9D5B, sandstone #D8C49A.
+Subject: a small voxel city block on a square board tile: one green voxel house and one red
+voxel hotel next to each other, a big golden voxel coin standing in front, and two white voxel
+dice with dark pips tumbling in the air above (one showing 5, one showing 3).
+Background: warm green (#2E9D5B) to dark midnight gradient with a soft golden glow behind the coin.
+One clear silhouette, readable at 60 px, no letters, no logos, kid-friendly, own original design
+(not based on any existing board game).
+```
+
+## Stadtbaron – Logo (optional, Titel im Menü)
+```
+Create a wide game logo, 1536x512, transparent background.
+Text exactly: "STADTBARON" (German, all caps, spelled S-T-A-D-T-B-A-R-O-N).
+Style: chunky 3D voxel block letters in green (#2E9D5B) with golden edges, a tiny voxel house
+on the letter "A" and a gold coin as the "O". Kid-friendly, clean edges, no other text,
+no background. Leave a generous transparent margin around everything, nothing cut off.
+```

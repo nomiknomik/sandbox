@@ -6,3 +6,4 @@
 - [x] Танчики (Panzer wie früher, zu zweit)
 - [ ] Reaktionsspiel: Wer tippt zuerst?
 - [ ] Kopfrechen-Quiz mit Punkten
+- [x] Stadtbaron (Straßen kaufen, Häuser bauen – Brettspiel, auch mit mehreren Geräten)
