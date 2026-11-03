@@ -44,7 +44,8 @@
   #unten{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;
          justify-content:space-between;align-items:flex-end;padding:0 10px;pointer-events:none;gap:8px;transition:opacity .3s}
   #unten > div{display:flex;gap:8px;pointer-events:auto}
-  #unten.aus{opacity:.3} #unten.aus > div{pointer-events:none}
+  #unten.aus > div{opacity:.3;pointer-events:none}
+  #unten.aus.vorwahl > #waffen{opacity:.85;pointer-events:auto}   /* nicht dran: nächste Waffe schon aussuchen */
   .knopf{width:62px;height:62px;border-radius:20px;border:3px solid rgba(255,255,255,.85);background:linear-gradient(rgba(70,95,125,.88),rgba(25,38,58,.9));color:#fff;font-size:28px;
          backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 5px 0 rgba(0,0,0,.35);text-shadow:0 2px 0 #0006}
   .knopf:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
@@ -249,7 +250,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.59';
+const APP_VERSION = '1.60';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -687,6 +688,7 @@ function updateWurm(w, dt) {
   w.aua = Math.max(0, w.aua - dt * 2);
   w.quetsch = Math.max(0, (w.quetsch || 0) - dt * 3.5);   // nur fürs Aussehen
   w.blinzeln -= dt; if (w.blinzeln < -0.15) w.blinzeln = rnd(2, 5);
+  if (w.weste && !w.luft) return schwimmen(w, dt);     // mit Rettungsweste: treibt auf dem Wasser
   if (w.luft) {
     freiMachen(w);
     w.vy += G * dt;
@@ -717,11 +719,38 @@ function updateWurm(w, dt) {
   } else if (!stoesst(w.x, w.y + 1, R)) { w.luft = true; w.vx = w.vy = 0; }
   if (w.y > WASSER + 8) ertrinken(w);
 }
+// Ins Wasser gefallen: Die Rettungsweste geht auf – der Wurm treibt oben und kann ans Ufer schwimmen
 function ertrinken(w) {
-  sag(w, 'blubb', true);
-  w.tot = true; w.hp = 0; w.ertrunken = true;
+  const neu = !w.weste;
+  w.weste = true; w.luft = false; w.seil = null; w.vx = w.vy = 0; w.dreh = 0; w.doppel = false; w.weich = false;
+  w.x = Math.max(15, Math.min(W - 15, w.x));          // nicht aus der Welt treiben
   platsch(w.x); ton.platsch();
-  texte.push({ x: w.x, y: WASSER - 30, t: 0, text: 'Blubb!', farbe: '#fff' });
+  if (neu) { sag(w, 'blubb', true); texte.push({ x: w.x, y: WASSER - 30, t: 0, text: '🦺 Rettungsweste!', farbe: '#ff9a2e' }); }
+}
+const SCHWIMM_Y = WASSER - 2;  // so tief steckt ein schwimmender Wurm im Wasser
+function schwimmen(w, dt) {
+  if (stoesst(w.x, w.y, R)) freiMachen(w);
+  const amBoden = stoesst(w.x, w.y + 1, R);
+  if (w.y < SCHWIMM_Y - 1 && !amBoden) w.y = Math.min(SCHWIMM_Y, w.y + 120 * dt);   // vom Ufer zurück ins Wasser
+  else if (w.y > SCHWIMM_Y) w.y = Math.max(SCHWIMM_Y, w.y - 40 * dt);              // auftauchen
+  if (amBoden && w.y < WASSER - 10) {                  // an Land geklettert: Weste aus
+    w.weste = false; w.ertrunken = false;
+    texte.push({ x: w.x, y: w.y - 30, t: 0, text: 'An Land! 🏝️', farbe: '#fff' });
+  }
+}
+// Paddeln: langsamer als laufen; am Ufer klettert der Wurm hoch (bis 40 Punkte)
+function paddeln(w, d, dt) {
+  w.schritte += dt;
+  const nx = Math.max(15, Math.min(W - 15, w.x + d * 32 * dt));
+  if (!stoesst(nx, w.y, R)) { w.x = nx; return; }
+  for (let k = 1; k <= 40; k++) if (!stoesst(nx, w.y - k, R)) { w.x = nx; w.y -= k; return; }
+}
+// Wo ist das nächste Ufer? (+1 rechts, -1 links, 0 = keins)
+function uferRichtung(w) {
+  for (let dx = 10; dx < W; dx += 10) for (const ri of [1, -1]) {
+    const x = w.x + ri * dx; if (x > 15 && x < W - 15 && obersterBoden(x) < WASSER - 12) return ri;
+  }
+  return 0;
 }
 function laufen(w, d, dt) {
   w.laufen += 55 * dt; w.schritte += dt;
@@ -1138,6 +1167,8 @@ function naechsterZug() {
   if (spiel.bonusSchuesse) kiste += '  🎁 Du hast ' + (spiel.bonusSchuesse + 1) + ' Schüsse!';
   // Wer rechnet diesen Zug? Lokal immer dieses Gerät. Online: das Gerät des Teams – Computer-Teams rechnet der Gastgeber.
   spiel.quelle = spiel.modus === 'lokal' || spiel.dran === spiel.ich || (spiel.art[spiel.dran] === 'c' && spiel.host) ? 'live' : 'fern';
+  { const tm = spiel.teams[spiel.dran], vw = tm.vorwahl; tm.vorwahl = null;   // vorher ausgesuchte Waffe nehmen
+    if (vw && spiel.quelle === 'live' && !kiDran() && tm.munition[vw] !== 0 && WAFFEN[vw].ab <= rundeNr()) spiel.waffe = vw; }
   kam.frei = false; zoom = ZOOM_STUFEN.includes(speicher.lies('wu-zoom')) ? speicher.lies('wu-zoom') : 1; zoomAnzeigen();   // gewählte Fernrohr-Stufe
   const t = TEAMS[spiel.dran], nr = rundeNr();
   let neu = '';
@@ -1235,16 +1266,16 @@ function neuerAls(rec, alt) { return !alt || (!alt.s && (rec.s || rec.id !== alt
 function zugMerken(rec) { if (spiel && rec && neuerAls(rec, spiel.zuege[rec.n])) spiel.zuege[rec.n] = rec; }
 
 function schnappschuss() {
-  return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung]),
+  return { w: wuermer.map(w => [w.x, w.y, w.hp, w.tot ? 1 : 0, w.richtung, w.weste ? 1 : 0]),
            m: spiel.teams.map(t => t.munition), z: spiel.teams.map(t => t.zeiger), d: spiel.dran,
            ki: kisten.map(k => [k.x, k.y, k.art, k.luft ? 1 : 0]), x: spiel.teams.map(t => t.extra || 0),
            mi: minen.map(m => [Math.round(m.x), Math.round(m.y)]), bu: wuermer.map(w => w.bunker ? 1 : 0) };
 }
 function standSetzen(s) {
-  s.w.forEach(([x, y, hp, tot, ri], i) => {
+  s.w.forEach(([x, y, hp, tot, ri, we], i) => {
     const w = wuermer[i]; if (!w) return;
     if (tot && !w.tot && !w.ertrunken) graeber.push({ x, y, vy: 0, r: 6, farbe: TEAMS[w.team].farbe });
-    Object.assign(w, { x, y, hp, tot: !!tot, richtung: ri, vx: 0, vy: 0, luft: false });
+    Object.assign(w, { x, y, hp, tot: !!tot, richtung: ri, vx: 0, vy: 0, luft: false, weste: !!we });
   });
   s.m.forEach((m, t) => spiel.teams[t].munition = { ...m });
   s.z.forEach((z, t) => spiel.teams[t].zeiger = z);
@@ -1351,10 +1382,11 @@ function updateSpiel(dt) {
     const d = (spiel.ein.links ? -1 : 0) + (spiel.ein.rechts ? 1 : 0);
     if (d && !w.luft) {
       if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; }
-      laufen(w, d, dt); if (spiel.quelle === 'live') kam.frei = false;
+      if (w.weste) paddeln(w, d, dt); else laufen(w, d, dt);
+      if (spiel.quelle === 'live') kam.frei = false;
     }
     if (w.seil && d) { w.vx += d * 420 * dt; if (d !== w.richtung) { w.richtung = d; w.ziel = Math.PI - w.ziel; } }   // schaukeln
-    if (spiel.ein.springen) { if (w.seil) { w.seil = null; w.vy = Math.min(w.vy, 0) - 120; } else springen(w, d !== 0); }   // loslassen
+    if (spiel.ein.springen) { if (w.seil) { w.seil = null; w.vy = Math.min(w.vy, 0) - 120; } else if (!w.weste) springen(w, d !== 0); }   // loslassen (mit Weste kein Sprung)
   }
   if (spiel.graben && spiel.ein.springen) spiel.graben.stop = true;   // ⤴ = mit dem Bohren aufhören
   spiel.ein.springen = false;
@@ -1440,6 +1472,15 @@ const leinwand = $('bild'), ctx = leinwand.getContext('2d');
 let zielt = null;                 // Steinschleuder: {id, sx, sy, x, y, staerke, richtung}
 const finger = new Map();         // alle Finger auf dem Bildschirm (für zwei-Finger-Schieben)
 
+// Wer gerade nicht dran ist, darf schon die Waffe für seinen nächsten Zug aussuchen.
+// Gibt das Team zurück, für das dieses Gerät vorwählen darf (sonst -1).
+function vorwahlTeam() {
+  if (!spiel || spiel.fertig || darfZielen()) return -1;
+  if (spiel.modus === 'online') return spiel.ich >= 0 && spiel.ich !== spiel.dran && lebt(spiel.ich) ? spiel.ich : -1;
+  if (!kiDran()) return -1;                             // am selben Gerät: nur während der Computer spielt
+  for (let i = 1; i < spiel.n; i++) { const t = (spiel.dran + i) % spiel.n; if (spiel.art[t] !== 'c' && lebt(t)) return t; }
+  return -1;
+}
 function darfZielen() { return spiel && spiel.quelle === 'live' && spiel.phase === 'zielen' && aktiver() && !aktiver().tot && !spiel.fertig && !kiDran() && !spiel.graben; }
 const inWelt = (sx, sy) => ({ x: (sx - bw / 2) / massstab + kam.x, y: (sy - bh / 2) / massstab + kam.y });
 
@@ -1518,7 +1559,7 @@ halten('links', 'L'); halten('rechts', 'R'); halten('springen', 'J');
 // Stapel: Name an jede Waffe im Fächer, Antippen öffnet/schließt den Fächer
 document.querySelectorAll('.faecher .waffe').forEach(b => { const n = document.createElement('span'); n.className = 'name'; n.textContent = WAFFEN[b.dataset.w].name; b.insertBefore(n, b.querySelector('small')); });
 function stapelZu() {
-  const t = spiel && spiel.teams[spiel.dran];
+  const t = spiel && spiel.teams[vorwahlTeam() >= 0 ? vorwahlTeam() : spiel.dran];
   document.querySelectorAll('.stapel.offen').forEach(st => {
     if (t && t.gesehen) st.querySelectorAll('.waffe.neu').forEach(b => t.gesehen[b.dataset.w] = true);   // angeschaut – Hinweis weg
     st.classList.remove('offen');
@@ -1532,17 +1573,18 @@ function stapelFaechern(st) {                         // Waffen schräg nach obe
 }
 document.querySelectorAll('.stapel').forEach((st, i, alle) => { if (i >= alle.length / 2) st.classList.add('links'); });
 document.querySelectorAll('.stapel').forEach(st => st.querySelector('.stapelknopf').onclick = () => {
-  if (!darfZielen()) return;
+  if (!darfZielen() && vorwahlTeam() < 0) return;
   const war = st.classList.contains('offen'); stapelZu(); if (!war) st.classList.add('offen');
   document.querySelectorAll('.stapel').forEach(stapelFaechern);
 });
 leinwand.addEventListener('pointerdown', () => { stapelZu(); document.querySelectorAll('.stapel').forEach(stapelFaechern); });
 document.querySelectorAll('.waffe').forEach(b => b.onclick = () => {
-  if (!darfZielen()) return;
-  const a = WAFFEN[b.dataset.w];
+  const vt = vorwahlTeam(); if (!darfZielen() && vt < 0) return;
+  const a = WAFFEN[b.dataset.w], tm = spiel.teams[vt >= 0 ? vt : spiel.dran];
   if (a.ab > rundeNr()) { $('waffeninfo').innerHTML = `🔒 ${symbol(b.dataset.w)} ${a.name} gibt es ab Runde ${a.ab}`; return; }
-  if (spiel.teams[spiel.dran].munition[b.dataset.w] === 0) { $('waffeninfo').innerHTML = `${symbol(b.dataset.w)} ${a.name} ist aufgebraucht` + (a.nurKiste ? ' – gibt es nur aus Kisten 📦' : ''); return; }
-  spiel.waffe = b.dataset.w; b.closest('.stapel').dataset.zuletzt = b.dataset.w;
+  if (tm.munition[b.dataset.w] === 0) { $('waffeninfo').innerHTML = `${symbol(b.dataset.w)} ${a.name} ist aufgebraucht` + (a.nurKiste ? ' – gibt es nur aus Kisten 📦' : ''); return; }
+  if (vt >= 0) tm.vorwahl = b.dataset.w; else spiel.waffe = b.dataset.w;
+  b.closest('.stapel').dataset.zuletzt = b.dataset.w;
   stapelZu(); document.querySelectorAll('.stapel').forEach(stapelFaechern); zeigeWaffen();
 });
 // Symbol einer Waffe als HTML: das gezeichnete Bild aus dem Knopf (falls vorhanden), sonst das Emoji
@@ -1552,12 +1594,13 @@ function symbol(art, groesse = '1.4em') {
 }
 function zeigeWaffen() {
   if (!spiel || !spiel.teams[spiel.dran]) return;
-  const m = spiel.teams[spiel.dran].munition, nr = rundeNr(), team = spiel.teams[spiel.dran];
+  const vt = vorwahlTeam(), team = spiel.teams[vt >= 0 ? vt : spiel.dran], m = team.munition, nr = rundeNr();
+  const gew = vt >= 0 ? (team.vorwahl || 'bazooka') : spiel.waffe;   // was als gewählt leuchtet
   const frei = w => m[w] !== 0 && WAFFEN[w].ab <= nr;
   if (!team.gesehen) team.gesehen = Object.fromEntries(Object.keys(WAFFEN).filter(frei).map(w => [w, true]));   // was man am Anfang schon hat, ist nicht „neu“
   document.querySelectorAll('.waffe').forEach(b => {
     const n = m[b.dataset.w], zu = WAFFEN[b.dataset.w].ab > nr;
-    b.classList.toggle('an', b.dataset.w === spiel.waffe);
+    b.classList.toggle('an', b.dataset.w === gew);
     b.classList.toggle('leer', n === 0);
     b.classList.toggle('zu', zu);
     b.classList.toggle('versteckt', (!!WAFFEN[b.dataset.w].nurKiste && n === 0) || (b.dataset.w === 'trampolin' && !regel().trampolin));   // Kisten-Waffe erst zeigen, wenn man eine hat
@@ -1567,16 +1610,17 @@ function zeigeWaffen() {
   // Stapelknopf zeigt die gewählte (oder zuletzt benutzte) Waffe seiner Gruppe
   document.querySelectorAll('.stapel').forEach(st => {
     const ws = [...st.querySelectorAll('.waffe')].filter(b => !b.classList.contains('versteckt'));
-    const zeig = ws.find(b => b.dataset.w === spiel.waffe) || ws.find(b => b.dataset.w === st.dataset.zuletzt) || ws.find(b => !b.classList.contains('zu') && !b.classList.contains('leer')) || ws[0];
+    const zeig = ws.find(b => b.dataset.w === gew) || ws.find(b => b.dataset.w === st.dataset.zuletzt) || ws.find(b => !b.classList.contains('zu') && !b.classList.contains('leer')) || ws[0];
     const k = st.querySelector('.stapelknopf');
-    k.classList.toggle('an', !!ws.find(b => b.dataset.w === spiel.waffe));
-    k.classList.toggle('neu', !!st.querySelector('.waffe.neu') && !kiDran());   // ✨ etwas Neues drin
+    k.classList.toggle('an', !!ws.find(b => b.dataset.w === gew));
+    k.classList.toggle('neu', !!st.querySelector('.waffe.neu') && (!kiDran() || vt >= 0));   // ✨ etwas Neues drin
     if (zeig && k.dataset.w !== zeig.dataset.w + zeig.querySelector('small')?.textContent) {
       k.dataset.w = zeig.dataset.w + zeig.querySelector('small')?.textContent;
       const kopie = zeig.cloneNode(true); kopie.querySelector('.name')?.remove();
       k.innerHTML = kopie.innerHTML;
     }
   });
+  if (vt >= 0 && team.vorwahl) { $('waffeninfo').innerHTML = `⏭ Nächster Zug: ${symbol(gew)} ${WAFFEN[gew].name}`; return; }
   const a = WAFFEN[spiel.waffe];
   if (spiel.waffe === 'zielsuch' && darfZielen()) { $('waffeninfo').textContent = spiel.zielPunkt ? '🎯 Ziel gesetzt – jetzt ziehen und loslassen' : '🎯 Erst kurz auf das Ziel tippen'; return; }
   const pw = aktiver(); if (pw && pw.panzer && darfZielen()) { $('waffeninfo').textContent = `Panzer · ${pw.panzer.schuss === 1 ? '1 Schuss' : 'noch ' + pw.panzer.schuss + ' Schüsse'} · ◀ ▶ fahren`; return; }
@@ -1638,6 +1682,12 @@ const KI = {
       return;
     }
     if (spiel.phase !== 'zielen') return;
+    if (w.weste && p.schwimmt === undefined) { p.schwimmt = uferRichtung(w); p.st = 0; if (p.schwimmt) eingeben([p.schwimmt > 0 ? 'R' : 'L', 0, 1], true); }
+    if (p.schwimmt) {                                    // im Wasser: erst ans Ufer paddeln, dann zielen
+      p.st += dt;
+      if (w.weste && p.st < 15 && spiel.zugzeit > 8) return;
+      eingeben([p.schwimmt > 0 ? 'R' : 'L', 0, 0], true); p.schwimmt = 0; p.t = 0;
+    }
     p.t += dt;
     if (p.t < 1) return;
     if (!p.wahl) {
@@ -2054,7 +2104,7 @@ const SPRUECHE = {
   mazila:   ['Мазила!', 'Мимо!', 'Косой!', 'Ха-ха, промазал!', 'Очки купи!', 'Даже не близко!'],
   kuda:     ['Куда ты лезешь?!', 'Э, сюда нельзя!', 'Не подходи!', 'Чего припёрся?'],
   tschuess: ['Прощайте, братцы…', 'Я ещё вернусь!', 'Ой, всё…'],
-  blubb:    ['Буль-буль…', 'Я не умею плавать!'],
+  blubb:    ['Буль-буль…', 'Спасите!'],
   heil:     ['Ой, хорошо-то как!', 'Спасибо, доктор!', 'Как новенький!'],
 };
 function sag(w, art, wichtig = false) {
@@ -2432,6 +2482,14 @@ function zeichneKiste(k) {
   } else ctx.fillText(WAFFEN[k.art].icon, 0, 1);
   ctx.restore();
 }
+// Orange Rettungsweste mit weißem Streifen
+function westeMalen(w) {
+  ctx.save(); ctx.translate(w.x, w.y);
+  ctx.fillStyle = '#ff7a1a'; ctx.strokeStyle = '#8a3b00'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-9, -6, 18, 10, 4) : ctx.rect(-9, -6, 18, 10); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillRect(-8, -2, 16, 2);
+  ctx.restore();
+}
 function zeichneGrab(g) {
   ctx.save(); ctx.translate(g.x, g.y + 6);
   ctx.fillStyle = '#9aa3ad'; ctx.strokeStyle = '#5b636c'; ctx.lineWidth = 1.2;
@@ -2679,6 +2737,7 @@ function zeichne() {
   for (const o of dinge) zeichneDing(o);
   welle(WASSER - 4, 'rgba(46,130,200,.75)', 6, 0, links, rechts, unten);
   welle(WASSER + 10, 'rgba(30,100,175,.85)', 5, 4, links, rechts, unten);
+  for (const w of wuermer) if (w.weste && !w.tot) westeMalen(w);   // Weste über den Wellen, damit man sie sieht
   if (tz > 1.2) { ctx.fillStyle = `rgba(15,20,60,${Math.min(.42, (tz - 1.2) * .15)})`; ctx.fillRect(links, kam.y - bh / massstab, rechts - links, bh / massstab * 2); }
   for (const p of teilchen) zeichneTeilchen(p);
   // Glitzer auf dem Wasser
@@ -2774,6 +2833,8 @@ function hud() {
   const lokalWeg = Lokal.an && spiel.modus === 'online' && !Lokal.verbunden();
   $('direkt').classList.toggle('versteckt', !(lokalWeg || (Direkt.an && !Direkt.lokal && !Direkt.alleVerbunden() && (Direkt.problem || Direkt.klapptNicht()))));
   $('unten').classList.toggle('aus', spiel.quelle !== 'live' || spiel.fertig || kiDran());
+  const vw = vorwahlTeam() >= 0;
+  if ($('unten').classList.contains('vorwahl') !== vw) { $('unten').classList.toggle('vorwahl', vw); if (!vw) stapelZu(); zeigeWaffen(); }
   const nr = rundeNr(), rt = `<b>Runde ${nr}</b>⚡ +${Math.round((staerkeFaktor().d - 1) * 100)} %`;
   if ($('runde').innerHTML !== rt) $('runde').innerHTML = rt;
   let st = '';
