@@ -88,7 +88,7 @@ Background: <einfacher Hintergrund, der zum Spiel passt>.
 One clear silhouette, readable at 60 px, no letters, kid-friendly.
 ```
 
-## Stadtbaron – App-Icon  (noch offen, bis dahin Platzhalter „SB“)
+## Stadtbaron – App-Icon  ✅ eingebaut (Stadtbaron v1.1)
 ```
 Create a square 1024x1024 app icon, full-bleed background, no rounded corners, no text.
 Style: high-quality voxel / 3D pixel-art (Minecraft-like), toy-like, chunky, soft lighting from
@@ -102,7 +102,7 @@ One clear silhouette, readable at 60 px, no letters, no logos, kid-friendly, own
 (not based on any existing board game).
 ```
 
-## Stadtbaron – Logo (optional, Titel im Menü)
+## Stadtbaron – Logo (Titel im Menü)  ✅ eingebaut (Stadtbaron v1.1, `logo.webp`)
 ```
 Create a wide game logo, 1536x512, transparent background.
 Text exactly: "STADTBARON" (German, all caps, spelled S-T-A-D-T-B-A-R-O-N).
