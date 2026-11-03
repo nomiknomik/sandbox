@@ -91,6 +91,14 @@
   #uebersicht{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:62px;width:46px;height:46px;font-size:20px}
   #uebersicht{position:fixed} #uebersicht small{pointer-events:none}
   #pause{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:114px;width:46px;height:46px;font-size:20px}
+  #hilfe{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:62px;width:46px;height:46px;font-size:20px}
+  #waffenhilfe{position:fixed;inset:0;z-index:55;background:rgba(10,20,40,.6);display:flex;align-items:center;justify-content:center;padding:12px}
+  #waffenhilfe > div{background:#fff;color:#222;border-radius:18px;max-width:640px;width:100%;max-height:100%;overflow:auto;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  #waffenhilfe h2{margin:0 0 4px;font-size:22px}
+  #waffenhilfe table{width:100%;border-collapse:collapse;font-size:14px}
+  #waffenhilfe td{padding:6px 4px;border-top:1px solid #eee;vertical-align:top}
+  #waffenhilfe td.s{font-weight:900;white-space:nowrap;text-align:right;color:#c0392b}
+  #waffenhilfe tr.zu{opacity:.45}
   #pausenbild{position:fixed;inset:0;z-index:50;background:rgba(10,20,40,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;cursor:pointer}
   #pausenbild b{font-size:64px;font-weight:900;text-shadow:0 4px 0 rgba(0,0,0,.35)}
   #pausenbild span{font-size:20px;font-weight:700}
@@ -181,6 +189,8 @@
 <button class="knopf versteckt" id="ton" aria-label="Ton an/aus">🔊</button>
 <button class="knopf versteckt" id="uebersicht" aria-label="Übersicht">🔭</button>
 <button class="knopf versteckt" id="pause" aria-label="Pause">⏸</button>
+<button class="knopf versteckt" id="hilfe" aria-label="Waffen-Info">ℹ️</button>
+<div id="waffenhilfe" class="versteckt"><div></div></div>
 <div id="pausenbild" class="versteckt"><b>⏸ Pause</b><span>Antippen zum Weiterspielen</span></div>
 
 <div id="unten" class="versteckt">
@@ -250,7 +260,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.60';
+const APP_VERSION = '1.61';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1109,7 +1119,7 @@ function neuesSpiel({ n, startzahl, modus = 'lokal', ich = -1, id = null, art = 
   spiel.dran = (spiel.dran + n - 1) % n;
   spiel.krater = [];
   baueHud();
-  ['oben', 'unten', 'ton', 'raus', 'status', 'uebersicht'].forEach(id => $(id).classList.remove('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'uebersicht', 'hilfe'].forEach(id => $(id).classList.remove('versteckt'));
   $('pause').classList.toggle('versteckt', modus !== 'lokal');   // Pause nur auf einem Gerät (online laufen die anderen weiter)
   $('menu').classList.add('versteckt');
   $('status').textContent = '';
@@ -1770,6 +1780,28 @@ $('fernbedienung').addEventListener('pointerdown', e => { e.preventDefault(); ei
 $('uebersicht').onclick = uebersicht;
 $('pause').onclick = () => pausieren(true);
 $('pausenbild').onclick = () => pausieren(false);
+// ℹ️ Waffen-Info: wie viel Schaden jede Waffe macht (mit der Verstärkung dieser Runde) und was sie Besonderes kann
+const SCHADEN_TEXT = {   // Waffen, die mehrmals treffen: [Anzahl, Schaden pro Treffer] oder eigener Text
+  banane: d => `${d(40)} + 5 × ${d(22)}`, luftschlag: d => `5 × ${d(26)}`, flinte: d => `2 × ${d(18)}`,
+  molotow: d => `${d(4)} pro ½ s im Feuer`, panzer: d => `${d(38)} pro Schuss`, trampolin: d => `${d(10)} pro Wurm`,
+  erdbrecher: () => '0', graben: () => '–', seil: () => '–', bunker: () => '–', teleport: () => '–',
+};
+function waffenhilfeZeigen() {
+  const f = staerkeFaktor(), nr = rundeNr(), d = n => Math.round(n * f.d);
+  const zeilen = Object.entries(WAFFEN).filter(([k]) => k !== 'trampolin' || regel().trampolin).map(([k, a]) => {
+    const sch = SCHADEN_TEXT[k] ? SCHADEN_TEXT[k](d) : a.schaden ? String(d(a.schaden)) : '–';
+    const extra = [a.radius ? `Größe ${Math.round(a.radius * f.r)}` : '', a.ab > nr ? `🔒 ab Runde ${a.ab}` : '', a.nurKiste ? '📦 nur aus Kisten' : ''].filter(Boolean).join(' · ');
+    return `<tr class="${a.ab > nr ? 'zu' : ''}"><td style="font-size:22px;text-align:center">${symbol(k, '1.3em')}</td>
+      <td><b>${a.name}</b> ${'★'.repeat(a.sterne)}<br>${a.info}${extra ? `<br><small style="color:#777">${extra}</small>` : ''}</td><td class="s">${sch}</td></tr>`;
+  }).join('');
+  $('waffenhilfe').firstElementChild.innerHTML = `<h2>ℹ️ Waffen</h2>
+    <p style="margin:0 0 8px;font-size:14px;color:#555">Runde ${nr}: Schaden +${Math.round((f.d - 1) * 100)} %. Jeder Wurm hat 100 ❤️. Im Panzer nur halber Schaden, im Bunker gar keiner. Antippen zum Schließen.</p>
+    <table><tr><td></td><td><b>Waffe</b></td><td class="s" style="color:#222">💥 Schaden</td></tr>${zeilen}</table>`;
+  $('waffenhilfe').classList.remove('versteckt');
+  if (spiel && spiel.modus === 'lokal' && !spiel.fertig) { pausiert = true; zielt = null; spiel.ein = {}; }   // am selben Gerät: Spiel wartet solange
+}
+$('hilfe').onclick = waffenhilfeZeigen;
+$('waffenhilfe').onclick = () => { $('waffenhilfe').classList.add('versteckt'); if ($('pausenbild').classList.contains('versteckt')) pausiert = false; };
 $('ton').onclick = () => { ton.stumm = !ton.stumm; $('ton').textContent = ton.stumm ? '🔇' : '🔊'; };
 $('raus').onclick = async () => {
   if (!spiel) return;
@@ -2920,7 +2952,7 @@ function karte(kopf, text, knoepfe = [], extra = '', unten = []) {
 }
 function hintergrund() {
   spiel = null; dinge = []; zielt = null; Direkt.stop();
-  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung', 'uebersicht', 'pause'].forEach(id => $(id).classList.add('versteckt'));
+  ['oben', 'unten', 'ton', 'raus', 'status', 'direkt', 'fernbedienung', 'uebersicht', 'pause', 'hilfe', 'waffenhilfe'].forEach(id => $(id).classList.add('versteckt'));
   pausieren(false);
 }
 function startMenue() {
