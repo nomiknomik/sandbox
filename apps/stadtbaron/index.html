@@ -51,7 +51,10 @@
   .sp-zeile input{flex:1;min-width:0;border-left:8px solid var(--f)}
   .sp-zeile .art{min-width:96px;padding:10px 8px}
   .anzahl button{padding:10px 0}
-  .anzahl button.an{outline:3px solid var(--text)}
+  .anzahl button.an,.stufe.an{outline:3px solid var(--text)}
+  .stufe{text-align:left;display:flex;gap:10px;align-items:center}
+  .stufe .gross{font-size:34px}
+  .stufe small{display:block;font-weight:400;font-size:14px;opacity:.85}
   label.schalter{display:flex;gap:10px;align-items:center;font-size:16px}
   label.schalter input{width:24px;height:24px}
 
@@ -70,6 +73,8 @@
           padding:calc(var(--u)*.05) 1px;font-size:calc(var(--u)*.17);line-height:1.05;min-width:0}
   .inhalt b{font-weight:600;word-break:break-word;hyphens:auto;-webkit-hyphens:auto}
   .inhalt .sym{font-size:calc(var(--u)*.42);line-height:1}
+  .inhalt .sym.st{font-size:calc(var(--u)*.3)}
+  .mini .inhalt .sym.st{font-size:calc(var(--u)*.46)}
   .inhalt .pr{font-size:calc(var(--u)*.16);opacity:.75}
   .mini .inhalt b{display:none}
   .mini .inhalt{justify-content:center}
@@ -158,6 +163,15 @@
   .karte-gross .titel{font-size:13px;letter-spacing:2px;font-weight:800;opacity:.7}
   .karte-gross .sym{font-size:46px}
   .er{background:#FFD8A8}.ks{background:#BFE3FF}
+  #toast{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:14;opacity:0}
+  #toast.on{animation:toast 1.3s ease forwards}
+  #toast div{background:#fff;color:#1B2A22;border-radius:22px;padding:14px 26px;box-shadow:0 10px 40px #0005;display:flex;flex-direction:column;align-items:center;gap:4px;border:4px solid #FFD54A}
+  #toast span{font-size:56px;line-height:1}
+  #toast b{font-size:24px;letter-spacing:1px}
+  @keyframes toast{0%{opacity:0;transform:scale(.4)}15%{opacity:1;transform:scale(1.1)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(.95)}}
+  #konfetti{position:fixed;inset:0;pointer-events:none;z-index:25;overflow:hidden}
+  #konfetti span{position:absolute;top:-40px;animation:fall 3s linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
   #karte{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:#0004}
   #karte.on{display:flex}
   #karte .karte-gross{width:min(340px,86vw);box-shadow:0 12px 40px #0007;animation:dreh .5s ease-out}
@@ -212,6 +226,14 @@
       <div class="reihe anzahl" id="n-anzahl"></div>
       <div id="n-spieler"></div>
       <p class="klein">Figur antippen = andere Figur. 👤 Mensch / 🤖 Computer umschalten.</p>
+    </div>
+    <div class="box">
+      <b>Wie schwer?</b>
+      <div class="spalte" id="n-stufe" style="margin-top:6px"></div>
+    </div>
+    <div class="box">
+      <b>Wie lange?</b>
+      <div class="reihe anzahl" id="n-runden"></div>
     </div>
     <div class="box">
       <b>Startgeld</b>
@@ -292,7 +314,14 @@
 <section id="s-regeln" class="screen">
   <div class="spalte regeln">
     <h2>📖 So geht Stadtbaron</h2>
+    <div class="box" style="font-size:18px">
+      <h3>🐣 In 5 Sätzen</h3>
+      <p>🎲 Würfeln und loslaufen.<br>🛒 Freies Feld? Du darfst es kaufen.<br>💸 Gehört es jemand anderem? Dann zahlst du Miete.<br>
+      🏠 Hast du alle Straßen einer Farbe? Dann darfst du Häuser bauen – die Miete wird viel höher!<br>🏆 Am Ende gewinnt, wer am reichsten ist.</p>
+    </div>
     <div class="box">
+      <p class="klein">🐣 Einfach: Kein Versteigern, keine Hypothek. Gefängnis = einmal aussetzen. Kein Geld mehr? Dann ist das Spiel aus.<br>
+      🦊 Mittel: Dazu gleichmäßig bauen, Gefängnis mit Pasch oder 50, Straßen tauschen.<br>🦁 Profi: Alles unten.</p>
       <h3>Ziel</h3><p>Kaufe Straßen, baue Häuser und kassiere Miete. Wer am Ende als Einziger nicht pleite ist, gewinnt. (Oder: ☰ Menü → „Spiel auswerten“ – wer am meisten besitzt, gewinnt.)</p>
       <h3>Dein Zug</h3><ul>
         <li>Würfeln und so viele Felder vorgehen. Über 🏁 START gibt es <b>200 🪙</b>.</li>
@@ -316,12 +345,13 @@
 
 <div id="dlg"><div class="inner"><div id="dlg-inhalt"></div><div class="knoepfe" id="dlg-knoepfe"></div></div></div>
 <div id="karte"></div>
+<div id="toast"></div>
 <div id="scanner"><video playsinline muted></video><p id="sc-text">QR-Code der Einladung in den Rahmen halten</p><button class="zweit" id="sc-stopp" style="color:#fff">ABBRECHEN</button></div>
 
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -387,46 +417,47 @@ const GRUPPEN = {
 };
 const F = [
   { t: 'start', n: 'START', i: '🏁' },
-  { t: 's', n: 'Kieselweg', g: 'braun', p: 60, m: [2, 10, 30, 90, 160, 250] },
+  { t: 's', n: 'Kieselweg', e: '🪨', g: 'braun', p: 60, m: [2, 10, 30, 90, 160, 250] },
   { t: 'ks', n: 'Stadtkasse', i: '💰' },
-  { t: 's', n: 'Sandgasse', g: 'braun', p: 60, m: [4, 20, 60, 180, 320, 450] },
+  { t: 's', n: 'Sandgasse', e: '🏖️', g: 'braun', p: 60, m: [4, 20, 60, 180, 320, 450] },
   { t: 'st', n: 'Steuer', i: '🧾', b: 200 },
   { t: 'b', n: 'Busbahnhof', i: '🚌', p: 200 },
-  { t: 's', n: 'Mühlenweg', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
+  { t: 's', n: 'Mühlenweg', e: '🌾', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
   { t: 'er', n: 'Überraschung', i: '❓' },
-  { t: 's', n: 'Gartenstraße', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
-  { t: 's', n: 'Brunnenplatz', g: 'hellblau', p: 120, m: [8, 40, 100, 300, 450, 600] },
+  { t: 's', n: 'Gartenstraße', e: '🌻', g: 'hellblau', p: 100, m: [6, 30, 90, 270, 400, 550] },
+  { t: 's', n: 'Brunnenplatz', e: '⛲', g: 'hellblau', p: 120, m: [8, 40, 100, 300, 450, 600] },
   { t: 'knast', n: 'Gefängnis', i: '🚓' },
-  { t: 's', n: 'Rosenallee', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
+  { t: 's', n: 'Rosenallee', e: '🌹', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
   { t: 'w', n: 'Kraftwerk', i: '⚡', p: 150 },
-  { t: 's', n: 'Tulpenweg', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
-  { t: 's', n: 'Fliederplatz', g: 'pink', p: 160, m: [12, 60, 180, 500, 700, 900] },
+  { t: 's', n: 'Tulpenweg', e: '🌷', g: 'pink', p: 140, m: [10, 50, 150, 450, 625, 750] },
+  { t: 's', n: 'Fliederplatz', e: '🦋', g: 'pink', p: 160, m: [12, 60, 180, 500, 700, 900] },
   { t: 'b', n: 'Hafen', i: '⚓', p: 200 },
-  { t: 's', n: 'Fischmarkt', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
+  { t: 's', n: 'Fischmarkt', e: '🐟', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
   { t: 'ks', n: 'Stadtkasse', i: '💰' },
-  { t: 's', n: 'Muschelweg', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
-  { t: 's', n: 'Leuchtturmweg', g: 'orange', p: 200, m: [16, 80, 220, 600, 800, 1000] },
+  { t: 's', n: 'Muschelweg', e: '🐚', g: 'orange', p: 180, m: [14, 70, 200, 550, 750, 950] },
+  { t: 's', n: 'Leuchtturmweg', e: '🗼', g: 'orange', p: 200, m: [16, 80, 220, 600, 800, 1000] },
   { t: 'park', n: 'Pause', i: '🧺' },
-  { t: 's', n: 'Burgstraße', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
+  { t: 's', n: 'Burgstraße', e: '🏰', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
   { t: 'er', n: 'Überraschung', i: '❓' },
-  { t: 's', n: 'Ritterweg', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
-  { t: 's', n: 'Drachenplatz', g: 'rot', p: 240, m: [20, 100, 300, 750, 925, 1100] },
+  { t: 's', n: 'Ritterweg', e: '🛡️', g: 'rot', p: 220, m: [18, 90, 250, 700, 875, 1050] },
+  { t: 's', n: 'Drachenplatz', e: '🐉', g: 'rot', p: 240, m: [20, 100, 300, 750, 925, 1100] },
   { t: 'b', n: 'Flughafen', i: '✈️', p: 200 },
-  { t: 's', n: 'Sonnenallee', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
-  { t: 's', n: 'Goldgasse', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
+  { t: 's', n: 'Sonnenallee', e: '☀️', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
+  { t: 's', n: 'Goldgasse', e: '👑', g: 'gelb', p: 260, m: [22, 110, 330, 800, 975, 1150] },
   { t: 'w', n: 'Wasserwerk', i: '💧', p: 150 },
-  { t: 's', n: 'Sternenweg', g: 'gelb', p: 280, m: [24, 120, 360, 850, 1025, 1200] },
+  { t: 's', n: 'Sternenweg', e: '⭐', g: 'gelb', p: 280, m: [24, 120, 360, 850, 1025, 1200] },
   { t: 'gehknast', n: 'Ab ins Gefängnis', i: '👮' },
-  { t: 's', n: 'Parkring', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
-  { t: 's', n: 'Waldallee', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
+  { t: 's', n: 'Parkring', e: '🎡', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
+  { t: 's', n: 'Waldallee', e: '🌲', g: 'gruen', p: 300, m: [26, 130, 390, 900, 1100, 1275] },
   { t: 'ks', n: 'Stadtkasse', i: '💰' },
-  { t: 's', n: 'Seeufer', g: 'gruen', p: 320, m: [28, 150, 450, 1000, 1200, 1400] },
+  { t: 's', n: 'Seeufer', e: '🦆', g: 'gruen', p: 320, m: [28, 150, 450, 1000, 1200, 1400] },
   { t: 'b', n: 'Seilbahn', i: '🚡', p: 200 },
   { t: 'er', n: 'Überraschung', i: '❓' },
-  { t: 's', n: 'Kristallturm', g: 'blau', p: 350, m: [35, 175, 500, 1100, 1300, 1500] },
-  { t: 'st', n: 'Luxussteuer', i: '💎', b: 100 },
-  { t: 's', n: 'Königsplatz', g: 'blau', p: 400, m: [50, 200, 600, 1400, 1700, 2000] },
+  { t: 's', n: 'Kristallturm', e: '💎', g: 'blau', p: 350, m: [35, 175, 500, 1100, 1300, 1500] },
+  { t: 'st', n: 'Luxussteuer', i: '💸', b: 100 },
+  { t: 's', n: 'Königsplatz', e: '🏯', g: 'blau', p: 400, m: [50, 200, 600, 1400, 1700, 2000] },
 ];
+const fName = i => (F[i].e || F[i].i || '') + ' ' + F[i].n;
 const kaufbar = i => ['s', 'b', 'w'].includes(F[i].t);
 const gruppeFelder = g => F.map((f, i) => f.g === g ? i : -1).filter(i => i >= 0);
 const BAHNEN = [5, 15, 25, 35], WERKE = [12, 28];
@@ -435,40 +466,40 @@ const HAEUSER = 32, HOTELS = 12;
 // Karten: a = was passiert
 const KARTEN = {
   er: [
-    { x: 'Fahre bis zum START.', a: 'geh', z: 0 },
-    { x: 'Ausflug zum Drachenplatz! Kommst du über START, bekommst du 200.', a: 'geh', z: 24 },
-    { x: 'Besuch auf der Rosenallee. Kommst du über START, bekommst du 200.', a: 'geh', z: 11 },
-    { x: 'Fahre zum Königsplatz.', a: 'geh', z: 39 },
-    { x: 'Fahre zum Busbahnhof. Kommst du über START, bekommst du 200.', a: 'geh', z: 5 },
-    { x: 'Fahre zum nächsten Bahnhof. Gehört er jemandem, zahlst du doppelte Miete.', a: 'bahn' },
-    { x: 'Fahre zum nächsten Bahnhof. Gehört er jemandem, zahlst du doppelte Miete.', a: 'bahn' },
-    { x: 'Fahre zum nächsten Werk. Gehört es jemandem: würfeln und 10× die Augen zahlen.', a: 'werk' },
-    { x: 'Dein Erfinder-Preis! Die Bank zahlt dir 50.', a: 'geld', b: 50 },
-    { x: 'RAUS AUS DEM GEFÄNGNIS. Behalte die Karte, bis du sie brauchst.', a: 'frei' },
-    { x: 'Ups, falsch abgebogen: Gehe 3 Felder zurück.', a: 'zurueck' },
-    { x: 'Ab ins Gefängnis! Du kommst nicht über START.', a: 'knast' },
-    { x: 'Frühjahrsputz: Zahle 25 pro Haus und 100 pro Hotel.', a: 'repar', h: 25, ho: 100 },
-    { x: 'Zu schnell mit dem Roller: Zahle 15.', a: 'geld', b: -15 },
-    { x: 'Du gibst ein Eis aus: Zahle jedem Mitspieler 50.', a: 'jeder', b: -50 },
-    { x: 'Dein Sparschwein ist voll: Du bekommst 150.', a: 'geld', b: 150 },
+    { x: '🏁 Flitz zum START!', a: 'geh', z: 0 },
+    { x: '🐉 Ausflug zum Drachenplatz! (Über START? +200)', a: 'geh', z: 24 },
+    { x: '🌹 Besuch auf der Rosenallee! (Über START? +200)', a: 'geh', z: 11 },
+    { x: '🏯 Ab zum Königsplatz!', a: 'geh', z: 39 },
+    { x: '🚌 Fahr zum Busbahnhof! (Über START? +200)', a: 'geh', z: 5 },
+    { x: '🚂 Ab zum nächsten Bahnhof! Gehört er jemandem: doppelte Miete.', a: 'bahn' },
+    { x: '🚂 Ab zum nächsten Bahnhof! Gehört er jemandem: doppelte Miete.', a: 'bahn' },
+    { x: '⚡ Ab zum nächsten Werk! Gehört es jemandem: 10× die Würfel-Augen zahlen.', a: 'werk' },
+    { x: '💡 Du hast etwas erfunden! +50', a: 'geld', b: 50 },
+    { x: '🎫 RAUS-AUS-DEM-GEFÄNGNIS-Karte! Heb sie gut auf.', a: 'frei' },
+    { x: '🙃 Ups, falsch abgebogen! 3 Felder zurück.', a: 'zurueck' },
+    { x: '🚓 Ab ins Gefängnis! (Kein Geld von START)', a: 'knast' },
+    { x: '🧹 Frühjahrsputz! Pro Haus 25, pro Hotel 100 zahlen.', a: 'repar', h: 25, ho: 100 },
+    { x: '🛴 Zu schnell mit dem Roller! −15', a: 'geld', b: -15 },
+    { x: '🍦 Du gibst Eis aus! Jeder bekommt 50 von dir.', a: 'jeder', b: -50 },
+    { x: '🐷 Dein Sparschwein ist voll! +150', a: 'geld', b: 150 },
   ],
   ks: [
-    { x: 'Fahre bis zum START.', a: 'geh', z: 0 },
-    { x: 'Die Bank hat sich verrechnet – zu deinen Gunsten! Du bekommst 200.', a: 'geld', b: 200 },
-    { x: 'Zahnarzt-Besuch: Zahle 50.', a: 'geld', b: -50 },
-    { x: 'Flohmarkt-Verkauf: Du bekommst 50.', a: 'geld', b: 50 },
-    { x: 'RAUS AUS DEM GEFÄNGNIS. Behalte die Karte, bis du sie brauchst.', a: 'frei' },
-    { x: 'Ab ins Gefängnis! Du kommst nicht über START.', a: 'knast' },
-    { x: 'Die Ferienkasse zahlt aus: Du bekommst 100.', a: 'geld', b: 100 },
-    { x: 'Steuer-Rückzahlung: Du bekommst 20.', a: 'geld', b: 20 },
-    { x: 'Du hast Geburtstag! Jeder Mitspieler schenkt dir 10.', a: 'jeder', b: 10 },
-    { x: 'Die Versicherung zahlt dir 100.', a: 'geld', b: 100 },
-    { x: 'Krankenhaus-Rechnung: Zahle 100.', a: 'geld', b: -100 },
-    { x: 'Klassenfahrt: Zahle 50.', a: 'geld', b: -50 },
-    { x: 'Du hilfst beim Umzug: Du bekommst 25.', a: 'geld', b: 25 },
-    { x: 'Straßen-Reparatur: Zahle 40 pro Haus und 115 pro Hotel.', a: 'repar', h: 40, ho: 115 },
-    { x: '2. Platz im Kuchen-Wettbewerb: Du bekommst 10.', a: 'geld', b: 10 },
-    { x: 'Du erbst 100.', a: 'geld', b: 100 },
+    { x: '🏁 Flitz zum START!', a: 'geh', z: 0 },
+    { x: '🤑 Die Bank hat sich verrechnet! +200', a: 'geld', b: 200 },
+    { x: '🦷 Zahnarzt! −50', a: 'geld', b: -50 },
+    { x: '🧸 Flohmarkt-Verkauf! +50', a: 'geld', b: 50 },
+    { x: '🎫 RAUS-AUS-DEM-GEFÄNGNIS-Karte! Heb sie gut auf.', a: 'frei' },
+    { x: '🚓 Ab ins Gefängnis! (Kein Geld von START)', a: 'knast' },
+    { x: '🏖️ Ferienkasse! +100', a: 'geld', b: 100 },
+    { x: '📬 Geld zurück vom Amt! +20', a: 'geld', b: 20 },
+    { x: '🎂 Geburtstag! Jeder schenkt dir 10.', a: 'jeder', b: 10 },
+    { x: '☂️ Die Versicherung zahlt! +100', a: 'geld', b: 100 },
+    { x: '🩹 Beinbruch beim Klettern! −100', a: 'geld', b: -100 },
+    { x: '🎒 Klassenfahrt! −50', a: 'geld', b: -50 },
+    { x: '📦 Du hilfst beim Umzug! +25', a: 'geld', b: 25 },
+    { x: '🚧 Straßen-Baustelle! Pro Haus 40, pro Hotel 115 zahlen.', a: 'repar', h: 40, ho: 115 },
+    { x: '🍰 2. Platz beim Kuchen-Backen! +10', a: 'geld', b: 10 },
+    { x: '🎁 Ein Geschenk von Oma Bank! +100', a: 'geld', b: 100 },
   ],
 };
 const KARTEN_NAME = { er: ['ÜBERRASCHUNG', '❓', 'er'], ks: ['STADTKASSE', '💰', 'ks'] };
@@ -491,7 +522,7 @@ function neuesSpiel(spieler, opt) {
     dran: Math.floor(Math.random() * spieler.length),
     spieler: spieler.map(s => ({ n: s.n, fig: s.fig, f: s.f, ki: !!s.ki, g: s.g || null, geld: opt.start, pos: 0, knast: false, versuche: 0, frei: [], pleite: false })),
     besitz: {}, stapel: { er: mischen(16), ks: mischen(16) }, pasch: 0, nochmal: false, topf: 0,
-    opt, wurf: [1, 1], wurfNr: 0, ablauf: [], log: [], info: '',
+    opt, wurf: [1, 1], wurfNr: 0, ablauf: [], log: [], info: '', runde: 1,
   };
   st.info = spName(st, st.dran) + ' fängt an.';
   return st;
@@ -499,6 +530,9 @@ function neuesSpiel(spieler, opt) {
 const spName = (st, p) => st.spieler[p].fig + ' ' + st.spieler[p].n;
 function log(st, text) { st.info = text; st.log.push(text); if (st.log.length > 40) st.log.shift(); }
 const ev = (st, e) => st.ablauf.push(e);
+// Spielstufe: 1 = 🐣 Einfach, 2 = 🦊 Mittel, 3 = 🦁 Profi (alle Regeln)
+const stufe = st => st.opt.stufe || 3;
+const toast = (st, s, x) => ev(st, { a: 'toast', s, x });
 const aktive = st => st.spieler.map((s, i) => s.pleite ? -1 : i).filter(i => i >= 0);
 
 // Wer muss gerade etwas tun?
@@ -530,6 +564,15 @@ function miete(st, i, augen, extra) {
 function zahle(st, p, betrag, an, grund) {
   const s = st.spieler[p];
   if (s.geld >= betrag) { geldGeben(st, p, betrag, an); return true; }
+  if (stufe(st) < 3) {
+    // Einfach/Mittel: Die Bank kauft Häuser zurück (halber Preis). Reicht es dann nicht: Spielende.
+    for (const [i, b] of Object.entries(st.besitz).sort((x, y) => F[y[0]].p - F[x[0]].p))
+      while (b.o === p && b.h > 0 && s.geld < betrag) { b.h--; s.geld += GRUPPEN[F[i].g][1] / 2; log(st, `🏦 Die Bank kauft ein Haus von ${fName(i)} zurück.`); }
+    if (s.geld >= betrag) { geldGeben(st, p, betrag, an); return true; }
+    st.schuld = { betrag, an, grund, zurueck: st.phase };
+    pleiteGehen(st, p);
+    return 'pleite';
+  }
   st.schuld = { betrag, an, grund, zurueck: st.phase };
   st.phase = 'schulden';
   log(st, `${spName(st, p)} muss ${geld(betrag)} zahlen (${grund}), hat aber nur ${geld(s.geld)}.`);
@@ -547,6 +590,7 @@ function fertig(st) { st.phase = st.nochmal ? 'wuerfeln' : 'zugEnde'; }
 
 function insKnast(st, p) {
   const s = st.spieler[p];
+  toast(st, '🚓', 'AB INS GEFÄNGNIS!');
   s.pos = 10; s.knast = true; s.versuche = 0; st.nochmal = false; st.pasch = 0;
   ev(st, { a: 'sprung', p, nach: 10 });
   st.phase = 'zugEnde';
@@ -572,13 +616,13 @@ function landen(st, p, augen, extra) {
   fertig(st);
   if (kaufbar(i)) {
     const b = st.besitz[i];
-    if (!b) { st.phase = 'kaufen'; log(st, `${spName(st, p)} steht auf ${f.n}. Kaufen für ${geld(f.p)}?`); return; }
-    if (b.o === p) { log(st, `${spName(st, p)} ist auf der eigenen ${f.n}.`); return; }
+    if (!b) { st.phase = 'kaufen'; log(st, `${spName(st, p)} steht auf ${fName(i)}. Kaufen für ${geld(f.p)}?`); return; }
+    if (b.o === p) { log(st, `${spName(st, p)} ist zu Hause: ${fName(i)} 😊`); return; }
     if (b.hyp) { log(st, `${f.n} hat eine Hypothek – keine Miete.`); return; }
     if (extra === 'werk10') augen = 2 + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6);
     const m = miete(st, i, augen, extra);
-    log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${f.n}).`);
-    ev(st, { a: 'geld', p, b: -m }); ev(st, { a: 'geld', p: b.o, b: m });
+    log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${fName(i)}).`);
+    toast(st, '💸', `${m} Miete an ${st.spieler[b.o].fig}`);
     zahle(st, p, m, b.o, 'Miete für ' + f.n);
     return;
   }
@@ -622,7 +666,17 @@ function karteZiehen(st, p, d, augen) {
 
 function naechster(st) {
   let q = st.dran;
-  do q = (q + 1) % st.spieler.length; while (st.spieler[q].pleite);
+  for (;;) {
+    const alt = q;
+    do q = (q + 1) % st.spieler.length; while (st.spieler[q].pleite);
+    if (q <= alt) {                                  // alle waren einmal dran → neue Runde
+      st.runde = (st.runde || 1) + 1;
+      if (st.opt.runden && st.runde > st.opt.runden) { st.dran = q; return spielEnde(st, `⏰ ${st.opt.runden} Runden sind vorbei!`); }
+    }
+    const s = st.spieler[q];
+    if (stufe(st) === 1 && s.knast) { s.knast = false; log(st, `${spName(st, q)} sitzt im Gefängnis und setzt einmal aus. 🚓`); continue; }
+    break;
+  }
   st.dran = q; st.pasch = 0; st.nochmal = false; st.phase = 'wuerfeln';
   const s = st.spieler[q];
   log(st, `${spName(st, q)} ist dran.` + (s.knast ? ' (im Gefängnis 🚓)' : ''));
@@ -640,6 +694,7 @@ function vermoegen(st, p) {
 
 function pleiteGehen(st, p) {
   const s = st.spieler[p], an = st.schuld ? st.schuld.an : -1;
+  if (stufe(st) < 3) { s.geld = 0; s.pleite = true; st.schuld = null; return spielEnde(st, `💸 ${spName(st, p)} hat kein Geld mehr – das Spiel ist aus!`); }
   const anSpieler = typeof an === 'number' && an >= 0;
   for (const [i, b] of Object.entries(st.besitz)) if (b.o === p) {
     const f = F[i];
@@ -650,6 +705,7 @@ function pleiteGehen(st, p) {
   else s.frei.forEach(d => st.stapel[d].push(d === 'er' ? 9 : 4));
   s.geld = 0; s.frei = []; s.pleite = true; s.knast = false; st.schuld = null;
   log(st, `💀 ${spName(st, p)} ist pleite!` + (anSpieler ? ` Alles geht an ${spName(st, an)}.` : ''));
+  if (stufe(st) < 3) return spielEnde(st, `💸 ${spName(st, p)} hat kein Geld mehr – das Spiel ist aus!`);
   const rest = aktive(st);
   if (rest.length === 1) { st.phase = 'ende'; st.status = 'ende'; st.sieger = rest[0]; log(st, `🏆 ${spName(st, rest[0])} gewinnt!`); return; }
   if (st.dran === p) naechster(st);
@@ -678,7 +734,7 @@ function anwenden(st, a) {
           log(st, `${spName(st, p)}: dritter Versuch ohne Pasch – zahlt 50 🪙 und geht los.`);
           ev(st, { a: 'geld', p, b: -50 });
           st.phase = 'zugEnde';
-          if (!zahle(st, p, 50, 'topf', 'Gefängnis')) { st.schuld.weiter = augen; return true; }
+          const r = zahle(st, p, 50, 'topf', 'Gefängnis'); if (r !== true) { if (st.schuld) st.schuld.weiter = augen; return true; }
           bewege(st, p, augen, augen); return true;
         }
         st.nochmal = pasch;
@@ -700,10 +756,14 @@ function anwenden(st, a) {
         const i = s.pos, f = F[i];
         if (st.phase !== 'kaufen' || p !== st.dran || s.geld < f.p) return false;
         s.geld -= f.p; st.besitz[i] = { o: p, h: 0, hyp: false }; ev(st, { a: 'geld', p, b: -f.p }); ev(st, { a: 'blink', i });
-        log(st, `${spName(st, p)} kauft ${f.n} für ${geld(f.p)}.`); fertig(st); return true;
+        toast(st, f.e || f.i, 'GEKAUFT! 🎉');
+        log(st, `${spName(st, p)} kauft ${fName(i)} für ${geld(f.p)}.`); fertig(st); return true;
       }
+      case 'nicht':
+        if (st.phase !== 'kaufen' || p !== st.dran || stufe(st) === 3) return false;
+        log(st, `${spName(st, p)} kauft ${fName(s.pos)} nicht.`); fertig(st); return true;
       case 'versteigern': {
-        if (st.phase !== 'kaufen' || p !== st.dran) return false;
+        if (st.phase !== 'kaufen' || p !== st.dran || stufe(st) < 3) return false;
         const reihe = []; for (let k = 0; k < st.spieler.length; k++) { const q = (st.dran + k) % st.spieler.length; if (!st.spieler[q].pleite) reihe.push(q); }
         st.auktion = { f: s.pos, gebot: 0, wer: -1, reihe, i: 0 }; st.phase = 'auktion';
         log(st, `${F[s.pos].n} wird versteigert! ${spName(st, reihe[0])} bietet zuerst.`); return true;
@@ -724,17 +784,18 @@ function anwenden(st, a) {
         const i = a.f, f = F[i], b = st.besitz[i];
         if (!verwalten(st, p) || st.phase === 'schulden' || f.t !== 's' || !b || b.o !== p || b.h >= 5 || !hatGruppe(st, p, f.g)) return false;
         const fs = gruppeFelder(f.g);
-        if (fs.some(k => st.besitz[k].hyp) || b.h > Math.min(...fs.map(k => st.besitz[k].h))) return false;
+        if (fs.some(k => st.besitz[k].hyp) || (stufe(st) > 1 && b.h > Math.min(...fs.map(k => st.besitz[k].h)))) return false;
         const preis = GRUPPEN[f.g][1], v = vorrat(st);
         if (s.geld < preis || (b.h < 4 && v.h < 1) || (b.h === 4 && v.ho < 1)) return false;
         s.geld -= preis; b.h++; ev(st, { a: 'geld', p, b: -preis }); ev(st, { a: 'blink', i });
-        log(st, `${spName(st, p)} baut ${b.h === 5 ? 'ein Hotel' : 'ein Haus'} auf ${f.n}.`); return true;
+        toast(st, b.h === 5 ? '🏨' : '🏠', b.h === 5 ? 'HOTEL GEBAUT!' : 'HAUS GEBAUT!');
+        log(st, `${spName(st, p)} baut ${b.h === 5 ? 'ein Hotel' : 'ein Haus'} auf ${fName(i)}.`); return true;
       }
       case 'abreissen': {
         const i = a.f, f = F[i], b = st.besitz[i];
         if (!verwalten(st, p) || f.t !== 's' || !b || b.o !== p || !b.h) return false;
         const fs = gruppeFelder(f.g);
-        if (b.h < Math.max(...fs.map(k => st.besitz[k].h))) return false;
+        if (stufe(st) > 1 && b.h < Math.max(...fs.map(k => st.besitz[k].h))) return false;
         if (b.h === 5 && vorrat(st).h < 4) return false;           // Hotel → 4 Häuser geht nur, wenn genug Häuser da sind
         const preis = GRUPPEN[f.g][1] / 2;
         b.h--; s.geld += preis; ev(st, { a: 'geld', p, b: preis });
@@ -742,18 +803,18 @@ function anwenden(st, a) {
       }
       case 'hyp': {
         const i = a.f, f = F[i], b = st.besitz[i];
-        if (!verwalten(st, p) || !b || b.o !== p || b.hyp || (f.t === 's' && gruppeHaeuser(st, f.g))) return false;
+        if (stufe(st) < 3 || !verwalten(st, p) || !b || b.o !== p || b.hyp || (f.t === 's' && gruppeHaeuser(st, f.g))) return false;
         b.hyp = true; s.geld += f.p / 2; ev(st, { a: 'geld', p, b: f.p / 2 });
         log(st, `${spName(st, p)} nimmt eine Hypothek auf ${f.n} (+${f.p / 2} 🪙).`); return true;
       }
       case 'einloesen': {
         const i = a.f, f = F[i], b = st.besitz[i], preis = Math.ceil(f.p / 2 * 1.1);
-        if (!verwalten(st, p) || st.phase === 'schulden' || !b || b.o !== p || !b.hyp || s.geld < preis) return false;
+        if (stufe(st) < 3 || !verwalten(st, p) || st.phase === 'schulden' || !b || b.o !== p || !b.hyp || s.geld < preis) return false;
         b.hyp = false; s.geld -= preis; ev(st, { a: 'geld', p, b: -preis });
         log(st, `${spName(st, p)} löst die Hypothek auf ${f.n} ein (−${preis} 🪙).`); return true;
       }
       case 'handel': {
-        if (!verwalten(st, p)) return false;
+        if (stufe(st) < 2 || !verwalten(st, p)) return false;
         const q = a.an, o = st.spieler[q];
         if (!o || q === p || o.pleite) return false;
         const g = a.gib, n = a.nimm;
@@ -804,18 +865,21 @@ function auktionPruefen(st) {
   if (A.wer >= 0) {
     st.spieler[A.wer].geld -= A.gebot; st.besitz[A.f] = { o: A.wer, h: 0, hyp: false };
     ev(st, { a: 'geld', p: A.wer, b: -A.gebot }); ev(st, { a: 'blink', i: A.f });
-    log(st, `🔨 ${spName(st, A.wer)} ersteigert ${f.n} für ${geld(A.gebot)}!`);
+    toast(st, f.e || f.i, 'ERSTEIGERT! 🔨');
+    log(st, `🔨 ${spName(st, A.wer)} ersteigert ${fName(A.f)} für ${geld(A.gebot)}!`);
   } else log(st, `Niemand wollte ${f.n} – es bleibt bei der Bank.`);
   st.auktion = null; fertig(st);
 }
 
 // Spiel vorzeitig auswerten: Wer am meisten besitzt, gewinnt
-function auswerten(st) {
-  const rang = aktive(st).sort((a, b) => vermoegen(st, b) - vermoegen(st, a));
-  st.status = 'ende'; st.phase = 'ende'; st.sieger = rang[0]; st.nr++; st.ablauf = [];
-  log(st, `🏆 Auswertung: ${spName(st, rang[0])} ist am reichsten!`);
+function spielEnde(st, grund) {
+  const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
+  st.status = 'ende'; st.phase = 'ende'; st.sieger = rang[0];
+  if (grund) log(st, grund);
+  log(st, `🏆 ${spName(st, rang[0])} ist am reichsten und gewinnt!`);
   return st;
 }
+function auswerten(st) { st.ablauf = []; spielEnde(st); st.nr++; return st; }
 
 /* =====================================================================
    COMPUTER-SPIELER 🤖 – einfache, aber ganz schlaue Regeln
@@ -853,7 +917,7 @@ function kiAktion(st) {
       }
       return bauen() || { t: 'wurf', w: wuerfeln() };
     case 'zugEnde': return bauen() || { t: 'fertig' };
-    case 'kaufen': { const f = F[s.pos]; return s.geld - f.p >= Math.min(reserve, 80) || (wert(s.pos) > f.p * 1.4 && s.geld >= f.p) ? { t: 'kaufen' } : { t: 'versteigern' }; }
+    case 'kaufen': { const f = F[s.pos]; return s.geld - f.p >= Math.min(reserve, 80) || (wert(s.pos) > f.p * 1.4 && s.geld >= f.p) ? { t: 'kaufen' } : { t: stufe(st) < 3 ? 'nicht' : 'versteigern' }; }
     case 'auktion': {
       const A = st.auktion, max = Math.min(wert(A.f), s.geld - 50);
       const schritt = A.gebot < 50 ? 10 : A.gebot < 200 ? 20 : 50, neu = A.gebot + schritt;
@@ -908,7 +972,7 @@ function brettBauen() {
     el.className = 'feld ' + seite; el.id = 'f' + i;
     el.style.gridArea = `${r}/${c}`;
     const bar = f.t === 's' ? `<div class="bar" style="background:${GRUPPEN[f.g][0]}"></div>` : '';
-    const sym = f.t === 's' ? '' : `<span class="sym">${f.i || ''}</span>`;
+    const sym = `<span class="sym ${f.t === 's' ? 'st' : ''}">${f.e || f.i || ''}</span>`;
     const pr = f.p ? `<span class="pr">${f.p}</span>` : f.b ? `<span class="pr">${f.b}</span>` : '';
     el.innerHTML = `${bar}<div class="inhalt"><b>${f.n}</b>${sym}${pr}</div><div class="besitzer"></div>`;
     el.onclick = () => feldInfo(i);
@@ -994,6 +1058,25 @@ async function wuerfelRollen(w) {
   if (w[0] === w[1]) { $('#info').innerHTML = '<span class="pasch">PASCH! 🎉</span>'; Ton.fanfare(); await warte(600); }
 }
 
+/* ---------- Große Meldung (GEKAUFT!, Miete …) ---------- */
+async function toastZeigen(sym, text) {
+  const el = $('#toast');
+  el.innerHTML = `<div><span>${sym || ''}</span><b>${esc(text)}</b></div>`;
+  el.classList.remove('on'); el.offsetWidth; el.classList.add('on');
+  if (/GEKAUFT|GEBAUT|ERSTEIGERT/.test(text)) Ton.fanfare(); else if (/Miete/.test(text)) Ton.zahlen();
+  await warte(1300);
+}
+// Konfetti für den Sieger
+function konfetti() {
+  const box = document.createElement('div'); box.id = 'konfetti'; document.body.appendChild(box);
+  for (let k = 0; k < 60; k++) {
+    const s = document.createElement('span'); s.textContent = ['🎉', '⭐', '🪙', '🎊', '✨', '🏆'][k % 6];
+    s.style.left = Math.random() * 100 + 'vw'; s.style.animationDelay = Math.random() * 1.5 + 's'; s.style.fontSize = 18 + Math.random() * 22 + 'px';
+    box.appendChild(s);
+  }
+  setTimeout(() => box.remove(), 5000);
+}
+
 /* ---------- Karte groß zeigen ---------- */
 function karteZeigen(d, k) {
   const [titel, sym, kl] = KARTEN_NAME[d];
@@ -1021,6 +1104,7 @@ async function standAbspielen(neu) {
       else if (e.a === 'lauf') await laufen(e.p, e.nach);
       else if (e.a === 'sprung') await springen(e.p, e.nach);
       else if (e.a === 'karte') await karteZeigen(e.d, e.k);
+      else if (e.a === 'toast') await toastZeigen(e.s, e.x);
       else if (e.a === 'blink') { const f = $('#f' + e.i); f.classList.remove('blink'); f.offsetWidth; f.classList.add('blink'); Ton.muenze(); }
     }
   } else wuerfelZeigen(neu.wurf, false);
@@ -1054,7 +1138,7 @@ function zeichneAlles() {
     return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" style="--f:${s.f}">
       <div class="kopf"><span>${s.fig}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
       <div class="karten">${felder}</div>${plus}</div>`;
-  }).join('') + (st.opt.topf ? `<div class="klein">🧺 Topf: ${geld(st.topf)}</div>` : '');
+  }).join('') + `<div class="klein">${['', '🐣 Einfach', '🦊 Mittel', '🦁 Profi'][stufe(st)]} · Runde ${st.runde || 1}${st.opt.runden ? ' von ' + st.opt.runden : ''}${st.opt.topf ? ` · 🧺 Topf: ${geld(st.topf)}` : ''}</div>`;
   anzeige.geld = st.spieler.map(s => s.geld);
   $('#verlauf').innerHTML = st.log.slice().reverse().map(t => `<div>${esc(t)}</div>`).join('');
   zeichneKnoepfe();
@@ -1081,7 +1165,10 @@ function zeichneKnoepfe() {
     b.onclick = () => { Ton.klick(); typeof a === 'function' ? a() : tun({ ...a, p }); };
     box.appendChild(b); return b;
   };
-  const verw = () => { knopf('🏠 Verwalten', verwaltenDialog, { kl: 'zweit' }); if (aktive(st).length > 1) knopf('🤝 Handeln', () => handelDialog(), { kl: 'zweit' }); };
+  const verw = () => {
+    knopf(stufe(st) < 3 ? '🏠 Häuser bauen' : '🏠 Verwalten', verwaltenDialog, { kl: 'zweit' });
+    if (stufe(st) > 1 && aktive(st).length > 1) knopf('🤝 Tauschen', () => handelDialog(), { kl: 'zweit' });
+  };
   switch (st.phase) {
     case 'wuerfeln':
       if (s.knast) {
@@ -1093,9 +1180,10 @@ function zeichneKnoepfe() {
     case 'kaufen': {
       const f = F[s.pos];
       knopf(`🛒 Kaufen (${geld(f.p)})`, { t: 'kaufen' });
-      knopf('🔨 Versteigern', { t: 'versteigern' }, { kl: 'zweit' });
+      if (stufe(st) < 3) knopf('👋 Nein, danke', { t: 'nicht' }, { kl: 'zweit' });
+      else knopf('🔨 Versteigern', { t: 'versteigern' }, { kl: 'zweit' });
       knopf('ℹ️', () => feldInfo(s.pos), { kl: 'zweit' });
-      if (s.geld < f.p) knopf('🏠 Geld beschaffen', verwaltenDialog, { kl: 'zweit' });
+      if (s.geld < f.p && stufe(st) === 3) knopf('🏠 Geld beschaffen', verwaltenDialog, { kl: 'zweit' });
       break;
     }
     case 'auktion': {
@@ -1127,15 +1215,15 @@ function zeichneKnoepfe() {
 function phasenText(p) {
   const s = st.spieler[p];
   if (st.status === 'ende') return `🏆 ${esc(spName(st, st.sieger))} gewinnt!`;
-  if (st.phase === 'kaufen') { const f = F[s.pos]; return `<span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${f.i || ''} ${f.n}</span><br>Kaufen für ${geld(f.p)}? (${meins(p) ? 'Du hast' : 'hat'} ${geld(s.geld)})`; }
-  if (st.phase === 'auktion') { const A = st.auktion, f = F[A.f]; return `🔨 <span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${f.n}</span><br>Höchstes Gebot: <b>${geld(A.gebot)}</b>${A.wer >= 0 ? ' von ' + esc(spName(st, A.wer)) : ''}`; }
+  if (st.phase === 'kaufen') { const f = F[s.pos]; return `<span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${f.e || f.i || ''} ${f.n}</span><br>Kaufen für ${geld(f.p)}? (${meins(p) ? 'Du hast' : 'hat'} ${geld(s.geld)})`; }
+  if (st.phase === 'auktion') { const A = st.auktion, f = F[A.f]; return `🔨 <span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${fName(A.f)}</span><br>Höchstes Gebot: <b>${geld(A.gebot)}</b>${A.wer >= 0 ? ' von ' + esc(spName(st, A.wer)) : ''}`; }
   if (st.phase === 'schulden') return `⚠️ ${esc(st.schuld.grund)}: <b>${geld(st.schuld.betrag)}</b> zahlen.<br>Vorhanden: ${geld(s.geld)}. Häuser verkaufen oder Hypotheken aufnehmen.`;
   if (st.phase === 'handel') return handelText(st.handel);
-  if (st.phase === 'wuerfeln' && s.knast) return `🚓 Im Gefängnis (Versuch ${s.versuche + 1} von 3)`;
+  if (st.phase === 'wuerfeln' && s.knast) return `🚓 Im Gefängnis! Pasch würfeln oder 50 zahlen (Versuch ${s.versuche + 1} von 3)`;
   return esc(st.info);
 }
 function handelText(H) {
-  const liste = (l, wer) => [...l.f.map(i => `<span class="mini-feld" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}">${F[i].n}</span>`), l.g ? geld(l.g) : '', l.k ? '🎫 Raus-Karte' : ''].filter(Boolean).join(' ') || 'nichts';
+  const liste = (l, wer) => [...l.f.map(i => `<span class="mini-feld" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}">${fName(i)}</span>`), l.g ? geld(l.g) : '', l.k ? '🎫 Raus-Karte' : ''].filter(Boolean).join(' ') || 'nichts';
   return `🤝 ${esc(spName(st, H.von))} gibt: ${liste(H.gib)}<br>und möchte dafür: ${liste(H.nimm)}`;
 }
 
@@ -1189,7 +1277,7 @@ function feldInfo(i) {
   else if (f.t === 'b') tab = [1, 2, 3, 4].map(n => `<tr><td>${n} Bahnhof${n > 1 ? 'e' : ''}</td><td>${geld(25 * 2 ** (n - 1))}</td></tr>`).join('');
   else tab = '<tr><td>1 Werk</td><td>4× Augen</td></tr><tr><td>beide Werke</td><td>10× Augen</td></tr>';
   tab += `<tr><td>Hypothek</td><td>${geld(f.p / 2)}</td></tr>`;
-  const html = `<div class="titelkarte" style="background:${farbe};color:${['braun', 'rot', 'gruen', 'blau', 'pink'].includes(f.g) ? '#fff' : '#1B2A22'}">${f.i || ''} ${f.n}</div>
+  const html = `<div class="titelkarte" style="background:${farbe};color:${['braun', 'rot', 'gruen', 'blau', 'pink'].includes(f.g) ? '#fff' : '#1B2A22'}">${f.e || f.i || ''} ${f.n}</div>
     <p>Preis: <b>${geld(f.p)}</b> · ${b ? 'Besitzer: <b>' + esc(spName(st, b.o)) + '</b>' + (b.hyp ? ' (Hypothek)' : '') : 'gehört der Bank'}</p>
     <table class="mieten">${tab}</table>`;
   if (b && meins(b.o) && verwalten(st, b.o)) {
@@ -1215,10 +1303,13 @@ function verwaltenDialog() {
   const zeilen = meine.map(i => {
     const b = st.besitz[i], f = F[i];
     const info = b.hyp ? 'Hypothek' : f.t === 's' ? (b.h === 5 ? '🏨 Hotel' : b.h ? '🏠'.repeat(b.h) : '') : '';
-    return `<div class="verw"><span class="nm" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#888'}">${f.i || ''} ${f.n} <span class="klein">${info}</span></span><span id="vk${i}" class="reihe" style="flex:none"></span></div>`;
+    return `<div class="verw"><span class="nm" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#888'}">${fName(i)} <span class="klein">${info}</span></span><span id="vk${i}" class="reihe" style="flex:none"></span></div>`;
   }).join('') || '<p>Du hast noch keine Straßen.</p>';
   const v = vorrat(st);
-  dialog(`<h2>🏠 Verwalten · ${geld(st.spieler[p].geld)}</h2><p class="klein">🏠+ bauen (gleichmäßig, ganze Farbe nötig) · 🏠− verkaufen (halber Preis) · Hypothek = halber Kaufpreis · Einlösen = +10 %<br>Bank: ${v.h} Häuser, ${v.ho} Hotels</p>${zeilen}`, [['Fertig', true]]);
+  const hilfe = stufe(st) === 1 ? 'Hast du alle Straßen einer Farbe? Dann darfst du Häuser bauen! 🏠+ = bauen, 🏠− = verkaufen. 4 Häuser + 1 = Hotel 🏨'
+    : stufe(st) === 2 ? 'Alle Straßen einer Farbe = bauen erlaubt. Immer gleichmäßig: erst überall 1 Haus, dann das 2. … 🏠− verkauft zum halben Preis.'
+    : '🏠+ bauen (gleichmäßig, ganze Farbe nötig) · 🏠− verkaufen (halber Preis) · Hypothek = halber Kaufpreis · Einlösen = +10 %';
+  dialog(`<h2>🏠 ${stufe(st) < 3 ? 'Häuser bauen' : 'Verwalten'} · ${geld(st.spieler[p].geld)}</h2><p class="klein">${hilfe}<br>Bank: ${v.h} Häuser, ${v.ho} Hotels</p>${zeilen}`, [['Fertig', true]]);
   meine.forEach(i => verwaltenKnoepfe($('#vk' + i), i, verwaltenDialog));
 }
 
@@ -1269,7 +1360,7 @@ function dialog(html, knoepfe) {
 
 function endeZeigen() {
   zeichneAlles();
-  Ton.fanfare();
+  Ton.fanfare(); konfetti();
   const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
   const liste = rang.map((p, k) => `<div class="verw"><b>${k + 1}.</b><span class="nm" style="--g:${st.spieler[p].f}">${esc(spName(st, p))}</span><span>${st.spieler[p].pleite ? '💀 pleite' : geld(vermoegen(st, p))}</span></div>`).join('');
   $('#info').innerHTML = `🏆 <b>${esc(spName(st, st.sieger))}</b> gewinnt!`;
@@ -1294,6 +1385,12 @@ $('#m-weiter').onclick = () => { Ton.klick(); modus = 'lokal'; spielStarten(spei
 
 const einstellung = speicher.lies('sb-einstellung') || { anzahl: 2, start: 1500, topf: false,
   spieler: FARBEN.map((f, k) => ({ n: 'Spieler ' + (k + 1), fig: FIGUREN[k], f, ki: k > 0 })) };
+einstellung.stufe = einstellung.stufe || 1; einstellung.runden = einstellung.runden ?? 10;
+const STUFEN = [
+  [1, '🐣', 'Einfach', 'Kaufen, Miete, Häuser. Kein Versteigern, keine Hypothek. Gefängnis = einmal aussetzen.'],
+  [2, '🦊', 'Mittel', 'Dazu: gleichmäßig bauen, Gefängnis mit Pasch, Straßen tauschen.'],
+  [3, '🦁', 'Profi', 'Alle Regeln: Versteigern, Hypotheken, Schulden, pleite gehen.'],
+];
 let neuOnline = false;
 function neuZeigen(online) {
   neuOnline = online;
@@ -1306,6 +1403,10 @@ function neuZeichnen() {
   const E = einstellung;
   $('#n-anzahl').innerHTML = [2, 3, 4, 5, 6].map(n => `<button class="zweit ${E.anzahl === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
   $('#n-anzahl').querySelectorAll('button').forEach(b => b.onclick = () => { E.anzahl = +b.dataset.n; Ton.klick(); neuZeichnen(); });
+  $('#n-stufe').innerHTML = STUFEN.map(([n, sym, titel, text]) => `<button class="zweit stufe ${E.stufe === n ? 'an' : ''}" data-n="${n}"><span class="gross">${sym}</span><span>${titel}<small>${text}</small></span></button>`).join('');
+  $('#n-stufe').querySelectorAll('button').forEach(b => b.onclick = () => { E.stufe = +b.dataset.n; Ton.klick(); neuZeichnen(); });
+  $('#n-runden').innerHTML = [[10, '⏱ Kurz', '10 Runden'], [20, '⏳ Mittel', '20 Runden'], [0, '♾️ Lang', 'bis einer pleite ist']].map(([n, t, k]) => `<button class="zweit ${E.runden === n ? 'an' : ''}" data-n="${n}">${t}<br><small style="font-weight:400">${k}</small></button>`).join('');
+  $('#n-runden').querySelectorAll('button').forEach(b => b.onclick = () => { E.runden = +b.dataset.n; Ton.klick(); neuZeichnen(); });
   $('#n-geld').innerHTML = [1000, 1500, 2000].map(n => `<button class="zweit ${E.start === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
   $('#n-geld').querySelectorAll('button').forEach(b => b.onclick = () => { E.start = +b.dataset.n; Ton.klick(); neuZeichnen(); });
   $('#n-spieler').innerHTML = E.spieler.slice(0, E.anzahl).map((s, k) =>
@@ -1327,10 +1428,11 @@ $('#n-los').onclick = () => {
   const E = einstellung; speicher.schreib('sb-einstellung', E);
   const spieler = E.spieler.slice(0, E.anzahl).map(s => ({ ...s }));
   if (!spieler.some(s => !s.ki)) spieler[0].ki = false;      // mindestens ein Mensch
-  if (neuOnline) return onlineErstellen(spieler, { start: E.start, topf: E.topf });
+  const opt = { start: E.start, topf: E.topf, stufe: E.stufe, runden: E.runden };
+  if (neuOnline) return onlineErstellen(spieler, opt);
   modus = 'lokal';
   Ton.fanfare();
-  spielStarten(neuesSpiel(spieler, { start: E.start, topf: E.topf }));
+  spielStarten(neuesSpiel(spieler, opt));
 };
 
 function spielStarten(neu) {

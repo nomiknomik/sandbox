@@ -131,3 +131,7 @@ lernt man, wie zwei Geräte miteinander reden.
 - Lobby: Gastgeber legt Spieler an, jedes Gerät tippt „Ich spiele …“ (ein Gerät darf mehrere übernehmen).
 - Vereinfachungen: kein 10 %-Aufschlag, wenn eine belastete Straße per Handel/Pleite den Besitzer
   wechselt; bei „Geburtstag“ zahlt jeder höchstens, was er hat; gebaut und gehandelt wird nur im eigenen Zug.
+- v1.2: Drei Spielstufen (im Spielstand `opt.stufe`): 🐣 Einfach (kein Versteigern/keine Hypothek/kein Tauschen,
+  Gefängnis = einmal aussetzen, kein Geld mehr = Spielende mit Wertung), 🦊 Mittel (gleichmäßig bauen, Pasch-Gefängnis,
+  Tauschen), 🦁 Profi (alle Regeln). Spiellänge 10 / 20 Runden oder ohne Ende. Jede Straße hat ein Bild (Emoji),
+  große Meldungen („GEKAUFT!“, Miete) und Konfetti für den Sieger.
