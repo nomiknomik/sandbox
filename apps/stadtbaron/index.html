@@ -162,7 +162,6 @@
   .karte-gross{border-radius:14px;padding:18px;text-align:center;color:#1B2A22;font-size:19px}
   .karte-gross .titel{font-size:13px;letter-spacing:2px;font-weight:800;opacity:.7}
   .karte-gross .sym{font-size:46px}
-  .er{background:#FFD8A8}.ks{background:#BFE3FF}
   #toast{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:14;opacity:0}
   #toast.on{animation:toast 1.3s ease forwards}
   #toast div{background:#fff;color:#1B2A22;border-radius:22px;padding:14px 26px;box-shadow:0 10px 40px #0005;display:flex;flex-direction:column;align-items:center;gap:4px;border:4px solid #FFD54A}
@@ -172,10 +171,34 @@
   #konfetti{position:fixed;inset:0;pointer-events:none;z-index:25;overflow:hidden}
   #konfetti span{position:absolute;top:-40px;animation:fall 3s linear forwards}
   @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
-  #karte{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:#0004}
-  #karte.on{display:flex}
-  #karte .karte-gross{width:min(340px,86vw);box-shadow:0 12px 40px #0007;animation:dreh .5s ease-out}
-  @keyframes dreh{0%{transform:rotateY(90deg) scale(.6)}100%{transform:none}}
+  /* Kartenstapel (Rückseite) und fliegende Karte */
+  #mitte>*:not(.stapel):not(#logo){position:relative;z-index:2}
+  .stapel{position:absolute;width:calc(var(--u)*2.1);height:calc(var(--u)*1.42);z-index:1;cursor:pointer;transform:rotate(-40deg);font-size:calc(var(--u)*.2)}
+  .stapel.er{left:calc(var(--u)*.45);top:calc(var(--u)*.95)}
+  .stapel.ks{right:calc(var(--u)*.45);bottom:calc(var(--u)*.95)}
+  .stapel .rs{position:absolute;inset:0;box-shadow:1px 2px 3px #0005}
+  .stapel .rs:nth-child(1){transform:translate(3px,3px)}.stapel .rs:nth-child(2){transform:translate(2px,2px)}.stapel .rs:nth-child(3){transform:translate(1px,1px)}
+  .stapel.zieh{animation:wackel .9s ease-in-out infinite;filter:drop-shadow(0 0 calc(var(--u)*.25) #FFD54A);z-index:3}
+  @keyframes wackel{0%,100%{transform:rotate(-40deg) scale(1)}50%{transform:rotate(-34deg) scale(1.14)}}
+  .rs{border-radius:10%/14%;overflow:hidden}
+  .rs.er{background:repeating-linear-gradient(45deg,#F39C2B 0 10%,#F7B256 10% 20%)}
+  .rs.ks{background:repeating-linear-gradient(45deg,#2E86DE 0 10%,#4FA0EC 10% 20%)}
+  .rs .ri{position:absolute;inset:7%;border:max(2px,.12em) solid #fffc;border-radius:9%/13%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-shadow:0 2px 0 #0004}
+  .rs .ri span{font-size:2.3em;line-height:1.1}
+  .rs .ri b{font-size:.85em;letter-spacing:.12em;font-weight:900}
+  #karte{position:fixed;inset:0;display:none;z-index:15;background:#0005}
+  #karte.on{display:block}
+  .flugkarte{--kw:min(340px,86vw);position:fixed;left:50%;top:50%;width:var(--kw);height:calc(var(--kw)/1.48);margin-left:calc(var(--kw)/-2);margin-top:calc(var(--kw)/-2.96);z-index:16;perspective:1000px;font-size:24px;cursor:pointer}
+  .flugkarte .innen{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,1.35,.5,1)}
+  .flugkarte.offen .innen{transform:rotateY(180deg)}
+  .flugkarte .fs{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 14px 40px #0008}
+  .flugkarte .vorne{transform:rotateY(180deg);background:#FFFBF2;color:#1B2A22;display:flex;flex-direction:column;text-align:center;overflow:hidden;border:3px solid #fff}
+  .vorne .kopfband{padding:5px;font-weight:900;letter-spacing:2px;color:#fff;font-size:15px}
+  .kopfband.er{background:#F39C2B}.kopfband.ks{background:#2E86DE}
+  .vorne .bild{font-size:min(50px,13vw);line-height:1.15;margin-top:4px}
+  .vorne p{margin:2px 12px;font-size:min(18px,4.6vw);flex:1;display:flex;align-items:center;justify-content:center;line-height:1.25}
+  .vorne .abz{margin:0 auto 10px;padding:4px 14px;border-radius:20px;font-weight:800;font-size:min(17px,4.4vw)}
+  .abz.plus{background:#D8F5DF;color:#1E7B3A}.abz.minus{background:#FFE0E0;color:#B32020}.abz.neutral{background:#ECECEC}
   .mieten{width:100%;border-collapse:collapse;font-size:15px}
   .mieten td{padding:3px 4px;border-bottom:1px solid #0001}
   .mieten td:last-child{text-align:right;font-variant-numeric:tabular-nums}
@@ -252,6 +275,8 @@
     <div id="brett">
       <div id="mitte">
         <div id="logo"><img src="logo.webp" alt=""></div>
+        <div class="stapel er" id="stapel-er"></div>
+        <div class="stapel ks" id="stapel-ks"></div>
         <div id="wer"></div>
         <div id="wuerfelbox"><div class="wuerfel" id="w1"></div><div class="wuerfel" id="w2"></div></div>
         <div id="info"></div>
@@ -351,7 +376,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -400,6 +425,16 @@ const Ton = {
   muenze() { this.piep(1320, .07, 'square', .06); this.piep(1760, .12, 'square', .06, .07); },
   zahlen() { this.piep(400, .1, 'triangle', .1); this.piep(300, .15, 'triangle', .1, .1); },
   fehler() { this.piep(160, .2, 'sawtooth', .08); },
+  wusch() {                                   // Karte rutscht: Ton, der schnell tiefer wird
+    if (!this.an) return;
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(700, t); o.frequency.exponentialRampToValueAtTime(140, t + .28);
+      g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t + .3);
+    } catch {}
+  },
   fanfare() { [523, 659, 784, 1046].forEach((f, i) => this.piep(f, .18, 'triangle', .1, i * .12)); },
 };
 function tonKnopf() { $('#m-ton').textContent = Ton.an ? '🔊 TON AN' : '🔇 TON AUS'; }
@@ -627,7 +662,7 @@ function landen(st, p, augen, extra) {
     return;
   }
   if (f.t === 'st') { log(st, `${spName(st, p)} zahlt ${geld(f.b)} ${f.n}.`); ev(st, { a: 'geld', p, b: -f.b }); zahle(st, p, f.b, 'topf', f.n); return; }
-  if (f.t === 'er' || f.t === 'ks') return karteZiehen(st, p, f.t, augen);
+  if (f.t === 'er' || f.t === 'ks') { st.phase = 'karte'; st.ziehen = { d: f.t, augen }; log(st, `${spName(st, p)} ist auf ${f.i} ${f.n} – Karte ziehen!`); return; }
   if (f.t === 'gehknast') { log(st, `${spName(st, p)} muss ins Gefängnis!`); return insKnast(st, p); }
   if (f.t === 'park' && st.opt.topf && st.topf > 0) { log(st, `${spName(st, p)} macht Pause und bekommt den Topf: ${geld(st.topf)}!`); ev(st, { a: 'geld', p, b: st.topf }); s.geld += st.topf; st.topf = 0; return; }
   if (f.t === 'knast') log(st, `${spName(st, p)} ist nur zu Besuch im Gefängnis.`);
@@ -847,6 +882,11 @@ function anwenden(st, a) {
       case 'pleite':
         if (st.phase !== 'schulden' || p !== st.dran) return false;
         pleiteGehen(st, p); return true;
+      case 'ziehen': {
+        if (st.phase !== 'karte' || p !== st.dran) return false;
+        const Z = st.ziehen; st.ziehen = null; fertig(st);
+        karteZiehen(st, p, Z.d, Z.augen); return true;
+      }
       case 'fertig':
         if (st.phase !== 'zugEnde' || p !== st.dran) return false;
         naechster(st); return true;
@@ -917,6 +957,7 @@ function kiAktion(st) {
       }
       return bauen() || { t: 'wurf', w: wuerfeln() };
     case 'zugEnde': return bauen() || { t: 'fertig' };
+    case 'karte': return { t: 'ziehen' };
     case 'kaufen': { const f = F[s.pos]; return s.geld - f.p >= Math.min(reserve, 80) || (wert(s.pos) > f.p * 1.4 && s.geld >= f.p) ? { t: 'kaufen' } : { t: stufe(st) < 3 ? 'nicht' : 'versteigern' }; }
     case 'auktion': {
       const A = st.auktion, max = Math.min(wert(A.f), s.geld - 50);
@@ -978,6 +1019,11 @@ function brettBauen() {
     el.onclick = () => feldInfo(i);
     brett.appendChild(el);
   });
+  for (const d of ['er', 'ks']) {
+    const el = $('#stapel-' + d);
+    el.innerHTML = rueckseite(d).repeat(4);
+    el.onclick = () => { if (st && st.phase === 'karte' && st.ziehen.d === d && meins(st.dran) && !beschaeftigt) { Ton.klick(); tun({ t: 'ziehen', p: st.dran }); } };
+  }
   for (const w of ['#w1', '#w2']) $(w).innerHTML = [1, 2, 3, 4, 5, 6].map(z => `<div class="seite s${z}">${augenHTML(z)}</div>`).join('');
 }
 function augenHTML(z) {
@@ -1077,18 +1123,57 @@ function konfetti() {
   setTimeout(() => box.remove(), 5000);
 }
 
-/* ---------- Karte groß zeigen ---------- */
-function karteZeigen(d, k) {
-  const [titel, sym, kl] = KARTEN_NAME[d];
-  const el = $('#karte');
-  el.innerHTML = `<div class="karte-gross ${kl}"><div class="titel">${titel}</div><div class="sym">${sym}</div><p>${KARTEN[d][k].x}</p><div class="klein">antippen</div></div>`;
-  el.classList.add('on'); Ton.piep(990, .15, 'triangle', .1);
-  return new Promise(ok => { const zu = () => { el.classList.remove('on'); el.onclick = null; ok(); }; el.onclick = zu; setTimeout(zu, 3800); });
+/* ---------- Karte: vom Stapel holen, umdrehen, zurücklegen ---------- */
+const rueckseite = d => `<div class="rs ${d}"><div class="ri"><span>${KARTEN_NAME[d][1]}</span><b>${KARTEN_NAME[d][0]}</b></div></div>`;
+// Kleines Schild unten auf der Karte: was passiert?
+function abzeichen(k) {
+  const z = {
+    geld: k.b > 0 ? ['plus', `+${k.b} 🪙`] : ['minus', `−${-k.b} 🪙`],
+    jeder: k.b > 0 ? ['plus', `+${k.b} 🪙 von jedem`] : ['minus', `−${-k.b} 🪙 an jeden`],
+    geh: ['neutral', `➡️ ${fName(k.z ?? 0)}`], bahn: ['neutral', '➡️ 🚂 nächster Bahnhof'], werk: ['neutral', '➡️ ⚡💧 nächstes Werk'],
+    zurueck: ['neutral', '⬅️ 3 Felder'], knast: ['minus', '➡️ 🚓 Gefängnis'], frei: ['plus', '🎫 behalten!'],
+    repar: ['minus', `🏠 −${k.h} · 🏨 −${k.ho}`],
+  }[k.a];
+  return `<div class="abz ${z[0]}">${z[1]}</div>`;
+}
+// Bewegung von der Bildschirm-Mitte zu einem Element (Stapel oder Spieler)
+function flugZu(ziel, el, drehen) {
+  const r = ziel.getBoundingClientRect(), k = el.getBoundingClientRect();
+  const dx = r.left + r.width / 2 - (k.left + k.width / 2), dy = r.top + r.height / 2 - (k.top + k.height / 2);
+  const s = (ziel.offsetWidth || r.width) / el.offsetWidth;
+  return `translate(${dx}px,${dy}px) rotate(${drehen ? -40 : 0}deg) scale(${s})`;
+}
+async function karteZeigen(d, k, p) {
+  const kt = KARTEN[d][k], [titel, sym] = KARTEN_NAME[d];
+  const [bild, ...rest] = kt.x.split(' ');
+  const stapel = $('#stapel-' + d), deckel = $('#karte');
+  const el = document.createElement('div'); el.className = 'flugkarte';
+  el.innerHTML = `<div class="innen"><div class="fs">${rueckseite(d).replace('class="rs', 'style="position:absolute;inset:0" class="rs')}</div>
+    <div class="fs vorne"><div class="kopfband ${d}">${sym} ${titel}</div><div class="bild">${bild}</div><p>${esc(rest.join(' '))}</p>${abzeichen(kt)}</div></div>`;
+  document.body.appendChild(el); deckel.classList.add('on');
+  Ton.wusch();
+  await el.animate([{ transform: flugZu(stapel, el, true) }, { transform: 'none' }], { duration: 600, easing: 'cubic-bezier(.2,.8,.3,1)' }).finished;
+  el.classList.add('offen'); Ton.piep(990, .15, 'triangle', .1);
+  await warte(700);
+  await new Promise(ok => { const zu = () => { clearTimeout(z); deckel.onclick = el.onclick = null; ok(); }; const z = setTimeout(zu, 5000); deckel.onclick = el.onclick = zu; });
+  deckel.classList.remove('on'); Ton.wusch();
+  const frei = kt.a === 'frei', ziel = frei && $(`#spielerliste .sp[data-p="${p}"]`);
+  if (!frei) el.classList.remove('offen');                  // Karte dreht sich wieder um und kommt unter den Stapel
+  await el.animate([{ transform: 'none', opacity: 1 }, { transform: flugZu(ziel || stapel, el, !frei), opacity: frei ? .3 : 1 }],
+    { duration: frei ? 600 : 700, easing: 'ease-in', fill: 'forwards' }).finished;
+  el.remove();
 }
 
 /* ---------- Neuen Stand anzeigen (mit Animationen) ---------- */
 let kette = Promise.resolve();
-function standZeigen(neu) { kette = kette.then(() => standAbspielen(neu)).catch(e => console.error(e)); return kette; }
+function standZeigen(neu) {
+  // Geht bei einer Animation etwas schief, läuft das Spiel trotzdem weiter
+  kette = kette.then(() => standAbspielen(neu)).catch(e => {
+    console.error(e); $('#karte').classList.remove('on'); $$('.flugkarte').forEach(x => x.remove());
+    beschaeftigt = false; zeichneAlles(); kiPruefen();
+  });
+  return kette;
+}
 async function standAbspielen(neu) {
   if (!neu) return;
   const neuesSpiel = !st || neu.id !== anzeige.id;
@@ -1103,7 +1188,7 @@ async function standAbspielen(neu) {
       if (e.a === 'wurf') await wuerfelRollen(e.w);
       else if (e.a === 'lauf') await laufen(e.p, e.nach);
       else if (e.a === 'sprung') await springen(e.p, e.nach);
-      else if (e.a === 'karte') await karteZeigen(e.d, e.k);
+      else if (e.a === 'karte') await karteZeigen(e.d, e.k, e.p);
       else if (e.a === 'toast') await toastZeigen(e.s, e.x);
       else if (e.a === 'blink') { const f = $('#f' + e.i); f.classList.remove('blink'); f.offsetWidth; f.classList.add('blink'); Ton.muenze(); }
     }
@@ -1135,7 +1220,7 @@ function zeichneAlles() {
       .map(i => `<span class="${st.besitz[i].hyp ? 'h' : ''}" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}"></span>`).join('');
     const diff = s.geld - (anzeige.geld[p] ?? s.geld);
     const plus = diff ? `<span class="plus" style="color:${diff > 0 ? '#2FA84F' : '#D33B3B'}">${diff > 0 ? '+' : ''}${diff}</span>` : '';
-    return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" style="--f:${s.f}">
+    return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" data-p="${p}" style="--f:${s.f}">
       <div class="kopf"><span>${s.fig}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
       <div class="karten">${felder}</div>${plus}</div>`;
   }).join('') + `<div class="klein">${['', '🐣 Einfach', '🦊 Mittel', '🦁 Profi'][stufe(st)]} · Runde ${st.runde || 1}${st.opt.runden ? ' von ' + st.opt.runden : ''}${st.opt.topf ? ` · 🧺 Topf: ${geld(st.topf)}` : ''}</div>`;
@@ -1151,6 +1236,7 @@ function zeichneKnoepfe() {
   const p = amZug(st), s = st.spieler[p];
   $('#wer').innerHTML = `<span class="figur" style="position:static;--f:${s.f};transform:none">${s.fig}</span> ${esc(s.n)}${st.phase === 'auktion' ? ' bietet' : st.phase === 'handel' ? ' entscheidet' : ' ist dran'}`;
   if (!beschaeftigt) $('#info').innerHTML = phasenText(p);
+  for (const d of ['er', 'ks']) $('#stapel-' + d).classList.toggle('zieh', !beschaeftigt && st.phase === 'karte' && st.ziehen && st.ziehen.d === d && meins(st.dran));
   if (beschaeftigt || st.status !== 'laeuft') return;
   if (!meins(p)) {
     const t = document.createElement('div'); t.className = 'klein';
@@ -1193,6 +1279,7 @@ function zeichneKnoepfe() {
       break;
     }
     case 'zugEnde': knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }); verw(); break;
+    case 'karte': knopf(`👆 ${KARTEN_NAME[st.ziehen.d][1]} Karte ziehen`, { t: 'ziehen' }, { kl: 'voll' }); break;
     case 'schulden':
       knopf(`💸 ${geld(st.schuld.betrag)} bezahlen`, { t: 'zahlen' });
       verw();
@@ -1219,6 +1306,7 @@ function phasenText(p) {
   if (st.phase === 'auktion') { const A = st.auktion, f = F[A.f]; return `🔨 <span class="mini-feld" style="--g:${f.t === 's' ? GRUPPEN[f.g][0] : '#777'}">${fName(A.f)}</span><br>Höchstes Gebot: <b>${geld(A.gebot)}</b>${A.wer >= 0 ? ' von ' + esc(spName(st, A.wer)) : ''}`; }
   if (st.phase === 'schulden') return `⚠️ ${esc(st.schuld.grund)}: <b>${geld(st.schuld.betrag)}</b> zahlen.<br>Vorhanden: ${geld(s.geld)}. Häuser verkaufen oder Hypotheken aufnehmen.`;
   if (st.phase === 'handel') return handelText(st.handel);
+  if (st.phase === 'karte') { const [titel, sym] = KARTEN_NAME[st.ziehen.d]; return meins(p) ? `${sym} Tipp auf den Stapel <b>${titel}</b>!` : `${esc(spName(st, p))} zieht eine Karte ${sym} …`; }
   if (st.phase === 'wuerfeln' && s.knast) return `🚓 Im Gefängnis! Pasch würfeln oder 50 zahlen (Versuch ${s.versuche + 1} von 3)`;
   return esc(st.info);
 }

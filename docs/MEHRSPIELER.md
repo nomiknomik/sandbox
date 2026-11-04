@@ -135,3 +135,6 @@ lernt man, wie zwei Geräte miteinander reden.
   Gefängnis = einmal aussetzen, kein Geld mehr = Spielende mit Wertung), 🦊 Mittel (gleichmäßig bauen, Pasch-Gefängnis,
   Tauschen), 🦁 Profi (alle Regeln). Spiellänge 10 / 20 Runden oder ohne Ende. Jede Straße hat ein Bild (Emoji),
   große Meldungen („GEKAUFT!“, Miete) und Konfetti für den Sieger.
+- v1.3: Karten liegen als zwei Stapel (❓ Überraschung, 💰 Stadtkasse) auf dem Brett. Landet man dort, wackelt der
+  Stapel – antippen zieht die Karte (eigene Phase `karte`, Aktion `ziehen`). Sie fliegt in die Mitte, dreht sich in 3D um,
+  danach zurück unter den Stapel (Raus-Karte fliegt zum Spieler). Rückseite noch selbst gebaut, später ChatGPT-Bild.
