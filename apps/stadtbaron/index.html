@@ -171,7 +171,7 @@
   #toast.on{animation:toast 1.3s ease forwards}
   #toast div{background:#fff;color:#1B2A22;border-radius:22px;padding:14px 26px;box-shadow:0 10px 40px #0005;display:flex;flex-direction:column;align-items:center;gap:4px;border:4px solid #FFD54A}
   #toast span{font-size:56px;line-height:1}
-  #toast b{font-size:24px;letter-spacing:1px}
+  #toast b{font-size:24px;letter-spacing:1px;text-align:center;max-width:80vw}
   @keyframes toast{0%{opacity:0;transform:scale(.4)}15%{opacity:1;transform:scale(1.1)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(.95)}}
   #konfetti{position:fixed;inset:0;pointer-events:none;z-index:25;overflow:hidden}
   #konfetti span{position:absolute;top:-40px;animation:fall 3s linear forwards}
@@ -383,7 +383,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -664,7 +664,7 @@ function landen(st, p, augen, extra) {
     if (extra === 'werk10') augen = 2 + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6);
     const m = miete(st, i, augen, extra);
     log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${fName(i)}).`);
-    toast(st, '💸', `${m} Miete an ${st.spieler[b.o].fig}`);
+    toast(st, '💸', `${spName(st, p)} zahlt ${m} 🪙 Miete an ${spName(st, b.o)}`);
     zahle(st, p, m, b.o, 'Miete für ' + f.n);
     return;
   }
@@ -1113,11 +1113,12 @@ async function wuerfelRollen(w) {
 
 /* ---------- Große Meldung (GEKAUFT!, Miete …) ---------- */
 async function toastZeigen(sym, text) {
-  const el = $('#toast');
+  const el = $('#toast'), ms = /Miete/.test(text) ? 3500 : 1300;   // Miete länger zeigen, damit man mitlesen kann
+  el.style.animationDuration = ms + 'ms';
   el.innerHTML = `<div><span>${sym || ''}</span><b>${esc(text)}</b></div>`;
   el.classList.remove('on'); el.offsetWidth; el.classList.add('on');
   if (/GEKAUFT|GEBAUT|ERSTEIGERT/.test(text)) Ton.fanfare(); else if (/Miete/.test(text)) Ton.zahlen();
-  await warte(1300);
+  await warte(ms);
 }
 // Konfetti für den Sieger
 function konfetti() {
@@ -1715,7 +1716,7 @@ const Sync = {
   cfg: speicher.lies('sb-sync') || speicher.lies('mb-sync') || speicher.lies('wu-sync') || speicher.lies('tk-sync'),
   geraet: speicher.lies('sb-geraet') || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('sb-geraet', id); return id; })(),
   pfad: 'stadtbaron/aktuell.json',
-  etag: null, sha: null, stand: null, schluessel: null,
+  etag: null, sha: null, stand: null, schluessel: null, geschrieben: 0,
 
   einladung() { const c = this.cfg; return ['MB1', c.o, c.r, c.t, c.k].join('~'); },
   einladungsLink() { return location.origin + location.pathname + '#einladung=' + this.einladung(); },
@@ -1755,32 +1756,39 @@ const Sync = {
     if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
     if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
     const j = await res.json();
-    this.sha = j.sha;
-    this.stand = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    const neu = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+    // GitHub schickt kurz nach dem Speichern manchmal noch den ALTEN Stand.
+    // Den erkennen wir am Zähler rev und behalten dann lieber unseren eigenen.
+    if (this.stand && Date.now() - this.geschrieben < 30000 && (neu.rev || 0) < (this.stand.rev || 0)) return this.stand;
+    this.sha = j.sha; this.stand = neu;
     this.etag = res.headers.get('ETag');
     return this.stand;
   },
-  async schreiben(stand) {
+  async schreiben(stand, sha = this.sha) {
     if (Lokal.an) { const ok = await Lokal.schreiben(stand); this.stand = Lokal.stand; return ok; }
+    stand.rev = Math.max(stand.rev || 0, (this.stand && this.stand.rev) || 0) + 1;   // jeder Speicherstand zählt hoch
     const body = { message: 'Stadtbaron: Zug', content: btoa(JSON.stringify(await this.verschluesseln(stand))) };
-    if (this.sha) body.sha = this.sha;
+    if (sha) body.sha = sha;
     const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.status === 409 || res.status === 422) return false;          // jemand war schneller
     if (res.status === 403 || res.status === 404) throw new Error('Token darf nicht schreiben (Contents: Read and write?).');
     if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
-    const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null;
+    const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null; this.geschrieben = Date.now();
     return true;
   },
   // Ändern = neu lesen, Funktion anwenden, zurückschreiben. Bei Gleichzeitigkeit: nochmal.
   async aendern(fn) {
-    for (let i = 0; i < 6; i++) {
-      const alt = await this.lesen(true);
+    this.aendert = true;   // solange kein Nachschauen nebenher (das würde sha durcheinanderbringen)
+    try {
+    for (let i = 0; i < 10; i++) {
+      const alt = await this.lesen(true), sha = this.sha;
       const neu = fn(alt ? kopie(alt) : null);
       if (!neu) return alt;
-      if (await this.schreiben(neu)) return neu;
-      await warte(300 + Math.random() * 700);
+      if (await this.schreiben(neu, sha)) return neu;
+      await warte(500 + i * 300 + Math.random() * 700);   // jedes Mal etwas länger warten
     }
     throw new Error('Ein anderes Gerät schreibt gerade – bitte nochmal.');
+    } finally { this.aendert = false; }
   },
 };
 
@@ -1789,7 +1797,7 @@ const Online = {
   start() { this.stop(); this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
   async tick() {
-    if (this.tickt || document.hidden || !this.timer) return;
+    if (this.tickt || Sync.aendert || document.hidden || !this.timer) return;
     this.tickt = true;
     try { this.empfang(await Sync.lesen()); verbindungAnzeigen(''); }
     catch (e) { verbindungAnzeigen(e.message, e); }
@@ -1863,16 +1871,30 @@ async function onlineErstellen(spieler, opt) {
   catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => onlineErstellen(spieler, opt)]]); }
 }
 async function platzNehmen(k) {
+  lobby('🙋 Trete bei …', []);
   try {
+    // GitHub zeigt kurz nach dem Speichern manchmal noch nichts Neues – dann bis zu 5× nachfassen
+    for (let versuch = 0, drin = false; versuch < 5 && !drin; versuch++) {
+    if (versuch) await warte(1000);
     await Sync.aendern(s => {
-      if (!s || s.status !== 'wartet' || s.spieler[k].g || s.spieler[k].ki) return null;
+      if (s && s.status !== 'wartet') { drin = true; return null; }   // Spiel läuft schon / ist vorbei: nicht mehr nötig
+      if (!s) return null;
+      // Platz schon weg (jemand war schneller)? Dann den nächsten freien nehmen.
+      if (s.spieler[k].g || s.spieler[k].ki) k = s.spieler.findIndex(p => !p.ki && !p.g);
+      if (k < 0) { drin = true; return null; }   // alles voll
       s.spieler[k].g = Sync.geraet; if (meinName()) s.spieler[k].n = meinName();   // eigener Name statt „Spieler 2“
-      if (!s.geraete.includes(Sync.geraet)) s.geraete.push(Sync.geraet); return s;
+      if (!s.geraete.includes(Sync.geraet)) s.geraete.push(Sync.geraet); drin = true; return s;
     });
+    }
     lobbyJson = ''; Online.tick();
   } catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => Online.tick()]]); }
 }
 async function onlineStarten() {
+  const s = await Sync.lesen(true).catch(() => Sync.stand);
+  const frei = s && s.spieler ? s.spieler.filter(p => !p.ki && !p.g).length : 0;
+  if (frei && await dialog(`<h2>⏳ Noch ${frei} Platz frei</h2><p>Ist ein Gerät noch nicht beigetreten? Dann kurz warten, bis dort „✅ beigetreten“ steht.<br>Wenn du startest, spielst du die freien Plätze selbst.</p>`,
+    [['Warten', 'warten'], ['Trotzdem starten', 'ok', 'zweit']]) !== 'ok') { lobbyJson = ''; return Online.tick(); }
+  lobby('▶ Starte …', []);
   try {
     await Sync.aendern(s => {
       if (!s || s.status !== 'wartet') return null;
