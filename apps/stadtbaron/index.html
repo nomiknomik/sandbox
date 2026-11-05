@@ -89,9 +89,10 @@
   .feld .besitzer{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 calc(var(--u)*.07) var(--o)}
   .feld.hyp .inhalt{opacity:.35}
   .feld.hyp::after{content:'H';position:absolute;right:2px;bottom:1px;font-size:calc(var(--u)*.22);font-weight:800;color:#D33B3B}
-  .haus{width:calc(var(--u)*.16);height:calc(var(--u)*.16);background:#2FA84F;border:1px solid #0006;border-radius:2px}
-  .hotel{width:calc(var(--u)*.34);height:calc(var(--u)*.2);background:#D33B3B;border:1px solid #0006;border-radius:2px}
-  .links .hotel,.rechts .hotel{width:calc(var(--u)*.2);height:calc(var(--u)*.34)}
+  .haus{width:calc(var(--u)*.22);height:calc(var(--u)*.22);background:url(bilder/haus.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
+  .hotel{width:calc(var(--u)*.36);height:calc(var(--u)*.36);background:url(bilder/hotel.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
+  img.bild{height:1.25em;width:auto;vertical-align:middle;-webkit-user-select:none;user-select:none}
+  .figur img.bild{height:96%;filter:drop-shadow(0 1px 1px #0007)}
   .feld.blink{animation:blink .9s ease 2}
   @keyframes blink{50%{background:#FFE58A}}
 
@@ -383,7 +384,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -547,6 +548,10 @@ const KARTEN = {
 const KARTEN_NAME = { er: ['ÜBERRASCHUNG', '❓', 'er'], ks: ['STADTKASSE', '💰', 'ks'] };
 
 const FIGUREN = ['🚗', '🐶', '🎩', '🚀', '🦖', '⛵', '🐱', '🎸', '🦄', '🐢'];
+// Schöne Bilder (aus ChatGPT) statt Emojis – im Text (Verlauf, Meldungen) bleiben die Emojis
+const BILDER = { '🚗': 'auto', '🐶': 'hund', '🎩': 'hut', '🚀': 'rakete', '🦖': 'dino', '⛵': 'boot', '🐱': 'katze', '🎸': 'gitarre',
+  '🦄': 'einhorn', '🐢': 'kroete', '🏁': 'start', '🚓': 'knast', '❓': 'frage', '💰': 'kasse' };
+const bild = (e, kl = '') => BILDER[e] ? `<img class="bild ${kl}" src="bilder/${BILDER[e]}.webp" alt="${e}" draggable="false">` : e;
 const FARBEN = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
 
 /* =====================================================================
@@ -1020,7 +1025,7 @@ function brettBauen() {
     el.className = 'feld ' + seite; el.id = 'f' + i;
     el.style.gridArea = `${r}/${c}`;
     const bar = f.t === 's' ? `<div class="bar" style="background:${GRUPPEN[f.g][0]}"></div>` : '';
-    const sym = `<span class="sym ${f.t === 's' ? 'st' : ''}">${f.e || f.i || ''}</span>`;
+    const sym = `<span class="sym ${f.t === 's' ? 'st' : ''}">${bild(f.e || f.i || '')}</span>`;
     const pr = f.p ? `<span class="pr">${f.p}</span>` : f.b ? `<span class="pr">${f.b}</span>` : '';
     el.innerHTML = `${bar}<div class="inhalt"><b>${f.n}</b>${sym}${pr}</div><div class="besitzer"></div>`;
     el.onclick = () => feldInfo(i);
@@ -1064,7 +1069,7 @@ function figurenSetzen(sanft = true) {
   st.spieler.forEach((s, p) => {
     let el = $('#fig' + p);
     if (!el) { el = document.createElement('div'); el.className = 'figur'; el.id = 'fig' + p; $('#brett').appendChild(el); }
-    el.textContent = s.fig; el.style.setProperty('--f', s.f);
+    if (el.dataset.fig !== s.fig) { el.innerHTML = bild(s.fig); el.dataset.fig = s.fig; } el.style.setProperty('--f', s.f);
     el.classList.toggle('weg', s.pleite); el.classList.toggle('dran', p === st.dran);
     const pos = anzeige.pos[p] ?? s.pos, gleich = st.spieler.map((t, q) => q).filter(q => !st.spieler[q].pleite && (anzeige.pos[q] ?? st.spieler[q].pos) === pos);
     const [x, y] = figurPunkt(pos, gleich.indexOf(p), gleich.length);
@@ -1132,7 +1137,7 @@ function konfetti() {
 }
 
 /* ---------- Karte: vom Stapel holen, umdrehen, zurücklegen ---------- */
-const rueckseite = d => `<div class="rs ${d}"><div class="ri"><span>${KARTEN_NAME[d][1]}</span><b>${KARTEN_NAME[d][0]}</b></div></div>`;
+const rueckseite = d => `<div class="rs ${d}"><div class="ri"><span>${bild(KARTEN_NAME[d][1])}</span><b>${KARTEN_NAME[d][0]}</b></div></div>`;
 // Kleines Schild unten auf der Karte: was passiert?
 function abzeichen(k) {
   const z = {
@@ -1229,7 +1234,7 @@ function zeichneAlles() {
     const diff = s.geld - (anzeige.geld[p] ?? s.geld);
     const plus = diff ? `<span class="plus" style="color:${diff > 0 ? '#2FA84F' : '#D33B3B'}">${diff > 0 ? '+' : ''}${diff}</span>` : '';
     return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" data-p="${p}" style="--f:${s.f}">
-      <div class="kopf"><span>${s.fig}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
+      <div class="kopf"><span>${bild(s.fig)}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
       <div class="karten">${felder}</div>${plus}</div>`;
   }).join('') + `<div class="klein">${['', '🐣 Einfach', '🦊 Mittel', '🦁 Profi'][stufe(st)]} · Runde ${st.runde || 1}${st.opt.runden ? ' von ' + st.opt.runden : ''}${st.opt.topf ? ` · 🧺 Topf: ${geld(st.topf)}` : ''}</div>`;
   anzeige.geld = st.spieler.map(s => s.geld);
@@ -1244,7 +1249,7 @@ function zeichneKnoepfe() {
   const box = $('#knoepfe'); box.innerHTML = '';
   if (!st) return;
   const p = amZug(st), s = st.spieler[p];
-  $('#wer').innerHTML = `<span class="figur" style="position:static;--f:${s.f};transform:none">${s.fig}</span> ${esc(s.n)}${st.phase === 'auktion' ? ' bietet' : st.phase === 'handel' ? ' entscheidet' : ' ist dran'}`;
+  $('#wer').innerHTML = `<span class="figur" style="position:static;--f:${s.f};transform:none">${bild(s.fig)}</span> ${esc(s.n)}${st.phase === 'auktion' ? ' bietet' : st.phase === 'handel' ? ' entscheidet' : ' ist dran'}`;
   if (!beschaeftigt) $('#info').innerHTML = phasenText(p);
   for (const d of ['er', 'ks']) $('#stapel-' + d).classList.toggle('zieh', !beschaeftigt && st.phase === 'karte' && st.ziehen && st.ziehen.d === d && meins(st.dran));
   if (beschaeftigt || st.status !== 'laeuft') return;
@@ -1523,7 +1528,7 @@ function neuZeichnen() {
   $('#n-geld').innerHTML = [1000, 1500, 2000].map(n => `<button class="zweit ${E.start === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
   $('#n-geld').querySelectorAll('button').forEach(b => b.onclick = () => { E.start = +b.dataset.n; Ton.klick(); neuZeichnen(); });
   $('#n-spieler').innerHTML = E.spieler.slice(0, E.anzahl).map((s, k) =>
-    `<div class="sp-zeile" style="--f:${s.f}"><button class="fig zweit" data-k="${k}">${s.fig}</button>
+    `<div class="sp-zeile" style="--f:${s.f}"><button class="fig zweit" data-k="${k}">${bild(s.fig)}</button>
      <input value="${esc(s.n)}" data-k="${k}" maxlength="14"><button class="art zweit" data-k="${k}">${s[K] ? '🤖 Computer' : neuOnline ? '👤 anderes Gerät' : '👤 Mensch'}</button></div>`).join('');
   $$('#n-spieler .fig').forEach(b => b.onclick = () => {
     const s = E.spieler[b.dataset.k], belegt = E.spieler.slice(0, E.anzahl).map(x => x.fig);
@@ -1861,7 +1866,7 @@ function lobbyZeigen(s) {
   }
   if (s.status === 'wartet') {
     zeige('s-online');
-    const liste = s.spieler.map((p, k) => `<div class="verw"><span class="nm" style="--g:${p.f}">${p.fig} ${esc(p.n)}</span><span>${p.ki ? '🤖' : p.g === ich ? '📱 dieses Gerät' : p.g ? '✅ beigetreten' : '⏳ frei'}</span></div>`).join('');
+    const liste = s.spieler.map((p, k) => `<div class="verw"><span class="nm" style="--g:${p.f}">${bild(p.fig)} ${esc(p.n)}</span><span>${p.ki ? '🤖' : p.g === ich ? '📱 dieses Gerät' : p.g ? '✅ beigetreten' : '⏳ frei'}</span></div>`).join('');
     const frei = s.spieler.map((p, k) => (!p.ki && !p.g) ? k : -1).filter(k => k >= 0);
     const knoepfe = frei.map(k => [`🙋 ICH SPIELE ${s.spieler[k].fig} ${esc(s.spieler[k].n)}`, () => platzNehmen(k)]);
     if (s.geraete[0] === ich) knoepfe.push([frei.length ? `▶ STARTEN (${frei.length} Platz/Plätze noch frei)` : "▶ LOS GEHT'S", () => onlineStarten(), frei.length ? 'zweit' : ''], ['✕ SPIEL ABBRECHEN', onlineAbbrechen, 'zweit']);

@@ -1,7 +1,8 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'stadtbaron-v8';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js', './lokal.js', './logo.webp'];
+const CACHE = 'stadtbaron-v9';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js', './lokal.js', './logo.webp',
+  './bilder/auto.webp', './bilder/hund.webp', './bilder/hut.webp', './bilder/rakete.webp', './bilder/dino.webp', './bilder/boot.webp', './bilder/katze.webp', './bilder/gitarre.webp', './bilder/einhorn.webp', './bilder/kroete.webp', './bilder/haus.webp', './bilder/hotel.webp', './bilder/frage.webp', './bilder/kasse.webp', './bilder/start.webp', './bilder/knast.webp'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
