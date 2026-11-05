@@ -1,6 +1,6 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'stadtbaron-v10';
+const CACHE = 'stadtbaron-v11';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jsQR.js', './lokal.js', './logo.webp',
   './bilder/auto.webp', './bilder/hund.webp', './bilder/hut.webp', './bilder/rakete.webp', './bilder/dino.webp', './bilder/boot.webp', './bilder/katze.webp', './bilder/gitarre.webp', './bilder/einhorn.webp', './bilder/kroete.webp', './bilder/haus.webp', './bilder/hotel.webp', './bilder/frage.webp', './bilder/kasse.webp', './bilder/start.webp', './bilder/knast.webp',
   './bilder/kiesel.webp', './bilder/strand.webp', './bilder/muehle.webp', './bilder/sonnenblume.webp', './bilder/brunnen.webp', './bilder/rose.webp', './bilder/tulpen.webp', './bilder/schmetterling.webp', './bilder/fisch.webp', './bilder/muschel.webp', './bilder/leuchtturm.webp', './bilder/burg.webp', './bilder/schild.webp', './bilder/drache.webp', './bilder/sonne.webp', './bilder/krone.webp', './bilder/stern.webp', './bilder/riesenrad.webp', './bilder/tanne.webp', './bilder/ente.webp', './bilder/kristall.webp', './bilder/palast.webp', './bilder/steuer.webp', './bilder/ring.webp', './bilder/bus.webp', './bilder/anker.webp', './bilder/flugzeug.webp', './bilder/seilbahn.webp', './bilder/kraftwerk.webp', './bilder/wasserturm.webp', './bilder/korb.webp', './bilder/polizist.webp'];

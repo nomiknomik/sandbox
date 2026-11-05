@@ -386,7 +386,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.10';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -725,6 +725,7 @@ function naechster(st) {
     if (q <= alt) {                                  // alle waren einmal dran → neue Runde
       st.runde = (st.runde || 1) + 1;
       if (st.opt.runden && st.runde > st.opt.runden) { st.dran = q; return spielEnde(st, `⏰ ${st.opt.runden} Runden sind vorbei!`); }
+      if (st.opt.runden && st.runde === st.opt.runden) { log(st, '⏰ Letzte Runde!'); toast(st, '⏰', 'LETZTE RUNDE!'); }
     }
     const s = st.spieler[q];
     if (stufe(st) === 1 && s.knast) { s.knast = false; log(st, `${spName(st, q)} sitzt im Gefängnis und setzt einmal aus. 🚓`); continue; }
@@ -932,7 +933,7 @@ function auktionPruefen(st) {
 // Spiel vorzeitig auswerten: Wer am meisten besitzt, gewinnt
 function spielEnde(st, grund) {
   const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
-  st.status = 'ende'; st.phase = 'ende'; st.sieger = rang[0];
+  st.status = 'ende'; st.phase = 'ende'; st.sieger = rang[0]; st.grund = grund || '';
   if (grund) log(st, grund);
   log(st, `🏆 ${spName(st, rang[0])} ist am reichsten und gewinnt!`);
   return st;
@@ -1488,7 +1489,7 @@ function endeZeigen() {
   const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
   const liste = rang.map((p, k) => `<div class="verw"><b>${k + 1}.</b><span class="nm" style="--g:${st.spieler[p].f}">${esc(spName(st, p))}</span><span>${st.spieler[p].pleite ? '💀 pleite' : geld(vermoegen(st, p))}</span></div>`).join('');
   $('#info').innerHTML = `🏆 <b>${esc(spName(st, st.sieger))}</b> gewinnt!`;
-  dialog(`<h2 style="text-align:center">🏆 ${esc(spName(st, st.sieger))} gewinnt!</h2><p class="klein">Vermögen = Geld + Straßen + Häuser</p>${liste}`, [['Zum Menü', 'menue', 'zweit'], ['Brett ansehen', 'brett']])
+  dialog(`<h2 style="text-align:center">🏆 ${esc(spName(st, st.sieger))} gewinnt!</h2>${st.grund ? `<p style="text-align:center"><b>${esc(st.grund)}</b></p>` : ''}<p class="klein">Vermögen = Geld + Straßen + Häuser</p>${liste}`, [['Zum Menü', 'menue', 'zweit'], ['Brett ansehen', 'brett']])
     .then(w => { if (w === 'menue') menue(); });
 }
 
