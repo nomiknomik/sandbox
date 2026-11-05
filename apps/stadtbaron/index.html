@@ -27,6 +27,11 @@
   button.rot{background:#D33B3B}
   input,textarea{font:inherit;padding:10px;border-radius:10px;border:1.5px solid #0003;background:var(--karte);color:var(--text);-webkit-user-select:text;user-select:text}
   #portal{position:fixed;top:calc(8px + env(safe-area-inset-top));left:10px;padding:8px 12px;border-radius:12px;background:#0002;color:inherit;text-decoration:none;font-size:15px;z-index:5}
+  #ticket{position:fixed;bottom:calc(6px + env(safe-area-inset-bottom));left:8px;width:44px;height:44px;padding:0;border-radius:50%;font-size:22px;font-weight:700;z-index:6}
+  #ticket b{position:absolute;top:-4px;right:-4px;min-width:18px;padding:0 4px;border-radius:9px;background:#E2342D;color:#fff;font-size:11px;line-height:18px}
+  .t-liste{max-height:40vh;overflow:auto;margin:8px 0}
+  .t-liste div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #0001}
+  .t-liste span{flex:1;white-space:pre-wrap}
   #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:var(--muted);cursor:pointer;z-index:5}
 
   /* ---------- Bildschirme ---------- */
@@ -226,6 +231,7 @@
 <body>
 <a id="portal" href="../../">🕹 Alle Spiele</a>
 <div id="version"></div>
+<button id="ticket" class="zweit" title="Wunsch oder Fehler aufschreiben">@</button>
 
 <!-- Menü -->
 <section id="s-menue" class="screen on">
@@ -235,6 +241,7 @@
     <button id="m-neu">🎲 NEUES SPIEL (EIN GERÄT)</button>
     <button id="m-online" class="zweit">🌐 MEHRERE GERÄTE (ONLINE)</button>
     <button id="m-lokal" class="zweit">📶 MEHRERE GERÄTE (OHNE INTERNET)</button>
+    <button id="m-name" class="zweit">👤 MEIN NAME</button>
     <button id="m-regeln" class="zweit">📖 SPIELREGELN</button>
     <button id="m-ton" class="zweit">🔊 TON AN</button>
   </div>
@@ -376,7 +383,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1523,6 +1530,48 @@ $('#n-los').onclick = () => {
   spielStarten(neuesSpiel(spieler, opt));
 };
 
+/* ---------- Mein Name 👤 – merkt sich dieses Gerät (nur hier gespeichert) ---------- */
+const meinName = () => speicher.lies('sb-name') || '';
+function nameKnopf() { $('#m-name').textContent = meinName() ? '👤 ' + meinName() : '👤 MEIN NAME'; }
+$('#m-name').onclick = async () => {
+  Ton.klick();
+  const w = await dialog(`<h2>👤 Wie heißt du?</h2><p class="klein">Dieses Gerät merkt sich den Namen – für Spiele hier und online.</p>
+    <input id="d-name" maxlength="14" value="${esc(meinName())}" style="width:100%">`, [['Abbrechen', null, 'zweit'], ['Speichern', 'ok']]);
+  if (w !== 'ok') return;
+  const n = $('#d-name').value.trim();
+  n ? speicher.schreib('sb-name', n) : speicher.weg('sb-name');
+  einstellung.spieler[0].n = n || 'Spieler 1';      // Spieler 1 bekommt den Namen gleich mit
+  speicher.schreib('sb-einstellung', einstellung);
+  nameKnopf();
+};
+nameKnopf();
+
+/* ---------- @ Tickets – Wünsche und Fehler aufschreiben, später an Claude geben ---------- */
+const tickets = () => speicher.lies('sb-tickets') || [];
+function ticketZahl() { const n = tickets().length; $('#ticket').innerHTML = '@' + (n ? `<b>${n}</b>` : ''); }
+async function ticketDialog() {
+  const liste = tickets().map((t, k) => `<div><b>${k + 1}.</b><span>${esc(t.t)}</span><button class="zweit" data-weg="${k}">🗑</button></div>`).join('');
+  const w = await dialog(`<h2>@ Neues Ticket</h2><p class="klein">Was soll anders werden? Was klappt nicht?</p>
+    <textarea id="d-ticket" rows="3" style="width:100%" placeholder="z. B. Die Würfel sollen größer sein"></textarea>
+    ${liste ? '<div class="t-liste">' + liste + '</div>' : ''}`,
+    [['Schließen', null, 'zweit'], ['📋 Alle kopieren', 'kopieren', 'zweit'], ['Speichern', 'ok']]);
+  if (w === 'ok') {
+    const t = $('#d-ticket').value.trim();
+    if (t) { speicher.schreib('sb-tickets', [...tickets(), { t, d: new Date().toISOString().slice(0, 10) }]); toastZeigen('✓', 'Gespeichert'); }
+  } else if (w === 'kopieren') {
+    const text = 'Tickets für Stadtbaron v' + APP_VERSION + ':\n' + tickets().map((t, k) => `${k + 1}. ${t.t}`).join('\n');
+    try { await navigator.clipboard.writeText(text); toastZeigen('📋', 'Kopiert'); } catch { toastZeigen('⚠', 'Kopieren ging nicht'); }
+  }
+  ticketZahl();
+}
+$('#ticket').onclick = () => { Ton.klick(); ticketDialog(); };
+// 🗑 im Dialog: Ticket löschen und Liste neu zeigen
+$('#dlg-inhalt').addEventListener('click', e => {
+  const k = e.target.dataset && e.target.dataset.weg; if (k === undefined) return;
+  const t = tickets(); t.splice(+k, 1); speicher.schreib('sb-tickets', t); ticketZahl(); ticketDialog();
+});
+ticketZahl();
+
 function spielStarten(neu) {
   st = null; anzeige.id = null; anzeige.nr = -1;
   zeige('s-spiel');
@@ -1802,6 +1851,7 @@ async function onlineErstellen(spieler, opt) {
   neu.status = 'wartet'; neu.geraete = [Sync.geraet];
   neu.spieler.forEach((s, k) => s.g = k === 0 && !s.ki ? Sync.geraet : null);
   if (neu.spieler[0].ki) { const k = neu.spieler.findIndex(s => !s.ki); neu.spieler[k].g = Sync.geraet; }
+  const meiner = neu.spieler.find(s => s.g === Sync.geraet); if (meiner && meinName()) meiner.n = meinName();
   zeige('s-online'); lobby('Erstelle Spiel …', []);
   try { await Sync.lesen(true).catch(() => {}); if (!await Sync.schreiben(neu)) await Sync.aendern(() => neu); Ton.fanfare(); lobbyJson = ''; Online.start(); }
   catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => onlineErstellen(spieler, opt)]]); }
@@ -1810,7 +1860,8 @@ async function platzNehmen(k) {
   try {
     await Sync.aendern(s => {
       if (!s || s.status !== 'wartet' || s.spieler[k].g || s.spieler[k].ki) return null;
-      s.spieler[k].g = Sync.geraet; if (!s.geraete.includes(Sync.geraet)) s.geraete.push(Sync.geraet); return s;
+      s.spieler[k].g = Sync.geraet; if (meinName()) s.spieler[k].n = meinName();   // eigener Name statt „Spieler 2“
+      if (!s.geraete.includes(Sync.geraet)) s.geraete.push(Sync.geraet); return s;
     });
     lobbyJson = ''; Online.tick();
   } catch (e) { lobby('⚠ ' + esc(e.message), [['NOCHMAL', () => Online.tick()]]); }
