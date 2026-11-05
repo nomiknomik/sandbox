@@ -383,7 +383,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1238,7 +1238,9 @@ function zeichneAlles() {
 }
 
 // Knöpfe in der Mitte – je nach Phase
+let endeTimer = null;
 function zeichneKnoepfe() {
+  clearInterval(endeTimer);
   const box = $('#knoepfe'); box.innerHTML = '';
   if (!st) return;
   const p = amZug(st), s = st.spieler[p];
@@ -1286,7 +1288,20 @@ function zeichneKnoepfe() {
       knopf('✋ Aussteigen', { t: 'passen' }, { kl: 'zweit' });
       break;
     }
-    case 'zugEnde': knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }); verw(); break;
+    case 'zugEnde': {
+      // Nach 10 Sekunden endet der Zug von selbst (Pause, solange ein Fenster offen ist)
+      const b = knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }); verw();
+      let rest = 10;
+      const zeig = () => b.innerHTML = `✅ Zug beenden <small>(${rest})</small>`;
+      zeig();
+      endeTimer = setInterval(() => {
+        if ($('#dlg').classList.contains('on') || beschaeftigt) { rest = 10; return zeig(); }
+        if (--rest > 0) return zeig();
+        clearInterval(endeTimer);
+        if (st && st.phase === 'zugEnde' && amZug(st) === p) tun({ t: 'fertig', p });
+      }, 1000);
+      break;
+    }
     case 'karte': knopf(`👆 ${KARTEN_NAME[st.ziehen.d][1]} Karte ziehen`, { t: 'ziehen' }, { kl: 'voll' }); break;
     case 'schulden':
       knopf(`💸 ${geld(st.schuld.betrag)} bezahlen`, { t: 'zahlen' });
