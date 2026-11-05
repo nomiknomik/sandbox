@@ -113,7 +113,8 @@ no background. Leave a generous transparent margin around everything, nothing cu
 
 ---
 
-## Stadtbaron – Bilderbögen fürs Spielbrett (4 Bögen)  ⏳ offen
+## Stadtbaron – Bilderbögen fürs Spielbrett (4 Bögen)  ✅ erledigt mit 2 Sammel-Prompts (16 + 32 Bilder, Stadtbaron v1.8/v1.9, `bilder/`)
+Hinweis: ChatGPT malte beim 2. Bogen ein Karomuster statt Transparenz – Claude hat es herausgerechnet.
 Ersetzen die Emojis auf dem Brett. **Jeden Bogen einzeln** in ChatGPT erzeugen
 (ein Prompt pro Nachricht), dann alle 4 PNGs hier hochladen. Claude schneidet jedes Feld
 aus dem Raster aus, speichert es als kleines WebP und baut es ein.

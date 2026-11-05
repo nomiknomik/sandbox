@@ -78,7 +78,7 @@
           padding:calc(var(--u)*.05) 1px;font-size:calc(var(--u)*.17);line-height:1.05;min-width:0}
   .inhalt b{font-weight:600;word-break:break-word;hyphens:auto;-webkit-hyphens:auto}
   .inhalt .sym{font-size:calc(var(--u)*.42);line-height:1}
-  .inhalt .sym.st{font-size:calc(var(--u)*.3)}
+  .inhalt .sym.st{font-size:calc(var(--u)*.36)}
   .mini .inhalt .sym.st{font-size:calc(var(--u)*.46)}
   .inhalt .pr{font-size:calc(var(--u)*.16);opacity:.75}
   .mini .inhalt b{display:none}
@@ -153,6 +153,8 @@
   .sp .karten{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;min-height:10px}
   .sp .karten span{width:12px;height:12px;border-radius:3px;background:var(--g)}
   .sp .karten span.h{opacity:.35}
+  .sp .karten span.b{background:none;width:auto;height:14px;font-size:12px;line-height:14px}
+  .sp .karten span.b img.bild{height:14px}
   #verlauf{background:var(--karte);border-radius:12px;padding:8px 10px;font-size:13px;color:var(--muted);flex:1;min-height:80px;overflow:auto}
   #verlauf div{padding:2px 0;border-bottom:1px solid #0001}
   #spielmenue{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;padding:8px 12px;border-radius:12px;background:#0002;color:inherit;font-size:15px;z-index:5}
@@ -384,7 +386,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -550,7 +552,11 @@ const KARTEN_NAME = { er: ['ÜBERRASCHUNG', '❓', 'er'], ks: ['STADTKASSE', '�
 const FIGUREN = ['🚗', '🐶', '🎩', '🚀', '🦖', '⛵', '🐱', '🎸', '🦄', '🐢'];
 // Schöne Bilder (aus ChatGPT) statt Emojis – im Text (Verlauf, Meldungen) bleiben die Emojis
 const BILDER = { '🚗': 'auto', '🐶': 'hund', '🎩': 'hut', '🚀': 'rakete', '🦖': 'dino', '⛵': 'boot', '🐱': 'katze', '🎸': 'gitarre',
-  '🦄': 'einhorn', '🐢': 'kroete', '🏁': 'start', '🚓': 'knast', '❓': 'frage', '💰': 'kasse' };
+  '🦄': 'einhorn', '🐢': 'kroete', '🏁': 'start', '🚓': 'knast', '❓': 'frage', '💰': 'kasse',
+  '🪨': 'kiesel', '🏖️': 'strand', '🌾': 'muehle', '🌻': 'sonnenblume', '⛲': 'brunnen', '🌹': 'rose', '🌷': 'tulpen', '🦋': 'schmetterling',
+  '🐟': 'fisch', '🐚': 'muschel', '🗼': 'leuchtturm', '🏰': 'burg', '🛡️': 'schild', '🐉': 'drache', '☀️': 'sonne', '👑': 'krone',
+  '⭐': 'stern', '🎡': 'riesenrad', '🌲': 'tanne', '🦆': 'ente', '💎': 'kristall', '🏯': 'palast', '🧾': 'steuer', '💸': 'ring',
+  '🚌': 'bus', '⚓': 'anker', '✈️': 'flugzeug', '🚡': 'seilbahn', '⚡': 'kraftwerk', '💧': 'wasserturm', '🧺': 'korb', '👮': 'polizist' };
 const bild = (e, kl = '') => BILDER[e] ? `<img class="bild ${kl}" src="bilder/${BILDER[e]}.webp" alt="${e}" draggable="false">` : e;
 const FARBEN = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
 
@@ -1230,7 +1236,8 @@ function zeichneAlles() {
   // Spielerliste
   $('#spielerliste').innerHTML = st.spieler.map((s, p) => {
     const felder = Object.entries(st.besitz).filter(([, b]) => b.o === p).map(([i, b]) => +i).sort((a, b) => a - b)
-      .map(i => `<span class="${st.besitz[i].hyp ? 'h' : ''}" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}"></span>`).join('');
+      .map(i => F[i].t === 's' ? `<span class="${st.besitz[i].hyp ? 'h' : ''}" style="--g:${GRUPPEN[F[i].g][0]}"></span>`
+        : `<span class="b ${st.besitz[i].hyp ? 'h' : ''}">${bild(F[i].i)}</span>`).join('');   // Bus, Hafen, Werke … als Bildchen
     const diff = s.geld - (anzeige.geld[p] ?? s.geld);
     const plus = diff ? `<span class="plus" style="color:${diff > 0 ? '#2FA84F' : '#D33B3B'}">${diff > 0 ? '+' : ''}${diff}</span>` : '';
     return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" data-p="${p}" style="--f:${s.f}">
@@ -1263,7 +1270,8 @@ function zeichneKnoepfe() {
     const b = document.createElement('button'); b.innerHTML = text;
     if (opt.kl) b.className = opt.kl;
     if (a && typeof a === 'object' && !anwenden(kopie(st), { ...a, p })) b.disabled = true;
-    b.onclick = () => { Ton.klick(); typeof a === 'function' ? a() : tun({ ...a, p }); };
+    // Würfeln: Augen erst beim Antippen auslosen (sonst gäbe ein zweiter Versuch dieselbe Zahl)
+    b.onclick = () => { Ton.klick(); typeof a === 'function' ? a() : tun({ ...a, ...(a.t === 'wurf' ? { w: wuerfeln() } : {}), p }); };
     box.appendChild(b); return b;
   };
   const verw = () => {
