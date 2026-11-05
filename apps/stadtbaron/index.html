@@ -170,6 +170,10 @@
   .karte-gross{border-radius:14px;padding:18px;text-align:center;color:#1B2A22;font-size:19px}
   .karte-gross .titel{font-size:13px;letter-spacing:2px;font-weight:800;opacity:.7}
   .karte-gross .sym{font-size:46px}
+  img.bild.pokal{height:90px}
+  .flugmuenze{position:fixed;width:34px;height:34px;z-index:15;pointer-events:none;filter:drop-shadow(0 3px 3px #0006)}
+  .sp.kriegt{animation:kriegt .6s ease}
+  @keyframes kriegt{40%{transform:scale(1.08);box-shadow:0 0 0 4px #FFD54A}}
   #toast{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:14;opacity:0}
   #toast.on{animation:toast 1.3s ease forwards}
   #toast div{background:#fff;color:#1B2A22;border-radius:22px;padding:14px 26px;box-shadow:0 10px 40px #0005;display:flex;flex-direction:column;align-items:center;gap:4px;border:4px solid #FFD54A}
@@ -241,11 +245,11 @@
   <div class="spalte menue">
     <h1 class="logo"><img src="logo.webp" alt="STADTBARON" width="960" height="242"><small>Kaufen · Bauen · Miete kassieren</small></h1>
     <button id="m-weiter" hidden>▶ WEITERSPIELEN</button>
-    <button id="m-neu">🎲 NEUES SPIEL (EIN GERÄT)</button>
-    <button id="m-online" class="zweit">🌐 MEHRERE GERÄTE (ONLINE)</button>
-    <button id="m-lokal" class="zweit">📶 MEHRERE GERÄTE (OHNE INTERNET)</button>
+    <button id="m-neu"><img class="bild" src="bilder/wuerfel.webp" alt=""> NEUES SPIEL (EIN GERÄT)</button>
+    <button id="m-online" class="zweit"><img class="bild" src="bilder/globus.webp" alt=""> MEHRERE GERÄTE (ONLINE)</button>
+    <button id="m-lokal" class="zweit"><img class="bild" src="bilder/wlan.webp" alt=""> MEHRERE GERÄTE (OHNE INTERNET)</button>
     <button id="m-name" class="zweit">👤 MEIN NAME</button>
-    <button id="m-regeln" class="zweit">📖 SPIELREGELN</button>
+    <button id="m-regeln" class="zweit"><img class="bild" src="bilder/buch.webp" alt=""> SPIELREGELN</button>
     <button id="m-ton" class="zweit">🔊 TON AN</button>
   </div>
 </section>
@@ -386,7 +390,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.12';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -499,7 +503,7 @@ const F = [
   { t: 'b', n: 'Seilbahn', i: '🚡', p: 200 },
   { t: 'er', n: 'Überraschung', i: '❓' },
   { t: 's', n: 'Kristallturm', e: '💎', g: 'blau', p: 350, m: [35, 175, 500, 1100, 1300, 1500] },
-  { t: 'st', n: 'Luxussteuer', i: '💸', b: 100 },
+  { t: 'st', n: 'Luxussteuer', i: '💍', b: 100 },
   { t: 's', n: 'Königsplatz', e: '🏯', g: 'blau', p: 400, m: [50, 200, 600, 1400, 1700, 2000] },
 ];
 const fName = i => (F[i].e || F[i].i || '') + ' ' + F[i].n;
@@ -555,8 +559,14 @@ const BILDER = { '🚗': 'auto', '🐶': 'hund', '🎩': 'hut', '🚀': 'rakete'
   '🦄': 'einhorn', '🐢': 'kroete', '🏁': 'start', '🚓': 'knast', '❓': 'frage', '💰': 'kasse',
   '🪨': 'kiesel', '🏖️': 'strand', '🌾': 'muehle', '🌻': 'sonnenblume', '⛲': 'brunnen', '🌹': 'rose', '🌷': 'tulpen', '🦋': 'schmetterling',
   '🐟': 'fisch', '🐚': 'muschel', '🗼': 'leuchtturm', '🏰': 'burg', '🛡️': 'schild', '🐉': 'drache', '☀️': 'sonne', '👑': 'krone',
-  '⭐': 'stern', '🎡': 'riesenrad', '🌲': 'tanne', '🦆': 'ente', '💎': 'kristall', '🏯': 'palast', '🧾': 'steuer', '💸': 'ring',
-  '🚌': 'bus', '⚓': 'anker', '✈️': 'flugzeug', '🚡': 'seilbahn', '⚡': 'kraftwerk', '💧': 'wasserturm', '🧺': 'korb', '👮': 'polizist' };
+  '⭐': 'stern', '🎡': 'riesenrad', '🌲': 'tanne', '🦆': 'ente', '💎': 'kristall', '🏯': 'palast', '🧾': 'steuer', '💍': 'ring',
+  '🚌': 'bus', '⚓': 'anker', '✈️': 'flugzeug', '🚡': 'seilbahn', '⚡': 'kraftwerk', '💧': 'wasserturm', '🧺': 'korb', '👮': 'polizist',
+  '💡': 'birne', '🎫': 'ticket', '🙃': 'schwindel', '🧹': 'besen', '🛴': 'roller', '🍦': 'eis', '🐷': 'sparschwein', '🤑': 'dollar',
+  '🦷': 'zahn', '🧸': 'teddy', '📬': 'briefkasten', '🎂': 'torte', '☂️': 'schirm', '🩹': 'pflaster', '🎒': 'rucksack', '📦': 'karton',
+  '🚧': 'baustelle', '🍰': 'kuchen', '🎁': 'geschenk', '🚂': 'zug', '🪙': 'muenze', '🏆': 'pokal', '🤝': 'handschlag', '🔨': 'hammer',
+  '🏦': 'bank', '🎲': 'wuerfel', '🤖': 'roboter', '💀': 'totenkopf', '🌐': 'globus', '📶': 'wlan', '👤': 'person', '📖': 'buch' };
+// Erstes Emoji eines Knopf-Textes durch das Bild ersetzen („🎲 Würfeln“ → Bild + Würfeln)
+const bildText = t => t.replace(/^(\S+) /, (m, e) => BILDER[e] ? bild(e) + ' ' : m);
 const bild = (e, kl = '') => BILDER[e] ? `<img class="bild ${kl}" src="bilder/${BILDER[e]}.webp" alt="${e}" draggable="false">` : e;
 const FARBEN = ['#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
 
@@ -634,8 +644,8 @@ function zahle(st, p, betrag, an, grund) {
 function geldGeben(st, p, betrag, an) {
   st.spieler[p].geld -= betrag;
   if (an === 'topf') { if (st.opt.topf) st.topf += betrag; }
-  else if (an === 'alle') { const andere = aktive(st).filter(q => q !== p); andere.forEach(q => st.spieler[q].geld += betrag / andere.length); }
-  else if (an >= 0) st.spieler[an].geld += betrag;
+  else if (an === 'alle') { const andere = aktive(st).filter(q => q !== p); andere.forEach(q => { st.spieler[q].geld += betrag / andere.length; ev(st, { a: 'zahlung', von: p, an: q, b: betrag / andere.length }); }); }
+  else if (an >= 0) { st.spieler[an].geld += betrag; ev(st, { a: 'zahlung', von: p, an, b: betrag }); }   // Münzen fliegen
 }
 
 // Nach dem Landen: Pasch → nochmal würfeln, sonst Zug beenden
@@ -675,8 +685,8 @@ function landen(st, p, augen, extra) {
     if (extra === 'werk10') augen = 2 + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6);
     const m = miete(st, i, augen, extra);
     log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${fName(i)}).`);
-    toast(st, '💸', `${spName(st, p)} zahlt ${m} 🪙 Miete an ${spName(st, b.o)}`);
     zahle(st, p, m, b.o, 'Miete für ' + f.n);
+    toast(st, '🪙', `${spName(st, p)} zahlt ${m} 🪙 Miete an ${spName(st, b.o)}`);
     return;
   }
   if (f.t === 'st') { log(st, `${spName(st, p)} zahlt ${geld(f.b)} ${f.n}.`); ev(st, { a: 'geld', p, b: -f.b }); zahle(st, p, f.b, 'topf', f.n); return; }
@@ -711,7 +721,7 @@ function karteZiehen(st, p, d, augen) {
     case 'jeder': {
       const andere = aktive(st).filter(q => q !== p);
       if (kt.b < 0) { ev(st, { a: 'geld', p, b: kt.b * andere.length }); zahle(st, p, -kt.b * andere.length, 'alle', 'Karte'); }
-      else for (const q of andere) { const x = Math.min(kt.b, st.spieler[q].geld); st.spieler[q].geld -= x; s.geld += x; ev(st, { a: 'geld', p: q, b: -x }); }
+      else for (const q of andere) { const x = Math.min(kt.b, st.spieler[q].geld); st.spieler[q].geld -= x; s.geld += x; ev(st, { a: 'geld', p: q, b: -x }); ev(st, { a: 'zahlung', von: q, an: p, b: x }); }
       return;
     }
   }
@@ -1123,11 +1133,32 @@ async function wuerfelRollen(w) {
   if (w[0] === w[1]) { $('#info').innerHTML = '<span class="pasch">PASCH! 🎉</span>'; Ton.fanfare(); await warte(600); }
 }
 
+/* ---------- Münzen fliegen vom Zahler zum Empfänger 🪙→ ---------- */
+function muenzenFliegen(von, an, betrag) {
+  const a = $(`.sp[data-p="${von}"]`), b = $(`.sp[data-p="${an}"]`);
+  if (!a || !b || !betrag) return;
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+  const x0 = ra.left + ra.width / 2, y0 = ra.top + ra.height / 2, x1 = rb.left + rb.width / 2, y1 = rb.top + rb.height / 2;
+  const n = Math.min(10, 3 + Math.floor(betrag / 50));          // mehr Geld = mehr Münzen
+  const hoch = Math.min(260, 120 + Math.abs(x1 - x0) / 3);       // Bogen nach oben
+  for (let k = 0; k < n; k++) {
+    const m = document.createElement('img'); m.src = 'bilder/muenze.webp'; m.className = 'flugmuenze';
+    m.style.left = x0 + 'px'; m.style.top = y0 + 'px'; document.body.appendChild(m);
+    const dx = x1 - x0, dy = y1 - y0, wackel = (Math.random() - .5) * 40;
+    const anim = m.animate([
+      { transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 0 },
+      { transform: `translate(calc(-50% + ${dx * .5 + wackel}px), calc(-50% + ${dy * .5 - hoch}px)) scale(1.2) rotate(360deg)`, opacity: 1, offset: .5 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.7) rotate(720deg)`, opacity: 1 },
+    ], { duration: 1100, delay: k * 110, easing: 'ease-in-out', fill: 'both' });
+    anim.onfinish = () => { m.remove(); Ton.muenze(); if (k === n - 1) { b.classList.remove('kriegt'); b.offsetWidth; b.classList.add('kriegt'); } };
+  }
+}
+
 /* ---------- Große Meldung (GEKAUFT!, Miete …) ---------- */
 async function toastZeigen(sym, text) {
   const el = $('#toast'), ms = /Miete/.test(text) ? 3500 : 1300;   // Miete länger zeigen, damit man mitlesen kann
   el.style.animationDuration = ms + 'ms';
-  el.innerHTML = `<div><span>${sym || ''}</span><b>${esc(text)}</b></div>`;
+  el.innerHTML = `<div><span>${bild(sym || '')}</span><b>${esc(text)}</b></div>`;
   el.classList.remove('on'); el.offsetWidth; el.classList.add('on');
   if (/GEKAUFT|GEBAUT|ERSTEIGERT/.test(text)) Ton.fanfare(); else if (/Miete/.test(text)) Ton.zahlen();
   await warte(ms);
@@ -1165,11 +1196,11 @@ function flugZu(ziel, el, drehen) {
 }
 async function karteZeigen(d, k, p) {
   const kt = KARTEN[d][k], [titel, sym] = KARTEN_NAME[d];
-  const [bild, ...rest] = kt.x.split(' ');
+  const [sym0, ...rest] = kt.x.split(' ');
   const stapel = $('#stapel-' + d), deckel = $('#karte');
   const el = document.createElement('div'); el.className = 'flugkarte';
   el.innerHTML = `<div class="innen"><div class="fs">${rueckseite(d).replace('class="rs', 'style="position:absolute;inset:0" class="rs')}</div>
-    <div class="fs vorne"><div class="kopfband ${d}">${sym} ${titel}</div><div class="bild">${bild}</div><p>${esc(rest.join(' '))}</p>${abzeichen(kt)}</div></div>`;
+    <div class="fs vorne"><div class="kopfband ${d}">${bild(sym)} ${titel}</div><div class="bild">${bild(sym0)}</div><p>${esc(rest.join(' '))}</p>${abzeichen(kt)}</div></div>`;
   document.body.appendChild(el); deckel.classList.add('on');
   Ton.wusch();
   await el.animate([{ transform: flugZu(stapel, el, true) }, { transform: 'none' }], { duration: 600, easing: 'cubic-bezier(.2,.8,.3,1)' }).finished;
@@ -1210,6 +1241,7 @@ async function standAbspielen(neu) {
       else if (e.a === 'sprung') await springen(e.p, e.nach);
       else if (e.a === 'karte') await karteZeigen(e.d, e.k, e.p);
       else if (e.a === 'toast') await toastZeigen(e.s, e.x);
+      else if (e.a === 'zahlung') { muenzenFliegen(e.von, e.an, e.b); await warte(250); }
       else if (e.a === 'blink') { const f = $('#f' + e.i); f.classList.remove('blink'); f.offsetWidth; f.classList.add('blink'); Ton.muenze(); }
     }
   } else wuerfelZeigen(neu.wurf, false);
@@ -1242,7 +1274,7 @@ function zeichneAlles() {
     const diff = s.geld - (anzeige.geld[p] ?? s.geld);
     const plus = diff ? `<span class="plus" style="color:${diff > 0 ? '#2FA84F' : '#D33B3B'}">${diff > 0 ? '+' : ''}${diff}</span>` : '';
     return `<div class="sp ${p === st.dran ? 'dran' : ''} ${s.pleite ? 'pleite' : ''}" data-p="${p}" style="--f:${s.f}">
-      <div class="kopf"><span>${bild(s.fig)}</span><span class="nm">${esc(s.n)}</span>${s.ki ? '🤖' : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? '💀' : ''}<span class="geld">${geld(s.geld)}</span></div>
+      <div class="kopf"><span>${bild(s.fig)}</span><span class="nm">${esc(s.n)}</span>${s.ki ? bild('🤖') : ''}${s.knast ? '🚓' : ''}${s.frei.length ? '🎫'.repeat(s.frei.length) : ''}${s.pleite ? bild('💀') : ''}<span class="geld">${s.geld} ${bild('🪙')}</span></div>
       <div class="karten">${felder}</div>${plus}</div>`;
   }).join('') + `<div class="klein">${['', '🐣 Einfach', '🦊 Mittel', '🦁 Profi'][stufe(st)]} · Runde ${st.runde || 1}${st.opt.runden ? ' von ' + st.opt.runden : ''}${st.opt.topf ? ` · 🧺 Topf: ${geld(st.topf)}` : ''}</div>`;
   anzeige.geld = st.spieler.map(s => s.geld);
@@ -1268,7 +1300,7 @@ function zeichneKnoepfe() {
     return;
   }
   const knopf = (text, a, opt = {}) => {
-    const b = document.createElement('button'); b.innerHTML = text;
+    const b = document.createElement('button'); b.innerHTML = bildText(text);
     if (opt.kl) b.className = opt.kl;
     if (a && typeof a === 'object' && !anwenden(kopie(st), { ...a, p })) b.disabled = true;
     // Würfeln: Augen erst beim Antippen auslosen (sonst gäbe ein zweiter Versuch dieselbe Zahl)
@@ -1489,7 +1521,7 @@ function endeZeigen() {
   const rang = st.spieler.map((s, p) => p).sort((a, b) => (st.spieler[a].pleite - st.spieler[b].pleite) || vermoegen(st, b) - vermoegen(st, a));
   const liste = rang.map((p, k) => `<div class="verw"><b>${k + 1}.</b><span class="nm" style="--g:${st.spieler[p].f}">${esc(spName(st, p))}</span><span>${st.spieler[p].pleite ? '💀 pleite' : geld(vermoegen(st, p))}</span></div>`).join('');
   $('#info').innerHTML = `🏆 <b>${esc(spName(st, st.sieger))}</b> gewinnt!`;
-  dialog(`<h2 style="text-align:center">🏆 ${esc(spName(st, st.sieger))} gewinnt!</h2>${st.grund ? `<p style="text-align:center"><b>${esc(st.grund)}</b></p>` : ''}<p class="klein">Vermögen = Geld + Straßen + Häuser</p>${liste}`, [['Zum Menü', 'menue', 'zweit'], ['Brett ansehen', 'brett']])
+  dialog(`<h2 style="text-align:center">${bild('🏆', 'pokal')}<br>${esc(spName(st, st.sieger))} gewinnt!</h2>${st.grund ? `<p style="text-align:center"><b>${esc(st.grund)}</b></p>` : ''}<p class="klein">Vermögen = Geld + Straßen + Häuser</p>${liste}`, [['Zum Menü', 'menue', 'zweit'], ['Brett ansehen', 'brett']])
     .then(w => { if (w === 'menue') menue(); });
 }
 
@@ -1568,7 +1600,7 @@ $('#n-los').onclick = async () => {
 
 /* ---------- Mein Name 👤 – merkt sich dieses Gerät (nur hier gespeichert) ---------- */
 const meinName = () => speicher.lies('sb-name') || '';
-function nameKnopf() { $('#m-name').textContent = meinName() ? '👤 ' + meinName() : '👤 MEIN NAME'; }
+function nameKnopf() { $('#m-name').innerHTML = bild('👤') + ' ' + (meinName() ? esc(meinName()) : 'MEIN NAME'); }
 $('#m-name').onclick = async () => {
   Ton.klick();
   const w = await dialog(`<h2>👤 Wie heißt du?</h2><p class="klein">Dieses Gerät merkt sich den Namen – für Spiele hier und online.</p>

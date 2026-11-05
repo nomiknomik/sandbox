@@ -41,6 +41,28 @@ das Kind entscheiden lassen. Nicht vorauseilend fertig bauen.
 - Datenschutz gilt auch hier: keine echten Personen/Gesichter, kein Foto des Kindes als Vorlage.
 - Bei neuen Spielen von Anfang an: Icon-Prompt (+ ggf. Logo-Prompt) mitliefern.
 
+### Regeln für ChatGPT-Prompts (gelernt bei Stadtbaron)
+- **ChatGPT-Kontingent ist knapp:** möglichst viele Bilder in **einem** Prompt als
+  Bilderbogen (Sprite-Sheet). Bewährt: 1536×1024, **8 Spalten × 4 Reihen = 32 Bilder**
+  (oder 1024×1024, 4×4 = 16). Einen Prompt pro Nachricht, nur bei groben Fehlern nachbessern.
+- Prompt immer auf **Englisch**, als kopierbarer Codeblock, mit:
+  „**REAL transparent background (alpha channel, NOT a checkerboard pattern)**“,
+  „exactly N icons in a perfect grid of C columns x R rows, each centered in its own
+  equal cell with empty space around it“, „No grid lines, no frames, no text, no letters,
+  no numbers“, gleicher Stil/Größe/Blickwinkel (3/4), „clear and simple so they read at 30 px“,
+  „Own original designs, not from any existing board game“.
+- Inhalt **Reihe für Reihe** aufzählen (Row 1: …), kurze englische Begriffe.
+- Projekt-Stil: polished voxel / 3D pixel-art (Minecraft-like), toy-like, chunky,
+  soft light from top left, subtle gloss, bright cheerful colors, kid-friendly.
+- Keine echten Marken/Spielnamen im Prompt oder im Spiel (z. B. nicht „Monopoly“).
+- Einbauen: Raster ausschneiden, Alpha säubern (Schleier < ~60–90 weg), auf Inhalt
+  zuschneiden, 128–160 px **WebP** in `bilder/`, alle in den SW-Cache.
+  Malt ChatGPT doch ein **Karomuster**: von außen per Flood-Fill nur hellgraue,
+  *unruhige* Pixel entfernen; weiße Motive (Flugzeug, Zettel) und Löcher (Ring) einzeln prüfen.
+- Im Code: Emoji → Bild über eine Tabelle (`BILDER` + `bild(emoji)`), Emoji bleibt Ersatz,
+  im Fließtext (Verlauf, Meldungstext) bleiben Emojis.
+- Nach dem Einbauen Screenshot prüfen (Playwright) und Ergebnis in `docs/BILD-PROMPTS.md` abhaken.
+
 ## Arbeitsweise
 - Pro App: bei jeder Änderung `APP_VERSION` in `index.html` **und** `CACHE` in
   `sw.js` hochzählen (sonst sieht das iPad die alte Version).
