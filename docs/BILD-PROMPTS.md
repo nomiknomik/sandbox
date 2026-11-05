@@ -110,3 +110,87 @@ Style: chunky 3D voxel block letters in green (#2E9D5B) with golden edges, a tin
 on the letter "A" and a gold coin as the "O". Kid-friendly, clean edges, no other text,
 no background. Leave a generous transparent margin around everything, nothing cut off.
 ```
+
+---
+
+## Stadtbaron – Bilderbögen fürs Spielbrett (4 Bögen)  ⏳ offen
+Ersetzen die Emojis auf dem Brett. **Jeden Bogen einzeln** in ChatGPT erzeugen
+(ein Prompt pro Nachricht), dann alle 4 PNGs hier hochladen. Claude schneidet jedes Feld
+aus dem Raster aus, speichert es als kleines WebP und baut es ein.
+Prüfen vor dem Hochladen: richtige Anzahl, richtige Reihenfolge, kein Text, nichts angeschnitten.
+
+### Bogen 1 – Straßen 1–12
+```
+Create a 1536x1024 sprite sheet with a TRANSPARENT background: exactly 12 game-board icons
+arranged in a perfect grid of 4 columns x 3 rows. Every icon sits centered in its own equal
+cell (384x341 px) with generous empty space around it, so it can be cut out cleanly.
+No grid lines, no frames, no labels, no text, no numbers, no letters anywhere.
+Style for every icon: high-quality voxel / 3D pixel-art diorama (Minecraft-like but polished),
+toy-like and chunky, soft lighting from the top left, gentle shadows, subtle gloss, rich warm
+colors, kid-friendly, all icons in exactly the same style, same size and same camera angle
+(slightly from above, 3/4 view). Each icon is a tiny floating voxel island showing one place:
+Row 1: 1 a gravel path with grey pebbles, 2 a sandy lane with a beach umbrella,
+3 a voxel windmill with wheat, 4 a garden with big sunflowers.
+Row 2: 5 a town square with a splashing fountain, 6 an avenue with red rose bushes,
+7 a path between colorful tulips, 8 a lilac square with a butterfly.
+Row 3: 9 a fish market stall with a fish, 10 a shell-covered beach path,
+11 a lighthouse path with a red-white lighthouse, 12 a little castle street with a castle tower.
+Own original design, not based on any existing board game.
+```
+
+### Bogen 2 – Straßen 13–22 + Kartenrücken
+```
+Create a 1536x1024 sprite sheet with a TRANSPARENT background: exactly 12 game-board icons
+arranged in a perfect grid of 4 columns x 3 rows. Every icon sits centered in its own equal
+cell (384x341 px) with generous empty space around it, so it can be cut out cleanly.
+No grid lines, no frames, no labels, no text, no numbers, no letters anywhere.
+Style for every icon: high-quality voxel / 3D pixel-art diorama (Minecraft-like but polished),
+toy-like and chunky, soft lighting from the top left, gentle shadows, subtle gloss, rich warm
+colors, kid-friendly, all icons in exactly the same style, same size and same camera angle
+(slightly from above, 3/4 view). Each icon is a tiny floating voxel island showing one place:
+Row 1: 1 a knight's street with a shield and banner, 2 a square with a friendly green dragon,
+3 a sunny avenue with a smiling golden sun above, 4 a golden lane with a royal crown.
+Row 2: 5 a starry path with a big glowing star, 6 a park ring with a Ferris wheel,
+7 a forest avenue with pine trees, 8 a lakeshore with a duck on blue water.
+Row 3: 9 a sparkling crystal tower, 10 a grand royal palace square (the most precious place),
+11 a big orange glowing question mark made of voxels (surprise card emblem),
+12 a golden voxel treasure chest overflowing with coins (city treasury card emblem).
+Own original design, not based on any existing board game.
+```
+
+### Bogen 3 – Sonderfelder, Haus und Hotel
+```
+Create a 1024x1024 sprite sheet with a TRANSPARENT background: exactly 16 game-board icons
+arranged in a perfect grid of 4 columns x 4 rows. Every icon sits centered in its own equal
+cell (256x256 px) with generous empty space around it, so it can be cut out cleanly.
+No grid lines, no frames, no labels, no text, no numbers, no letters anywhere.
+Style for every icon: high-quality voxel / 3D pixel-art (Minecraft-like but polished),
+toy-like and chunky, soft lighting from the top left, gentle shadows, subtle gloss, rich warm
+colors, kid-friendly, all icons in exactly the same style, size and 3/4 camera angle.
+Row 1: 1 a start line with a checkered flag and a green arrow, 2 a golden treasure chest with coins,
+3 a paper tax receipt with a coin stack, 4 a big diamond ring on a cushion (luxury tax).
+Row 2: 5 a yellow city bus, 6 a harbor with an anchor and a small ship,
+7 a white passenger airplane, 8 a red cable car gondola on a rope.
+Row 3: 9 a power plant with a glowing lightning bolt, 10 a water tower with a big blue drop,
+11 a glowing orange question mark, 12 a small jail building with bars and a police car.
+Row 4: 13 a picnic basket on a blanket (rest stop), 14 a friendly police officer pointing the way
+(cartoon, no real person), 15 a small green house, 16 a bigger red hotel.
+Own original design, not based on any existing board game.
+```
+
+### Bogen 4 – Spielfiguren
+```
+Create a 1536x1024 sprite sheet with a TRANSPARENT background: exactly 10 game pieces
+arranged in a perfect grid of 5 columns x 2 rows. Every piece sits centered in its own equal
+cell (307x512 px) with generous empty space around it, so it can be cut out cleanly.
+No grid lines, no frames, no labels, no text, no numbers, no letters anywhere.
+Style: shiny collectible board-game pieces made of high-quality voxels (Minecraft-like but
+polished), each standing on a small round voxel base, toy-like and chunky, soft lighting from
+the top left, subtle gloss, bright cheerful colors, kid-friendly, all in the same style and size,
+front 3/4 view, clear silhouette that still reads at 40 px.
+Row 1: 1 a red race car, 2 a happy brown dog, 3 a black top hat with a golden band,
+4 a white-orange rocket, 5 a green dinosaur.
+Row 2: 6 a sailboat with white sails, 7 an orange cat, 8 a red electric guitar,
+9 a white unicorn with a rainbow mane, 10 a green turtle.
+Own original designs, not based on any existing board game pieces.
+```
