@@ -383,7 +383,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1494,8 +1494,10 @@ function neuZeigen(online) {
   $('#n-topf').checked = einstellung.topf;
   neuZeichnen(); zeige('s-neu');
 }
+// Computer/Mensch merkt sich das Gerät getrennt: ki = an einem Gerät, kio = online (Standard: Mensch)
+const kiFeld = () => neuOnline ? 'kio' : 'ki';
 function neuZeichnen() {
-  const E = einstellung;
+  const E = einstellung, K = kiFeld();
   $('#n-anzahl').innerHTML = [2, 3, 4, 5, 6].map(n => `<button class="zweit ${E.anzahl === n ? 'an' : ''}" data-n="${n}">${n}</button>`).join('');
   $('#n-anzahl').querySelectorAll('button').forEach(b => b.onclick = () => { E.anzahl = +b.dataset.n; Ton.klick(); neuZeichnen(); });
   $('#n-stufe').innerHTML = STUFEN.map(([n, sym, titel, text]) => `<button class="zweit stufe ${E.stufe === n ? 'an' : ''}" data-n="${n}"><span class="gross">${sym}</span><span>${titel}<small>${text}</small></span></button>`).join('');
@@ -1506,23 +1508,27 @@ function neuZeichnen() {
   $('#n-geld').querySelectorAll('button').forEach(b => b.onclick = () => { E.start = +b.dataset.n; Ton.klick(); neuZeichnen(); });
   $('#n-spieler').innerHTML = E.spieler.slice(0, E.anzahl).map((s, k) =>
     `<div class="sp-zeile" style="--f:${s.f}"><button class="fig zweit" data-k="${k}">${s.fig}</button>
-     <input value="${esc(s.n)}" data-k="${k}" maxlength="14"><button class="art zweit" data-k="${k}">${s.ki ? '🤖 Computer' : '👤 Mensch'}</button></div>`).join('');
+     <input value="${esc(s.n)}" data-k="${k}" maxlength="14"><button class="art zweit" data-k="${k}">${s[K] ? '🤖 Computer' : neuOnline ? '👤 anderes Gerät' : '👤 Mensch'}</button></div>`).join('');
   $$('#n-spieler .fig').forEach(b => b.onclick = () => {
     const s = E.spieler[b.dataset.k], belegt = E.spieler.slice(0, E.anzahl).map(x => x.fig);
     let k = FIGUREN.indexOf(s.fig); do k = (k + 1) % FIGUREN.length; while (belegt.includes(FIGUREN[k]));
     s.fig = FIGUREN[k]; Ton.klick(); neuZeichnen();
   });
-  $$('#n-spieler .art').forEach(b => b.onclick = () => { const s = E.spieler[b.dataset.k]; s.ki = !s.ki; Ton.klick(); neuZeichnen(); });
+  $$('#n-spieler .art').forEach(b => b.onclick = () => { const s = E.spieler[b.dataset.k]; s[K] = !s[K]; Ton.klick(); neuZeichnen(); });
   $$('#n-spieler input').forEach(i => i.oninput = () => E.spieler[i.dataset.k].n = i.value.trim() || 'Spieler ' + (+i.dataset.k + 1));
 }
 $('#n-topf').onchange = () => einstellung.topf = $('#n-topf').checked;
 $('#m-neu').onclick = () => { Ton.klick(); neuZeigen(false); };
 $('#n-zurueck').onclick = () => { Ton.klick(); neuOnline ? onlineMenue() : menue(); };
-$('#n-los').onclick = () => {
+$('#n-los').onclick = async () => {
   Ton.klick();
-  const E = einstellung; speicher.schreib('sb-einstellung', E);
-  const spieler = E.spieler.slice(0, E.anzahl).map(s => ({ ...s }));
+  const E = einstellung, K = kiFeld(); speicher.schreib('sb-einstellung', E);
+  const spieler = E.spieler.slice(0, E.anzahl).map(({ kio, ...s }) => ({ ...s, ki: K === 'kio' ? !!kio : !!s.ki }));
   if (!spieler.some(s => !s.ki)) spieler[0].ki = false;      // mindestens ein Mensch
+  // Online: Wenn alle anderen Computer sind, kann kein anderes Gerät mitspielen
+  if (neuOnline && spieler.filter(s => !s.ki).length < 2 &&
+    await dialog('<h2>🤖 Nur Computer?</h2><p>Alle anderen Plätze sind Computer – dann kann <b>kein anderes Gerät</b> mitspielen.<br>Tippe bei den Mitspielern auf „🤖 Computer“, damit dort „👤 anderes Gerät“ steht.</p>',
+      [['Ändern', 'zurueck'], ['Trotzdem erstellen', 'ok', 'zweit']]) !== 'ok') return;
   const opt = { start: E.start, topf: E.topf, stufe: E.stufe, runden: E.runden };
   if (neuOnline) return onlineErstellen(spieler, opt);
   modus = 'lokal';
