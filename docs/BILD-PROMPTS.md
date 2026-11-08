@@ -195,3 +195,24 @@ Row 2: 6 a sailboat with white sails, 7 an orange cat, 8 a red electric guitar,
 9 a white unicorn with a rainbow mane, 10 a green turtle.
 Own original designs, not based on any existing board game pieces.
 ```
+
+---
+
+## Schlange – ein Sammel-Prompt (32 Bilder: Obst, Bonus, Extras, Icon-Motiv)
+Ein einziger Bilderbogen für alles. Feld 25 (zusammengerollte Schlange) wird auch App-Icon
+(Claude legt den Hintergrund darunter) und Titelbild im Menü. Reihe 2–4 sind Vorrat für
+Ideen, die das Kind später aussucht (Power-ups, Hindernisse, Pokal …).
+
+```
+Create ONE image, 1536x1024, with a REAL transparent background (alpha channel, NOT a checkerboard pattern).
+It contains exactly 32 icons in a perfect grid of 8 columns x 4 rows, each centered in its own equal cell with empty space around it.
+No grid lines, no frames, no text, no letters, no numbers.
+Style for ALL icons: polished voxel / 3D pixel-art (Minecraft-like), toy-like, chunky, soft light from top left, subtle gloss, bright cheerful colors, kid-friendly.
+Same style, same size and same 3/4 viewing angle for every icon. Clear and simple so they read at 30 px. Own original designs, not from any existing game.
+Row 1: red apple, cherries, strawberry, banana, watermelon slice, bunch of grapes, orange, carrot.
+Row 2: shiny golden apple with sparkles, blue diamond, gold coin, yellow star, red heart, slice of cake, pink donut, red mushroom with white dots.
+Row 3: lightning bolt, cute snail, hourglass, blue shield, red horseshoe magnet, grey boulder, wooden crate, small cactus.
+Row 4: cute coiled green snake smiling and looking at the viewer, golden trophy, golden crown, cartoon black bomb with lit fuse, swirling purple portal, small flower bush, tree stump, white egg with green spots.
+```
+Dateien danach in `apps/schlange/bilder/`: apfel, kirschen, erdbeere, banane, melone, trauben,
+orange, karotte, goldapfel, diamant, schlange (.webp) – Rest nach Bedarf.
