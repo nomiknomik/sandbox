@@ -216,3 +216,16 @@ Row 4: cute coiled green snake smiling and looking at the viewer, golden trophy,
 ```
 Dateien danach in `apps/schlange/bilder/`: apfel, kirschen, erdbeere, banane, melone, trauben,
 orange, karotte, goldapfel, diamant, schlange (.webp) – Rest nach Bedarf.
+
+## Schlange – Logo (Titel im Menü)
+Bilderbogen ist da (Stand v0.2, noch als Datei hochladen). Icon = Feld 25 + Hintergrund von Claude.
+
+```
+Create ONE image, 1536x512, with a REAL transparent background (alpha channel, NOT a checkerboard pattern).
+A game title logo with the word "SCHLANGE" (exactly these 8 letters: S C H L A N G E).
+Style: polished voxel / 3D pixel-art (Minecraft-like), toy-like, chunky 3D block letters, soft light from top left, subtle gloss, bright cheerful colors, kid-friendly.
+Letters in fresh grass green with a darker green 3D side and a thin dark outline, a few tiny pixel leaves and flowers on top of the letters.
+A cute green voxel snake winds through and around the letters, its smiling head with tongue out resting on the letter "S" on the left, its tail curling around the "E".
+A small red voxel apple sits on top of the letter "A".
+Leave a generous transparent margin around everything, nothing cut off. No other text.
+```
