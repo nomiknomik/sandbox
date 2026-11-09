@@ -1,9 +1,9 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'schlange-v2';
+const CACHE = 'schlange-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   // Bilder aus ChatGPT (fehlen sie noch, malt das Spiel Emojis)
-  ...['apfel','kirschen','erdbeere','banane','melone','trauben','orange','karotte','goldapfel','diamant','schlange'].map(n => './bilder/' + n + '.webp')];
+  ...['apfel','kirschen','erdbeere','banane','melone','trauben','orange','karotte','goldapfel','diamant','schlange','logo'].map(n => './bilder/' + n + '.webp')];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));

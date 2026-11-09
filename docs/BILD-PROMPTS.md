@@ -217,7 +217,7 @@ Row 4: cute coiled green snake smiling and looking at the viewer, golden trophy,
 Dateien danach in `apps/schlange/bilder/`: apfel, kirschen, erdbeere, banane, melone, trauben,
 orange, karotte, goldapfel, diamant, schlange (.webp) – Rest nach Bedarf.
 
-## Schlange – Logo (Titel im Menü)
+## Schlange – Logo (Titel im Menü)  ✅ eingebaut (Schlange v0.3, `logo.webp`)
 Bilderbogen ist da (Stand v0.2, noch als Datei hochladen). Icon = Feld 25 + Hintergrund von Claude.
 
 ```
