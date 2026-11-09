@@ -61,17 +61,17 @@
       <div class="wahl" id="farben"></div>
       <div class="zeile">Tempo</div>
       <div class="wahl" id="tempos"></div>
-      <div class="zeile">Wand</div>
-      <div class="wahl" id="waende"></div>
+      <div class="zeile">Gegner-Schlangen</div>
+      <div class="wahl" id="gegner"></div>
       <button class="los" id="start">▶ Los!</button>
-      <div id="hilfe">Wischen oder Pfeiltasten. Iss Obst, werde lang – aber beiß dich nicht selbst!</div>
+      <div id="hilfe">Wischen oder Pfeiltasten. Iss Obst und werde lang! Die größere Schlange frisst die kleinere – <b style="color:#7CFF8A">grüne</b> Zahl = fressbar, <b style="color:#FF8A7C">rote</b> Zahl = Vorsicht!</div>
     </div>
   </div>
 
   <!-- Spielende -->
   <div class="fenster" id="ende" hidden>
     <div class="karte">
-      <div style="font-size:22px">Autsch! 💥</div>
+      <div style="font-size:22px" id="endtitel">Autsch! 💥</div>
       <div class="gross" id="endpunkte">0</div>
       <div id="endtext" style="color:var(--muted)"></div>
       <button class="los" id="nochmal">🔁 Nochmal</button><br>
@@ -81,7 +81,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.1';
+const APP_VERSION = '0.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -117,8 +117,8 @@ for (const [emoji, datei] of Object.entries(BILDER)) {
 const FARBEN = { gruen: ['#4CD964', '#2E9E45', '#1C6B2E'], blau: ['#4DB8FF', '#2479D6', '#174C8F'],
                  lila: ['#C07CFF', '#8A45D9', '#5A2A96'], gold: ['#FFD54A', '#E0A21A', '#9A6A08'], rot: ['#FF6B5E', '#D93A2F', '#8F1F18'] };
 const TEMPOS = { '🐢 Langsam': 190, '🐇 Normal': 140, '🚀 Schnell': 95 };
-const WAENDE = { '🧱 Wand = Aua': true, '🌀 Durch die Wand': false };
-let einst = { farbe: 'gruen', tempo: '🐇 Normal', wand: '🧱 Wand = Aua', ton: true };
+const GEGNER = { '🐍 3': 3, '🐍 6': 6, '🐍 10': 10 };
+let einst = { farbe: 'gruen', tempo: '🐇 Normal', gegner: '🐍 6', ton: true };
 try { Object.assign(einst, JSON.parse(localStorage.getItem('schlange-einst') || '{}')); } catch {}
 const speichern = () => { try { localStorage.setItem('schlange-einst', JSON.stringify(einst)); } catch {} };
 let rekord = 0; try { rekord = +localStorage.getItem('schlange-rekord') || 0; } catch {}
@@ -138,7 +138,7 @@ function wahlKnoepfe(id, werte, schluessel, malen) {
 }
 wahlKnoepfe('farben', Object.keys(FARBEN), 'farbe', true);
 wahlKnoepfe('tempos', Object.keys(TEMPOS), 'tempo');
-wahlKnoepfe('waende', Object.keys(WAENDE), 'wand');
+wahlKnoepfe('gegner', Object.keys(GEGNER), 'gegner');
 
 // ---------- Töne (ganz einfache Piepser, kein Download) ----------
 let audio = null;
@@ -157,63 +157,76 @@ const tonKnopf = document.getElementById('ton');
 tonKnopf.textContent = einst.ton ? '🔊' : '🔇';
 tonKnopf.onclick = () => { einst.ton = !einst.ton; speichern(); tonKnopf.textContent = einst.ton ? '🔊' : '🔇'; };
 
-// ---------- Spielfeld ----------
+// ---------- Die Welt ----------
+// Die Welt ist viel größer als der Bildschirm. Die Kamera folgt deiner Schlange.
+// Wer am Rand der Welt rausläuft, kommt auf der anderen Seite wieder rein – es gibt keine Wand.
+const WB = 60, WH = 60;                    // Weltgröße in Kästchen (gerade Zahl, damit das Karomuster passt)
+const OBST = ['🍎', '🍒', '🍓', '🍌', '🍉', '🍇', '🍊', '🥕'];
+const OBST_ANZAHL = 45;
 const cv = document.getElementById('feld'), ctx = cv.getContext('2d');
-let W, H, DPR, Z, SP, RE, ox, oy;   // Z = Kästchengröße in Pixeln, SP/RE = Spalten/Reihen
-let boden = null;                   // fertig gemalter Rasen (wird nur bei Größenänderung neu gemalt)
+let W, H, DPR, Z, muster;                  // Z = Kästchengröße in Pixeln
+
+const ring = (v, n) => ((v % n) + n) % n;                 // 61 -> 1, -1 -> 59
+const abst = (d, n) => ring(d + n / 2, n) - n / 2;         // kürzester Weg über den Rand (-30 … 29)
+const feldNr = (x, y) => y * WB + x;
 
 function groesse() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = innerWidth; H = innerHeight;
   cv.width = W * DPR; cv.height = H * DPR;
-  const obenFrei = 60, untenFrei = 24;
-  const kurz = Math.min(W - 24, H - obenFrei - untenFrei);
-  Z = Math.floor(kurz / 17);
-  SP = Math.max(12, Math.floor((W - 24) / Z));
-  RE = Math.max(12, Math.floor((H - obenFrei - untenFrei) / Z));
-  if (SP > 30) SP = 30; if (RE > 30) RE = 30;
-  ox = Math.round((W - SP * Z) / 2); oy = Math.round(obenFrei + (H - obenFrei - untenFrei - RE * Z) / 2);
-  malBoden();
-}
-
-// Der Rasen: Kacheln mit kleiner Kante unten -> sieht aus wie 3D-Klötze
-function malBoden() {
-  boden = document.createElement('canvas');
-  boden.width = W * DPR; boden.height = H * DPR;
-  const b = boden.getContext('2d');
-  b.scale(DPR, DPR);
-  const tiefe = Math.max(6, Z * 0.35);
-  // Erd-Sockel unter dem Feld
-  b.fillStyle = '#5A3A1E'; rund(b, ox - 6, oy - 6, SP * Z + 12, RE * Z + 12 + tiefe, 14); b.fill();
-  b.fillStyle = '#3E2712'; b.fillRect(ox - 6, oy + RE * Z + 6, SP * Z + 12, tiefe - 6);
-  for (let y = 0; y < RE; y++) for (let x = 0; x < SP; x++) {
-    const hell = (x + y) % 2 === 0;
-    const px = ox + x * Z, py = oy + y * Z;
-    b.fillStyle = hell ? '#7BD35A' : '#6CC24C'; b.fillRect(px, py, Z, Z);
-    b.fillStyle = '#ffffff1a'; b.fillRect(px, py, Z, Z * 0.12);           // Licht oben
-    b.fillStyle = '#0000001a'; b.fillRect(px, py + Z * 0.88, Z, Z * 0.12); // Schatten unten
-    if (((x * 7 + y * 13) % 11) === 0) {                                     // ein paar Grashalme
-      b.fillStyle = '#4FA83A';
-      for (let i = 0; i < 3; i++) b.fillRect(px + Z * (0.3 + i * 0.15), py + Z * (0.45 - (i % 2) * 0.1), Z * 0.07, Z * 0.25);
-    }
+  Z = Math.max(26, Math.floor(Math.min(W, H) / 16));
+  // Ein 2x2-Stück Rasen als Muster – damit wird der ganze Boden schnell gemalt
+  const m = document.createElement('canvas'); m.width = m.height = 2 * Z * DPR;
+  const b = m.getContext('2d'); b.scale(DPR, DPR);
+  for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
+    b.fillStyle = (x + y) % 2 ? '#6CC24C' : '#7BD35A'; b.fillRect(x * Z, y * Z, Z, Z);
+    b.fillStyle = '#ffffff1a'; b.fillRect(x * Z, y * Z, Z, Z * 0.12);
+    b.fillStyle = '#0000001a'; b.fillRect(x * Z, y * Z + Z * 0.88, Z, Z * 0.12);
   }
-  b.strokeStyle = '#2E6B22'; b.lineWidth = 3; rund(b, ox - 1.5, oy - 1.5, SP * Z + 3, RE * Z + 3, 6); b.stroke();
+  muster = ctx.createPattern(m, 'repeat');
 }
 function rund(c, x, y, w, h, r) { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
 
 // ---------- Spielzustand ----------
-const OBST = ['🍎', '🍒', '🍓', '🍌', '🍉', '🍇', '🍊', '🥕'];
-let schlange, vorher, richtung, wunsch, essen, bonus, punkte, laeuft = false, pausiert = false;
-let takt, letzterSchritt, funken = [], texte = [], wackeln = 0, tot = false;
+let schlangen = [], ich = null, essen = new Map(), punkte = 0, laeuft = false, pausiert = false, tot = false;
+let takt, letzterSchritt, funken = [], texte = [], wackeln = 0, kamera = { x: 0, y: 0 }, bonusUhr = 0;
+
+function neueSchlange(x, y, laenge, farbe, bot) {
+  const r = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }][Math.floor(Math.random() * 4)];
+  const richtung = bot ? r : { x: 1, y: 0 };
+  const koerper = [];
+  for (let i = 0; i < laenge; i++) koerper.push({ x: ring(x - richtung.x * i, WB), y: ring(y - richtung.y * i, WH) });
+  return { koerper, vorher: koerper.map(s => ({ ...s })), richtung, wunsch: [], farbe, bot, lebt: true, wachsen: 0, geboren: performance.now() };
+}
+
+// Gegner an einer freien Stelle, nicht direkt vor deiner Nase
+function neuerGegner() {
+  const farben = Object.keys(FARBEN).filter(f => f !== einst.farbe);
+  let x, y, n = 0;
+  do { x = Math.floor(Math.random() * WB); y = Math.floor(Math.random() * WH); }
+  while (n++ < 200 && (belegt(x, y) || (ich && Math.abs(abst(x - ich.koerper[0].x, WB)) + Math.abs(abst(y - ich.koerper[0].y, WH)) < 14)));
+  const laenge = 3 + Math.floor(Math.random() * Math.max(4, ich ? ich.koerper.length + 4 : 8));
+  schlangen.push(neueSchlange(x, y, Math.min(laenge, 40), farben[Math.floor(Math.random() * farben.length)], true));
+}
+
+function belegt(x, y) {
+  return essen.has(feldNr(x, y)) || schlangen.some(s => s.lebt && s.koerper.some(k => k.x === x && k.y === y));
+}
+function legeEssen(art, extra) {
+  let x, y, n = 0;
+  do { x = Math.floor(Math.random() * WB); y = Math.floor(Math.random() * WH); } while (belegt(x, y) && ++n < 500);
+  essen.set(feldNr(x, y), { x, y, art, geboren: performance.now(), ...extra });
+}
+const zufallsObst = () => OBST[Math.floor(Math.random() * OBST.length)];
 
 function neuesSpiel() {
-  const mx = Math.floor(SP / 2), my = Math.floor(RE / 2);
-  schlange = [{ x: mx, y: my }, { x: mx - 1, y: my }, { x: mx - 2, y: my }];
-  vorher = schlange.map(s => ({ ...s }));
-  richtung = { x: 1, y: 0 }; wunsch = [];
-  punkte = 0; bonus = null; funken = []; texte = []; tot = false;
+  schlangen = []; essen = new Map(); funken = []; texte = []; ich = null;
+  ich = neueSchlange(Math.floor(WB / 2), Math.floor(WH / 2), 3, einst.farbe, false);
+  schlangen.push(ich);
+  for (let i = 0; i < GEGNER[einst.gegner]; i++) neuerGegner();
+  for (let i = 0; i < OBST_ANZAHL; i++) legeEssen(zufallsObst());
+  punkte = 0; tot = false; bonusUhr = 0;
   takt = TEMPOS[einst.tempo];
-  essen = neuesEssen(OBST[Math.floor(Math.random() * OBST.length)]);
   document.getElementById('punkte').textContent = 0;
   letzterSchritt = performance.now();
   laeuft = true; pausiert = false;
@@ -222,91 +235,195 @@ function neuesSpiel() {
   ton(520, 0.08); setTimeout(() => ton(780, 0.12), 90);
 }
 
-function frei(x, y) {
-  return !schlange.some(s => s.x === x && s.y === y) && !(essen && essen.x === x && essen.y === y) && !(bonus && bonus.x === x && bonus.y === y);
-}
-function neuesEssen(art, extra) {
-  let x, y, n = 0;
-  do { x = Math.floor(Math.random() * SP); y = Math.floor(Math.random() * RE); } while (!frei(x, y) && ++n < 500);
-  return { x, y, art, geboren: performance.now(), ...extra };
+// ---------- Computer-Schlangen denken nach ----------
+// Für jede der 3 möglichen Richtungen (geradeaus, links, rechts) gibt es Punkte.
+// Die Richtung mit den meisten Punkten gewinnt.
+function botDenkt(b, wer) {
+  const kopf = b.koerper[0], len = b.koerper.length;
+  const r = b.richtung;
+  const moeglich = [r, { x: r.y, y: -r.x }, { x: -r.y, y: r.x }];
+  // Ziel suchen: kleinere Schlange in der Nähe jagen, sonst nächstes Essen
+  let ziel = null, zielAbst = 1e9;
+  for (const s of schlangen) {
+    if (s === b || !s.lebt || s.koerper.length >= len) continue;
+    const d = Math.abs(abst(s.koerper[0].x - kopf.x, WB)) + Math.abs(abst(s.koerper[0].y - kopf.y, WH));
+    if (d < 8 && d < zielAbst) { ziel = s.koerper[0]; zielAbst = d; }
+  }
+  if (!ziel) for (const e of essen.values()) {
+    const d = Math.abs(abst(e.x - kopf.x, WB)) + Math.abs(abst(e.y - kopf.y, WH)) - (e.bis ? 4 : 0);
+    if (d < zielAbst) { ziel = e; zielAbst = d; }
+  }
+  let beste = r, besteWertung = -1e9;
+  for (const m of moeglich) {
+    const nx = ring(kopf.x + m.x, WB), ny = ring(kopf.y + m.y, WH);
+    let wertung = Math.random() * 3 + (m === r ? 1 : 0);
+    const da = wer.get(feldNr(nx, ny));
+    if (da === b) wertung -= 1000;                                 // nicht in sich selbst beißen
+    else if (da) wertung += da.koerper.length < len ? 40 : -1000;  // kleinere fressen, größere meiden
+    for (const s of schlangen) {                                   // Abstand halten von großen Köpfen
+      if (s === b || !s.lebt || s.koerper.length < len) continue;
+      const d = Math.abs(abst(s.koerper[0].x - nx, WB)) + Math.abs(abst(s.koerper[0].y - ny, WH));
+      if (d <= 2) wertung -= (3 - d) * 60;
+    }
+    if (wertung > -500 && platz(nx, ny, wer, Math.min(len + 4, 50)) < Math.min(len + 4, 50)) wertung -= 400;   // Sackgasse?
+    if (ziel) wertung -= (Math.abs(abst(ziel.x - nx, WB)) + Math.abs(abst(ziel.y - ny, WH))) * 3;
+    if (wertung > besteWertung) { besteWertung = wertung; beste = m; }
+  }
+  b.richtung = beste;
 }
 
-// Ein Schritt nach vorne
+// Wie viel freier Platz ist hinter diesem Feld? (Flutfüllung, hört bei 'genug' auf)
+function platz(x, y, wer, genug) {
+  const gesehen = new Set([feldNr(x, y)]), liste = [[x, y]];
+  while (liste.length && gesehen.size < genug) {
+    const [cx, cy] = liste.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = ring(cx + dx, WB), ny = ring(cy + dy, WH), nr = feldNr(nx, ny);
+      if (gesehen.has(nr) || wer.has(nr)) continue;
+      gesehen.add(nr); liste.push([nx, ny]);
+    }
+  }
+  return gesehen.size;
+}
+
+// ---------- Ein Schritt für alle Schlangen ----------
+function karte() {           // welches Feld gehört welcher Schlange?
+  const wer = new Map();
+  for (const s of schlangen) if (s.lebt) for (const k of s.koerper) wer.set(feldNr(k.x, k.y), s);
+  return wer;
+}
+
 function schritt() {
-  if (wunsch.length) {                    // gemerkte Richtungswünsche nacheinander abarbeiten
-    const w = wunsch.shift();
-    if (w.x !== -richtung.x || w.y !== -richtung.y) richtung = w;
+  if (ich.wunsch.length) {
+    const w = ich.wunsch.shift();
+    if (w.x !== -ich.richtung.x || w.y !== -ich.richtung.y) ich.richtung = w;
   }
-  vorher = schlange.map(s => ({ ...s }));
-  const kopf = schlange[0];
-  let nx = kopf.x + richtung.x, ny = kopf.y + richtung.y;
-  const wand = WAENDE[einst.wand];
-  if (nx < 0 || ny < 0 || nx >= SP || ny >= RE) {
-    if (wand) return aua();
-    nx = (nx + SP) % SP; ny = (ny + RE) % RE;
+  let wer = karte();
+  for (const s of schlangen) if (s.lebt && s.bot) botDenkt(s, wer);
+  // Alle bewegen sich gleichzeitig
+  for (const s of schlangen) {
+    if (!s.lebt) continue;
+    s.vorher = s.koerper.map(k => ({ ...k }));
+    const k = s.koerper[0];
+    s.koerper.unshift({ x: ring(k.x + s.richtung.x, WB), y: ring(k.y + s.richtung.y, WH) });
+    if (s.bot && s.koerper.length >= 40) s.wachsen = 0;    // Gegner werden höchstens 40 lang – du kannst größer werden!
+    if (s.wachsen > 0) { s.wachsen--; s.vorher.push({ ...s.vorher[s.vorher.length - 1] }); }
+    else s.koerper.pop();
   }
-  const isst = (essen.x === nx && essen.y === ny);
-  const isstBonus = bonus && bonus.x === nx && bonus.y === ny;
-  // Der Schwanz rückt weiter – außer wir essen gerade, dann wächst die Schlange
-  const koerper = isst || isstBonus ? schlange : schlange.slice(0, -1);
-  if (koerper.some(s => s.x === nx && s.y === ny)) return aua();
-  schlange.unshift({ x: nx, y: ny });
-  if (!isst && !isstBonus) schlange.pop();
-  else vorher.push({ ...vorher[vorher.length - 1] });   // neues Schwanzstück startet am alten Ende
-
-  if (isst) {
-    gewinn(1, essen);
-    essen = neuesEssen(OBST[Math.floor(Math.random() * OBST.length)]);
-    if (!bonus && Math.random() < 0.25) bonus = neuesEssen(Math.random() < 0.6 ? '🌟' : '💎', { bis: performance.now() + 7000 });
-    takt = Math.max(60, takt - 1.5);      // ein bisschen schneller
+  // Essen
+  for (const s of schlangen) {
+    if (!s.lebt) continue;
+    const k = s.koerper[0], nr = feldNr(k.x, k.y), e = essen.get(nr);
+    if (!e) continue;
+    essen.delete(nr);
+    const wert = e.art === '🌟' ? 5 : e.art === '💎' ? 3 : 1;
+    s.wachsen += e.art === '🌟' ? 3 : 1;
+    if (s === ich) gewinn(wert, e, wert > 1 ? '#FFD54A' : '#FF5A4A');
+    if (!e.rest) legeEssen(zufallsObst());          // Reste von Schlangen wachsen nicht nach
   }
-  if (isstBonus) { gewinn(bonus.art === '🌟' ? 5 : 3, bonus); bonus = null; }
+  // Zusammenstöße: Wer größer ist, frisst den anderen!
+  wer = karte();
+  for (const a of schlangen) {
+    if (!a.lebt) continue;
+    const k = a.koerper[0];
+    if (a.koerper.slice(1).some(t => t.x === k.x && t.y === k.y)) { zerfallen(a, 'Du hast dich selbst gebissen!'); continue; }
+    for (const b of schlangen) {
+      if (b === a || !b.lebt) continue;
+      if (!b.koerper.some(t => t.x === k.x && t.y === k.y)) continue;
+      if (a.koerper.length > b.koerper.length) fressen(a, b);
+      else fressen(b, a);
+      break;
+    }
+  }
+  schlangen = schlangen.filter(s => s.lebt || s === ich);
+  // Bonus taucht ab und zu auf
+  if (++bonusUhr > 40) { bonusUhr = 0; legeEssen(Math.random() < 0.6 ? '🌟' : '💎', { bis: performance.now() + 15000 }); }
+  for (const [nr, e] of essen) if (performance.now() > (e.bis || e.weg || Infinity)) essen.delete(nr);   // Bonus und Reste verschwinden wieder
+  // Neue Gegner kommen nach
+  while (schlangen.filter(s => s.bot).length < GEGNER[einst.gegner]) neuerGegner();
+  takt = Math.max(70, TEMPOS[einst.tempo] - ich.koerper.length * 0.6);   // je länger, desto schneller
 }
 
-function gewinn(n, wo) {
+function fressen(gross, klein) {
+  klein.lebt = false;
+  gross.wachsen += klein.koerper.length;
+  const k = klein.koerper[0];
+  spritzer(k.x, k.y, FARBEN[klein.farbe][0], 34);
+  if (gross === ich) { gewinn(klein.koerper.length, k, FARBEN[klein.farbe][0]); ton(300, 0.15, 'square', 0.1); setTimeout(() => ton(900, 0.2, 'triangle', 0.12), 100); }
+  if (klein === ich) ende('Eine größere Schlange hat dich gefressen!');
+}
+// Ohne Fresser zerfällt die Schlange zu Obst
+function zerfallen(s, grund) {
+  s.lebt = false;
+  s.koerper.forEach((k, i) => { if (i % 2 === 0 && !essen.has(feldNr(k.x, k.y))) essen.set(feldNr(k.x, k.y), { x: k.x, y: k.y, art: zufallsObst(), geboren: performance.now(), rest: true, weg: performance.now() + 25000 }); });
+  spritzer(s.koerper[0].x, s.koerper[0].y, FARBEN[s.farbe][0], 20);
+  if (s === ich) ende(grund);
+}
+
+function spritzer(x, y, farbe, n) {           // kleine Würfel fliegen weg (in Kästchen-Einheiten)
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * Math.PI * 2, v = 0.05 + Math.random() * 0.1;
+    funken.push({ x: x + 0.5, y: y + 0.5, vx: Math.cos(w) * v, vy: Math.sin(w) * v - 0.08, leben: 1, farbe: i % 3 ? farbe : '#fff', g: 0.12 + Math.random() * 0.12 });
+  }
+}
+function gewinn(n, wo, farbe) {
   punkte += n;
   document.getElementById('punkte').textContent = punkte;
-  const px = ox + (wo.x + 0.5) * Z, py = oy + (wo.y + 0.5) * Z;
-  const farbe = n > 1 ? '#FFD54A' : '#FF5A4A';
-  for (let i = 0; i < 18; i++) {           // kleine Würfel fliegen weg
-    const w = Math.random() * Math.PI * 2, v = 2 + Math.random() * 4;
-    funken.push({ x: px, y: py, vx: Math.cos(w) * v, vy: Math.sin(w) * v - 3, leben: 1, farbe: i % 3 ? farbe : '#fff', g: Z * (0.12 + Math.random() * 0.12) });
-  }
-  texte.push({ x: px, y: py, t: '+' + n, leben: 1 });
+  spritzer(wo.x, wo.y, farbe, 18);
+  texte.push({ x: wo.x + 0.5, y: wo.y + 0.5, t: '+' + n, leben: 1 });
   if (n > 1) { ton(880, 0.1, 'triangle', 0.12); setTimeout(() => ton(1320, 0.15, 'triangle', 0.12), 80); }
   else ton(600 + Math.min(punkte, 40) * 10, 0.07);
 }
 
-function aua() {
+function ende(grund) {
   laeuft = false; tot = true; wackeln = 14;
   ton(200, 0.3, 'sawtooth', 0.1); setTimeout(() => ton(120, 0.4, 'sawtooth', 0.1), 150);
   const neuerRekord = punkte > rekord;
   if (neuerRekord) { rekord = punkte; try { localStorage.setItem('schlange-rekord', rekord); } catch {} }
   document.getElementById('rekord').textContent = rekord;
   setTimeout(() => {
+    document.getElementById('endtitel').textContent = grund.includes('gefressen') ? 'Gefressen! 😱' : 'Autsch! 💥';
     document.getElementById('endpunkte').textContent = punkte;
-    document.getElementById('endtext').textContent = neuerRekord && punkte > 0 ? '🏆 Neuer Rekord!' : 'Rekord: ' + rekord + ' · Länge: ' + schlange.length;
+    document.getElementById('endtext').textContent = grund + (neuerRekord && punkte > 0 ? ' 🏆 Neuer Rekord!' : ' Rekord: ' + rekord);
     document.getElementById('ende').hidden = false;
-  }, 900);
+  }, 1000);
 }
 
 // ---------- Malen ----------
-function helle(hex, f) {          // Farbe heller (f>0) oder dunkler (f<0) machen
+// Welt-Kästchen -> Bildschirm-Pixel (die Kamera steht in der Mitte)
+const sx = wx => W / 2 + abst(wx - kamera.x, WB) * Z;
+const sy = wy => H / 2 + abst(wy - kamera.y, WH) * Z;
+const sichtbar = (px, py, rand) => px > -rand && px < W + rand && py > -rand && py < H + rand;
+
+function helle(hex, f) {
   const n = parseInt(hex.slice(1), 16);
   const k = v => Math.max(0, Math.min(255, Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f))));
   return 'rgb(' + k(n >> 16) + ',' + k((n >> 8) & 255) + ',' + k(n & 255) + ')';
 }
 
+function malBoden() {
+  const versX = ring(W / 2 - kamera.x * Z, 2 * Z), versY = ring(H / 2 - kamera.y * Z, 2 * Z);
+  ctx.save(); ctx.translate(versX, versY); ctx.fillStyle = muster; ctx.fillRect(-versX, -versY, W, H); ctx.restore();
+  // Grashalme und Blumen an festen Stellen der Welt
+  const x0 = Math.floor(kamera.x - W / 2 / Z) - 1, y0 = Math.floor(kamera.y - H / 2 / Z) - 1;
+  for (let y = y0; y < y0 + H / Z + 3; y++) for (let x = x0; x < x0 + W / Z + 3; x++) {
+    const gx = ring(x, WB), gy = ring(y, WH), h = (gx * 7 + gy * 13) % 11;
+    if (h !== 0 && h !== 5) continue;
+    const px = sx(gx), py = sy(gy);
+    if (h === 0) { ctx.fillStyle = '#4FA83A'; for (let i = 0; i < 3; i++) ctx.fillRect(px + Z * (0.3 + i * 0.15), py + Z * (0.45 - (i % 2) * 0.1), Z * 0.07, Z * 0.25); }
+    else if ((gx + gy) % 3 === 0) { ctx.fillStyle = ['#FFF', '#FFD84A', '#FF8AC8'][gx % 3]; ctx.beginPath(); ctx.arc(px + Z * 0.5, py + Z * 0.5, Z * 0.07, 0, 7); ctx.fill(); }
+  }
+}
+
 function malEssen(e, jetzt) {
-  const px = ox + (e.x + 0.5) * Z, py = oy + (e.y + 0.5) * Z;
-  const hops = Math.sin((jetzt - e.geboren) / 220) * Z * 0.1;
-  const auftauchen = Math.min(1, (jetzt - e.geboren) / 250);
-  let s = Z * 1.05 * auftauchen;
-  if (e.bis) {                                         // Bonus blinkt kurz vor dem Verschwinden
-    const rest = e.bis - jetzt;
-    if (rest < 2000 && Math.floor(jetzt / 120) % 2) return;
-    s *= 1 + Math.sin(jetzt / 120) * 0.06;
-    ctx.fillStyle = '#FFE58A55'; ctx.beginPath(); ctx.arc(px, py, Z * 0.75, 0, 7); ctx.fill();
+  const px = sx(e.x + 0.5), py = sy(e.y + 0.5);
+  if (!sichtbar(px, py, Z)) return;
+  const hops = Math.sin((jetzt - e.geboren) / 220 + e.x) * Z * 0.1;
+  let s = Z * (e.rest ? 0.8 : 1.05) * Math.min(1, (jetzt - e.geboren) / 250);
+  if (e.bis) {
+    if (e.bis - jetzt < 3000 && Math.floor(jetzt / 120) % 2) return;
+    s *= 1.15 + Math.sin(jetzt / 120) * 0.06;
+    ctx.fillStyle = '#FFE58A55'; ctx.beginPath(); ctx.arc(px, py, Z * 0.8, 0, 7); ctx.fill();
   }
   ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(px, py + Z * 0.32, Z * 0.32, Z * 0.12, 0, 0, 7); ctx.fill();
   const img = bildCache[e.art];
@@ -314,69 +431,65 @@ function malEssen(e, jetzt) {
   else { ctx.font = Math.round(s * 0.8) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e.art, px, py - Z * 0.08 - hops); }
 }
 
-function malSchlange(t) {
-  const [hell, mittel, dunkel] = FARBEN[einst.farbe];
-  // Position jedes Stücks zwischen altem und neuem Kästchen (macht die Bewegung weich)
-  const pos = schlange.map((s, i) => {
-    const a = vorher[i] || s;
-    if (Math.abs(a.x - s.x) > 1 || Math.abs(a.y - s.y) > 1) return { x: s.x, y: s.y };   // durch die Wand: springen
-    return { x: a.x + (s.x - a.x) * t, y: a.y + (s.y - a.y) * t };
+// Position jedes Stücks zwischen altem und neuem Kästchen (macht die Bewegung weich)
+function positionen(s, t) {
+  return s.koerper.map((k, i) => {
+    const a = s.vorher[i] || k;
+    return { x: a.x + abst(k.x - a.x, WB) * t, y: a.y + abst(k.y - a.y, WH) * t };
   });
-  // Zwischenstücke einfügen, damit der Körper eine durchgehende Röhre ist
-  const teile = [];
-  for (let i = pos.length - 1; i >= 0; i--) {
-    teile.push({ ...pos[i], i });
-    if (i > 0 && Math.abs(pos[i].x - pos[i - 1].x) <= 1.01 && Math.abs(pos[i].y - pos[i - 1].y) <= 1.01)
-      teile.push({ x: (pos[i].x + pos[i - 1].x) / 2, y: (pos[i].y + pos[i - 1].y) / 2, i: i - 0.5 });
-  }
-  const n = pos.length;
-  const breite = i => Z * (0.86 - 0.3 * (i / Math.max(n, 6)));   // zum Schwanz hin dünner
-  const tiefe = Z * 0.22;
-  // 1. Schatten auf dem Rasen
-  ctx.fillStyle = '#0000002e';
-  for (const p of teile) { const b = breite(p.i); ctx.beginPath(); ctx.ellipse(ox + (p.x + 0.5) * Z + Z * 0.08, oy + (p.y + 0.5) * Z + tiefe + Z * 0.06, b * 0.5, b * 0.42, 0, 0, 7); ctx.fill(); }
-  // 2. dunkle Seitenwand (das ist das „3D“)
-  ctx.fillStyle = dunkel;
-  for (const p of teile) { const b = breite(p.i); rund(ctx, ox + (p.x + 0.5) * Z - b / 2, oy + (p.y + 0.5) * Z - b / 2 + tiefe * 0.2, b, b + tiefe * 0.8, b * 0.32); ctx.fill(); }
-  // 3. Oberseite mit Streifen und Glanz
-  for (const p of teile) {
-    const b = breite(p.i), cx = ox + (p.x + 0.5) * Z, cy = oy + (p.y + 0.5) * Z - tiefe * 0.2;
-    const g = ctx.createLinearGradient(cx - b / 2, cy - b / 2, cx + b / 2, cy + b / 2);
-    const streifen = Math.floor(p.i) % 3 === 0;
-    g.addColorStop(0, helle(streifen ? mittel : hell, 0.25)); g.addColorStop(1, streifen ? dunkel : mittel);
-    ctx.fillStyle = g; rund(ctx, cx - b / 2, cy - b / 2, b, b, b * 0.32); ctx.fill();
-  }
-  for (const p of teile) {          // Glanzpunkt oben links
-    if (p.i % 1) continue;
-    const b = breite(p.i), cx = ox + (p.x + 0.5) * Z, cy = oy + (p.y + 0.5) * Z - tiefe * 0.2;
-    ctx.fillStyle = '#ffffff55'; rund(ctx, cx - b * 0.34, cy - b * 0.36, b * 0.32, b * 0.18, b * 0.09); ctx.fill();
-  }
-  malKopf(pos[0], hell, mittel, dunkel, tiefe);
 }
 
-function malKopf(p, hell, mittel, dunkel, tiefe) {
-  const s = Z * 1.0, cx = ox + (p.x + 0.5) * Z, cy = oy + (p.y + 0.5) * Z - tiefe * 0.25;
-  const jetzt = performance.now();
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.atan2(richtung.y, richtung.x));
-  // Zunge: schnellt ab und zu heraus
-  if (!tot && Math.floor(jetzt / 700) % 3 === 0) {
+function malSchlange(s, t) {
+  const [hell, mittel, dunkel] = FARBEN[s.farbe];
+  const pos = positionen(s, t), n = pos.length;
+  // Zwischenstücke einfügen, damit der Körper eine durchgehende Röhre ist
+  const teile = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const px = sx(pos[i].x + 0.5), py = sy(pos[i].y + 0.5);
+    teile.push({ px, py, i });
+    if (i > 0) teile.push({ px: px + abst(pos[i - 1].x - pos[i].x, WB) * Z / 2, py: py + abst(pos[i - 1].y - pos[i].y, WH) * Z / 2, i: i - 0.5 });
+  }
+  const dick = 1 + Math.min(n, 40) / 100;                              // große Schlangen sind dicker
+  const breite = i => Z * dick * (0.86 - 0.3 * (i / Math.max(n, 6)));
+  const tiefe = Z * 0.22;
+  const sicht = teile.filter(p => sichtbar(p.px, p.py, Z * 2));
+  ctx.fillStyle = '#0000002e';
+  for (const p of sicht) { const b = breite(p.i); ctx.beginPath(); ctx.ellipse(p.px + Z * 0.08, p.py + tiefe + Z * 0.06, b * 0.5, b * 0.42, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = dunkel;
+  for (const p of sicht) { const b = breite(p.i); rund(ctx, p.px - b / 2, p.py - b / 2 + tiefe * 0.2, b, b + tiefe * 0.8, b * 0.32); ctx.fill(); }
+  for (const p of sicht) {
+    const b = breite(p.i), cy = p.py - tiefe * 0.2;
+    const g = ctx.createLinearGradient(p.px - b / 2, cy - b / 2, p.px + b / 2, cy + b / 2);
+    const streifen = Math.floor(p.i) % 3 === 0;
+    g.addColorStop(0, helle(streifen ? mittel : hell, 0.25)); g.addColorStop(1, streifen ? dunkel : mittel);
+    ctx.fillStyle = g; rund(ctx, p.px - b / 2, cy - b / 2, b, b, b * 0.32); ctx.fill();
+  }
+  ctx.fillStyle = '#ffffff55';
+  for (const p of sicht) { if (p.i % 1) continue; const b = breite(p.i); rund(ctx, p.px - b * 0.34, p.py - tiefe * 0.2 - b * 0.36, b * 0.32, b * 0.18, b * 0.09); ctx.fill(); }
+  const kx = sx(pos[0].x + 0.5), ky = sy(pos[0].y + 0.5);
+  if (sichtbar(kx, ky, Z * 2)) malKopf(s, kx, ky, hell, mittel, dunkel, tiefe, dick);
+}
+
+function malKopf(sch, cx, cy, hell, mittel, dunkel, tiefe, dick) {
+  const s = Z * dick, jetzt = performance.now(), weg = !sch.lebt;
+  cy -= tiefe * 0.25;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.atan2(sch.richtung.y, sch.richtung.x));
+  if (!weg && Math.floor((jetzt + sch.geboren) / 700) % 3 === 0) {   // Zunge
     const l = s * (0.25 + 0.15 * Math.sin(jetzt / 40));
     ctx.strokeStyle = '#E8344A'; ctx.lineWidth = Math.max(2, Z * 0.07); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(s * 0.45, 0); ctx.lineTo(s * 0.45 + l, 0);
-    ctx.moveTo(s * 0.45 + l, 0); ctx.lineTo(s * 0.45 + l + s * 0.1, -s * 0.08);
-    ctx.moveTo(s * 0.45 + l, 0); ctx.lineTo(s * 0.45 + l + s * 0.1, s * 0.08); ctx.stroke();
+    ctx.moveTo(s * 0.45 + l, 0); ctx.lineTo(s * 0.55 + l, -s * 0.08);
+    ctx.moveTo(s * 0.45 + l, 0); ctx.lineTo(s * 0.55 + l, s * 0.08); ctx.stroke();
   }
-  // Kopf-Klotz
   ctx.fillStyle = dunkel; rund(ctx, -s / 2, -s / 2 + tiefe * 0.25, s, s, s * 0.34); ctx.fill();
   const g = ctx.createLinearGradient(0, -s / 2, 0, s / 2);
   g.addColorStop(0, helle(hell, 0.3)); g.addColorStop(1, mittel);
   ctx.fillStyle = g; rund(ctx, -s / 2, -s / 2, s, s, s * 0.34); ctx.fill();
   ctx.fillStyle = '#ffffff50'; rund(ctx, -s * 0.36, -s * 0.42, s * 0.4, s * 0.16, s * 0.08); ctx.fill();
-  // Augen (schauen in Laufrichtung)
   for (const seite of [-1, 1]) {
     const ax = s * 0.12, ay = seite * s * 0.22;
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ax, ay, s * 0.16, 0, 7); ctx.fill();
-    if (tot) {                                                          // x_x
+    if (weg) {
       ctx.strokeStyle = '#222'; ctx.lineWidth = Math.max(2, s * 0.05);
       ctx.beginPath(); ctx.moveTo(ax - s * 0.08, ay - s * 0.08); ctx.lineTo(ax + s * 0.08, ay + s * 0.08);
       ctx.moveTo(ax + s * 0.08, ay - s * 0.08); ctx.lineTo(ax - s * 0.08, ay + s * 0.08); ctx.stroke();
@@ -385,29 +498,60 @@ function malKopf(p, hell, mittel, dunkel, tiefe) {
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ax + s * 0.08, ay - s * 0.04, s * 0.03, 0, 7); ctx.fill();
     }
   }
-  // Nasenlöcher und rote Bäckchen
+  if (sch.bot) {                       // Gegner haben böse Augenbrauen
+    ctx.strokeStyle = '#1B1B1B'; ctx.lineWidth = Math.max(2, s * 0.06); ctx.lineCap = 'round';
+    for (const seite of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 0.0, seite * s * 0.38); ctx.lineTo(s * 0.26, seite * s * 0.14); ctx.stroke(); }
+  }
   ctx.fillStyle = '#0006';
   for (const seite of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 0.4, seite * s * 0.1, s * 0.03, 0, 7); ctx.fill(); }
-  ctx.fillStyle = '#FF7A8A66';
-  for (const seite of [-1, 1]) { ctx.beginPath(); ctx.ellipse(-s * 0.08, seite * s * 0.38, s * 0.1, s * 0.06, 0, 0, 7); ctx.fill(); }
+  if (!sch.bot) { ctx.fillStyle = '#FF7A8A66'; for (const seite of [-1, 1]) { ctx.beginPath(); ctx.ellipse(-s * 0.08, seite * s * 0.38, s * 0.1, s * 0.06, 0, 0, 7); ctx.fill(); } }
   ctx.restore();
+}
+
+// Zahl über jedem Gegner: grün = kleiner als du (fressbar), rot = größer (Vorsicht!)
+function malSchilder(t) {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '800 ' + Math.round(Z * 0.45) + 'px system-ui';
+  for (const s of schlangen) {
+    if (!s.bot || !s.lebt) continue;
+    const p = positionen(s, t)[0], px = sx(p.x + 0.5), py = sy(p.y + 0.5) - Z * 0.95;
+    if (!sichtbar(px, py, Z)) continue;
+    const fressbar = s.koerper.length < ich.koerper.length;
+    ctx.fillStyle = fressbar ? '#1E9E58' : '#D93A2F';
+    rund(ctx, px - Z * 0.4, py - Z * 0.25, Z * 0.8, Z * 0.5, Z * 0.2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(s.koerper.length, px, py + 1);
+  }
+}
+
+// Kleine Karte unten links: zeigt die ganze Welt
+function malKarte() {
+  const g = Math.min(130, W * 0.28), f = g / WB, x0 = 10, y0 = H - g - 30;
+  ctx.fillStyle = '#0B2414cc'; rund(ctx, x0 - 4, y0 - 4, g + 8, g + 8, 10); ctx.fill();
+  ctx.fillStyle = '#ffffff22'; ctx.fillRect(x0 + (ring(kamera.x - W / 2 / Z, WB)) * f, y0 + ring(kamera.y - H / 2 / Z, WH) * f, Math.min(g, W / Z * f), Math.min(g, H / Z * f));
+  for (const s of schlangen) {
+    if (!s.lebt) continue;
+    ctx.fillStyle = s === ich ? '#fff' : (s.koerper.length < ich.koerper.length ? '#7CFF8A' : '#FF6B5E');
+    for (const k of s.koerper) ctx.fillRect(x0 + k.x * f, y0 + k.y * f, Math.max(2, f), Math.max(2, f));
+  }
 }
 
 function malEffekte() {
   for (const f of funken) {
-    f.x += f.vx; f.y += f.vy; f.vy += 0.35; f.leben -= 0.03;
+    f.x += f.vx; f.y += f.vy; f.vy += 0.008; f.leben -= 0.03;
     ctx.globalAlpha = Math.max(0, f.leben);
-    ctx.fillStyle = f.farbe; ctx.fillRect(f.x - f.g / 2, f.y - f.g / 2, f.g, f.g);
-    ctx.fillStyle = '#0003'; ctx.fillRect(f.x - f.g / 2, f.y + f.g * 0.2, f.g, f.g * 0.3);
+    const px = sx(f.x), py = sy(f.y), g = f.g * Z;
+    ctx.fillStyle = f.farbe; ctx.fillRect(px - g / 2, py - g / 2, g, g);
+    ctx.fillStyle = '#0003'; ctx.fillRect(px - g / 2, py + g * 0.2, g, g * 0.3);
   }
   funken = funken.filter(f => f.leben > 0);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const t of texte) {
-    t.y -= 1.2; t.leben -= 0.02;
+    t.y -= 0.03; t.leben -= 0.02;
     ctx.globalAlpha = Math.max(0, t.leben);
     ctx.font = '800 ' + Math.round(Z * 0.8) + 'px system-ui';
-    ctx.fillStyle = '#0006'; ctx.fillText(t.t, t.x + 2, t.y + 3);
-    ctx.fillStyle = '#FFE14D'; ctx.fillText(t.t, t.x, t.y);
+    const px = sx(t.x), py = sy(t.y);
+    ctx.fillStyle = '#0006'; ctx.fillText(t.t, px + 2, py + 3);
+    ctx.fillStyle = '#FFE14D'; ctx.fillText(t.t, px, py);
   }
   texte = texte.filter(t => t.leben > 0);
   ctx.globalAlpha = 1;
@@ -416,20 +560,18 @@ function malEffekte() {
 function schleife(jetzt) {
   if (laeuft && !pausiert) {
     while (jetzt - letzterSchritt >= takt && laeuft) { letzterSchritt += takt; schritt(); }
-    if (bonus && jetzt > bonus.bis) bonus = null;
   } else if (pausiert) letzterSchritt = jetzt;
   const t = laeuft && !pausiert ? Math.min(1, (jetzt - letzterSchritt) / takt) : 1;
 
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.clearRect(0, 0, W, H);
+  if (ich) { const k = positionen(ich, t)[0]; kamera = { x: ring(k.x + 0.5, WB), y: ring(k.y + 0.5, WH) }; }
   if (wackeln > 0) { ctx.translate((Math.random() - 0.5) * wackeln, (Math.random() - 0.5) * wackeln); wackeln *= 0.85; if (wackeln < 0.5) wackeln = 0; }
-  ctx.drawImage(boden, 0, 0, W, H);
-  if (schlange) {
-    malEssen(essen, jetzt);
-    if (bonus) malEssen(bonus, jetzt);
-    malSchlange(t);
-  }
+  malBoden();
+  for (const e of essen.values()) malEssen(e, jetzt);
+  for (const s of schlangen) if (s !== ich) malSchlange(s, t);
+  if (ich) malSchlange(ich, t);
   malEffekte();
+  if (ich) { malSchilder(t); malKarte(); }
   if (pausiert) {
     ctx.fillStyle = '#0008'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#fff'; ctx.font = '800 48px system-ui'; ctx.textAlign = 'center'; ctx.fillText('⏸ Pause', W / 2, H / 2);
@@ -440,16 +582,16 @@ function schleife(jetzt) {
 // ---------- Steuerung ----------
 function lenke(x, y) {
   if (!laeuft || pausiert) return;
-  const letzte = wunsch[wunsch.length - 1] || richtung;
+  const letzte = ich.wunsch[ich.wunsch.length - 1] || ich.richtung;
   if ((x === letzte.x && y === letzte.y) || (x === -letzte.x && y === -letzte.y)) return;
-  if (wunsch.length < 3) wunsch.push({ x, y });
+  if (ich.wunsch.length < 3) ich.wunsch.push({ x, y });
 }
 addEventListener('keydown', e => {
   const k = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }[e.key];
   if (k) { e.preventDefault(); lenke(...k); }
   if (e.key === ' ' || e.key === 'p') pauseUmschalten();
 });
-// Wischen: schon während der Finger sich bewegt reagieren (schneller als erst beim Loslassen)
+// Wischen: schon während der Finger sich bewegt reagieren
 let tx = null, ty = null;
 cv.addEventListener('pointerdown', e => { tx = e.clientX; ty = e.clientY; });
 cv.addEventListener('pointermove', e => {
@@ -468,7 +610,7 @@ document.getElementById('start').onclick = neuesSpiel;
 document.getElementById('nochmal').onclick = neuesSpiel;
 document.getElementById('zummenue').onclick = () => { document.getElementById('ende').hidden = true; document.getElementById('menue').hidden = false; };
 
-addEventListener('resize', () => { const lief = laeuft; groesse(); if (lief || tot) { laeuft = false; tot = false; schlange = null; document.getElementById('ende').hidden = true; document.getElementById('menue').hidden = false; } });
+addEventListener('resize', groesse);
 groesse();
 requestAnimationFrame(schleife);
 
