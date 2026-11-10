@@ -137,6 +137,18 @@
   .figur.dran{z-index:4;box-shadow:0 0 0 3px #FFD54A,0 2px 6px #0007}
   .figur.weg{display:none}
 
+  /* 3D-Ansicht (☰ → Ansicht): „kloetze“ = dicke Felder, „geneigt“ = Brett gekippt wie auf dem Tisch */
+  .kloetze #brett{border-color:#1E2B22;box-shadow:0 calc(var(--u)*.2) 0 #1E2B22,0 calc(var(--u)*.32) 22px #0007}
+  .kloetze .feld{box-shadow:inset calc(var(--u)*.035) calc(var(--u)*.035) 0 #fffa,inset calc(var(--u)*-.045) calc(var(--u)*-.06) 0 #0003}
+  .kloetze .bar{box-shadow:inset 0 calc(var(--u)*.035) 0 #fff7,inset 0 calc(var(--u)*-.05) 0 #0004}
+  .kloetze .inhalt .sym img.bild{filter:drop-shadow(calc(var(--u)*.02) calc(var(--u)*.05) 0 #0004)}
+  .kloetze .haus,.kloetze .hotel{filter:drop-shadow(calc(var(--u)*.02) calc(var(--u)*.04) 0 #0007) drop-shadow(0 2px 2px #0005)}
+  .kloetze .figur{box-shadow:0 calc(var(--u)*.07) 0 #0007,0 calc(var(--u)*.12) 6px #0006}
+  .kloetze #mitte{box-shadow:inset 0 calc(var(--u)*.08) calc(var(--u)*.2) #0002}
+  #spielflaeche.geneigt{perspective:calc(var(--u)*30)}
+  .geneigt #brett{transform:rotateX(30deg);transform-style:preserve-3d;margin-top:calc(var(--u)*-.6);margin-bottom:calc(var(--u)*-.4);--steh:-30deg}
+  .geneigt .figur{transform-origin:50% 90%}
+
   /* Seitenleiste: Spieler + Verlauf */
   #seite{flex:1;min-width:250px;max-width:380px;display:flex;flex-direction:column;gap:8px;height:100%;overflow:auto}
   .hoch #seite{max-width:none;width:100%;min-width:0;flex:1}
@@ -218,14 +230,40 @@
   .verw{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #0001;font-size:15px}
   .verw .nm{flex:1;border-left:8px solid var(--g);padding-left:6px}
   .verw button{padding:6px 9px;font-size:14px}
-  .chips{display:flex;flex-wrap:wrap;gap:5px}
-  .chip{padding:6px 8px;border-radius:10px;border-left:8px solid var(--g);background:#0001;font-size:14px;cursor:pointer}
-  .chip.an{background:#FFD54A;color:#1B2A22}
-  .handel-spalten{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:520px){.handel-spalten{grid-template-columns:1fr}}
-  .betrag{display:flex;gap:4px;align-items:center;margin-top:6px}
-  .betrag input{width:90px}
-  .betrag button{padding:6px 10px}
+  /* Besitz-Karten mit Bild (Spieler-Ansicht, Tauschen) */
+  .bkarten{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;margin:6px 0}
+  .bkarte{background:#fff;color:#1B2A22;border-radius:10px;box-shadow:0 2px 6px #0003;overflow:hidden;text-align:center;position:relative}
+  .bk-bar{background:var(--g);height:20px;display:flex;align-items:center;justify-content:center;gap:1px}
+  .bk-bar .haus{width:16px;height:16px}.bk-bar .hotel{width:20px;height:20px}
+  .bk-bild img.bild{height:50px;display:block;margin:6px auto 2px}
+  .bk-name{font-size:12px;font-weight:700;padding:0 3px 6px;line-height:1.1}
+  .bkarte.hyp .bk-bild{opacity:.35}
+  .bk-hyp{color:#D33B3B;font-size:11px;font-weight:800;margin-top:-4px;padding-bottom:4px}
+  .bkarte.wahl{cursor:pointer;opacity:.6;transition:transform .15s}
+  .bkarte.wahl.an{opacity:1;outline:3px solid #FFD54A;transform:translateY(-3px)}
+  .bkarte.wahl.an::after{content:'✓';position:absolute;top:22px;right:4px;width:22px;height:22px;border-radius:50%;background:#2FA84F;color:#fff;font-weight:900;line-height:22px}
+  .sp-gross{display:flex;gap:12px;align-items:center;border-left:8px solid var(--f);padding-left:10px;margin-bottom:8px}
+  .sp-gross h2{margin:0}
+  .sp-gross .fig{width:60px;height:60px;border-radius:50%;background:var(--f);border:3px solid #fff;box-shadow:0 2px 6px #0005;display:flex;align-items:center;justify-content:center;flex:none}
+  .sp-gross .fig img.bild{height:80%}
+  .sp{cursor:pointer}
+  /* Tauschen als Waage: links „Du gibst“, rechts „Du bekommst“ */
+  .waage{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:start}
+  .w-seite{border-radius:12px;padding:8px;min-width:0}
+  .w-seite.gib{background:#FDE3E1}.w-seite.nimm{background:#DDF3E3}
+  .w-seite .klein{margin:4px 0;color:#1B2A22cc}
+  .w-kopf{font-weight:800;font-size:17px;color:#1B2A22}
+  .w-kopf small{display:block;font-weight:600;font-size:12px;opacity:.75}
+  .w-seite .bkarten{grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}
+  .w-seite .bk-bild img.bild{height:40px}
+  .w-pfeil{font-size:28px;font-weight:900;align-self:center}
+  .w-geld{margin-top:6px;color:#1B2A22}
+  .w-tasten{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
+  .w-tasten button{padding:6px 0;font-size:13px;min-width:0}
+  .w-seite label.schalter{color:#1B2A22;margin-top:6px}
+  .w-summe{margin-top:10px;padding:8px 10px;border-radius:12px;background:#0001;line-height:1.9}
+  .w-summe .rot,.w-warn{color:#D33B3B}
+  .w-warn{font-weight:800}
 
   canvas#qr{width:min(320px,80vw);height:auto;image-rendering:pixelated;background:#fff;border-radius:10px;padding:8px;align-self:center}
   #scanner{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:30;gap:12px;color:#fff}
@@ -390,7 +428,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.12';
+const APP_VERSION = '1.13';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1061,11 +1099,20 @@ function augenHTML(z) {
 }
 
 // Größe: Brett so groß wie möglich, Seitenleiste daneben (quer) oder darunter (hoch)
+// 3D-Ansicht: 0 = flach, 1 = Klötzchen, 2 = geneigt, 3 = beides (dieses Gerät merkt es sich)
+const ANSICHTEN = ['⬜ Flach', '🧊 Klötzchen', '📐 Geneigt', '🧊📐 Beides'];
+let ansicht = speicher.lies('sb-ansicht') ?? 3;
+function ansichtSetzen() {
+  $('#spielflaeche').classList.toggle('kloetze', ansicht === 1 || ansicht === 3);
+  $('#spielflaeche').classList.toggle('geneigt', ansicht >= 2);
+}
 function layout() {
+  ansichtSetzen();
   const W = innerWidth - 16, H = innerHeight - 56 - 16;
   const quer = W > H * 1.25;
   $('#spielflaeche').classList.toggle('hoch', !quer);
-  const groesse = Math.floor(quer ? Math.min(H, W - 260) : Math.min(W, H - 150));
+  // Geneigt wirkt das Brett unten breiter – darum etwas kleiner
+  const groesse = Math.floor((quer ? Math.min(H, W - 260) : Math.min(W, H - 150)) * (ansicht >= 2 ? (quer ? .86 : .95) : 1));
   const brett = $('#brett');
   brett.style.width = brett.style.height = groesse + 'px';
   document.documentElement.style.setProperty('--u', (groesse / 12) + 'px');
@@ -1091,7 +1138,7 @@ function figurenSetzen(sanft = true) {
     const pos = anzeige.pos[p] ?? s.pos, gleich = st.spieler.map((t, q) => q).filter(q => !st.spieler[q].pleite && (anzeige.pos[q] ?? st.spieler[q].pos) === pos);
     const [x, y] = figurPunkt(pos, gleich.indexOf(p), gleich.length);
     if (!sanft) el.style.transition = 'none';
-    el.style.transform = `translate(${x}px,${y}px)`;
+    el.style.transform = `translate(${x}px,${y}px) rotateX(var(--steh,0deg))`;
     if (!sanft) { el.offsetWidth; el.style.transition = ''; }
   });
 }
@@ -1475,27 +1522,76 @@ function handelDialog(an = null, auswahl = null) {
   const p = st.dran, andere = aktive(st).filter(q => q !== p);
   if (an === null) {
     if (andere.length === 1) return handelDialog(andere[0]);
-    dialog('<h2>🤝 Mit wem handeln?</h2>', [...andere.map(q => [spName(st, q), q]), ['Abbrechen', null, 'zweit']]).then(q => q !== null && q !== undefined && handelDialog(q));
+    dialog('<h2>🤝 Mit wem tauschen?</h2>', [...andere.map(q => [spName(st, q), q]), ['Abbrechen', null, 'zweit']]).then(q => q !== null && q !== undefined && handelDialog(q));
     return;
   }
   const A = auswahl || { gib: { f: [], g: 0, k: 0 }, nimm: { f: [], g: 0, k: 0 } };
-  const spalte = (wer, l, key) => {
+  const der = esc(st.spieler[an].fig + ' ' + st.spieler[an].n);
+  // Eine Seite der Waage: Karten zum Antippen, Geld, Raus-Karte
+  const seite = (wer, l, key) => {
     const s = st.spieler[wer];
-    const chips = Object.keys(st.besitz).map(Number).filter(i => handelbar(st, i, wer)).sort((a, b) => a - b)
-      .map(i => `<span class="chip ${l.f.includes(i) ? 'an' : ''}" data-k="${key}" data-i="${i}" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#888'}">${F[i].n}${st.besitz[i].hyp ? ' (H)' : ''}</span>`).join('') || '<span class="klein">keine Straßen</span>';
-    return `<div><b>${key === 'gib' ? 'Ich gebe' : esc(spName(st, wer)) + ' gibt'}</b> <span class="klein">(${geld(s.geld)})</span><div class="chips">${chips}</div>
-      <div class="betrag">🪙 <button class="zweit" data-k="${key}" data-g="-50">−50</button><button class="zweit" data-k="${key}" data-g="-10">−10</button><b style="min-width:50px;text-align:center">${l.g}</b><button class="zweit" data-k="${key}" data-g="10">+10</button><button class="zweit" data-k="${key}" data-g="50">+50</button></div>
+    const karten = Object.keys(st.besitz).map(Number).filter(i => handelbar(st, i, wer)).sort((a, b) => a - b)
+      .map(i => besitzKarte(i, `data-k="${key}" data-i="${i}"`, 'wahl ' + (l.f.includes(i) ? 'an' : ''))).join('') || '<span class="klein">keine Straßen</span>';
+    const kopf = key === 'gib' ? `📤 Du gibst <small>${esc(s.fig + ' ' + s.n)}</small>` : `📥 Du bekommst <small>von ${der}</small>`;
+    const hilfe = key === 'gib' ? 'Tippe an, was <b>du hergibst</b>:' : `Tippe an, was du <b>haben willst</b>:`;
+    return `<div class="w-seite ${key}"><div class="w-kopf">${kopf}</div><p class="klein">${hilfe}</p><div class="bkarten">${karten}</div>
+      <div class="w-geld"><div>${bild('🪙')} <b>${l.g}</b> <span class="klein">von ${s.geld}</span></div>
+        <div class="w-tasten">${[-50, -10, 10, 50].map(g => `<button class="zweit" data-k="${key}" data-g="${g}">${g > 0 ? '+' : '−'}${Math.abs(g)}</button>`).join('')}</div></div>
       ${s.frei.length ? `<label class="schalter"><input type="checkbox" data-k="${key}" data-karte ${l.k ? 'checked' : ''}> 🎫 Raus-Karte</label>` : ''}</div>`;
   };
+  // Zusammenfassung in Worten – damit man sieht, ob man etwas zurückbekommt
+  const was = l => [...l.f.map(i => `<span class="mini-feld" style="--g:${F[i].t === 's' ? GRUPPEN[F[i].g][0] : '#777'}">${bild(F[i].e || F[i].i || '')} ${F[i].n}</span>`), l.g ? geld(l.g) : '', l.k ? '🎫 Raus-Karte' : ''].filter(Boolean).join(' ');
+  const gibt = was(A.gib), kriegt = was(A.nimm);
+  const summe = `<div class="w-summe"><div>➡️ ${der} bekommt von dir: ${gibt || '<b>nichts</b>'}</div>
+    <div>⬅️ Du bekommst: ${kriegt || '<b class="rot">NICHTS</b>'}</div>
+    ${gibt && !kriegt ? '<div class="w-warn">⚠️ Du bekommst nichts zurück – das wäre ein Geschenk!</div>' : ''}</div>`;
   const a = { t: 'handel', p, an, gib: A.gib, nimm: A.nimm };
   const geht = !!anwenden(kopie(st), a);
-  dialog(`<h2>🤝 Handel mit ${esc(spName(st, an))}</h2><div class="handel-spalten">${spalte(p, A.gib, 'gib')}${spalte(an, A.nimm, 'nimm')}</div>
-    <p class="klein">Bebaute Farben kann man erst nach dem Verkauf der Häuser tauschen.</p>`, [['Abbrechen', false, 'zweit'], [geht ? 'Angebot machen' : 'Angebot machen', 'los']]).then(w => { if (w === 'los') tun(a); });
+  dialog(`<h2>🤝 Tauschen mit ${der}</h2><div class="waage">${seite(p, A.gib, 'gib')}<div class="w-pfeil">⇄</div>${seite(an, A.nimm, 'nimm')}</div>${summe}
+    <p class="klein">Bebaute Farben kann man erst nach dem Verkauf der Häuser tauschen.</p>`, [['Abbrechen', false, 'zweit'], ['Angebot schicken', 'los']]).then(w => { if (w === 'los') tun(a); });
   if (!geht) $$('#dlg-knoepfe button')[1].disabled = true;
   const box = $('#dlg-inhalt');
-  box.querySelectorAll('.chip').forEach(c => c.onclick = () => { const l = A[c.dataset.k], i = +c.dataset.i; l.f = l.f.includes(i) ? l.f.filter(x => x !== i) : [...l.f, i]; Ton.klick(); handelDialog(an, A); });
+  box.querySelectorAll('.bkarte[data-i]').forEach(c => c.onclick = () => { const l = A[c.dataset.k], i = +c.dataset.i; l.f = l.f.includes(i) ? l.f.filter(x => x !== i) : [...l.f, i]; Ton.klick(); handelDialog(an, A); });
   box.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const l = A[b.dataset.k], wer = b.dataset.k === 'gib' ? p : an; l.g = Math.max(0, Math.min(st.spieler[wer].geld, l.g + +b.dataset.g)); Ton.klick(); handelDialog(an, A); });
   box.querySelectorAll('[data-karte]').forEach(c => c.onchange = () => { A[c.dataset.k].k = c.checked ? 1 : 0; handelDialog(an, A); });
+}
+
+/* ---------- Besitz-Karte mit großem Bild (Spieler-Ansicht und Tauschen) ---------- */
+function besitzKarte(i, attr = '', kl = '') {
+  const f = F[i], b = st.besitz[i], farbe = f.t === 's' ? GRUPPEN[f.g][0] : '#9AA5A0';
+  const haeuser = !b || !b.h ? '' : b.h === 5 ? '<span class="hotel"></span>' : '<span class="haus"></span>'.repeat(b.h);
+  return `<div class="bkarte ${kl} ${b && b.hyp ? 'hyp' : ''}" style="--g:${farbe}" ${attr}><div class="bk-bar">${haeuser}</div>
+    <div class="bk-bild">${bild(f.e || f.i || '')}</div><div class="bk-name">${f.n}</div>${b && b.hyp ? '<div class="bk-hyp">Hypothek</div>' : ''}</div>`;
+}
+
+/* ---------- Spieler-Kachel antippen: alles groß zeigen, was er hat ---------- */
+function spielerDialog(p) {
+  const s = st.spieler[p];
+  const meine = Object.keys(st.besitz).map(Number).filter(i => st.besitz[i].o === p).sort((a, b) => a - b);
+  const frei = `<div class="bkarte" style="--g:#FFD54A"><div class="bk-bar"></div><div class="bk-bild">${bild('🎫')}</div><div class="bk-name">Raus aus dem Gefängnis</div></div>`.repeat(s.frei.length);
+  const karten = meine.map(i => besitzKarte(i)).join('') + frei;
+  // Den Namen ändern darf, wem der Spieler gehört (online: nur das eigene Gerät)
+  const darf = !s.ki && st.status === 'laeuft' && (modus === 'lokal' || s.g === Sync.geraet);
+  dialog(`<div class="sp-gross" style="--f:${s.f}"><span class="fig">${bild(s.fig)}</span><div><h2>${esc(s.n)}${s.ki ? ' ' + bild('🤖') : ''}</h2><div>${geld(s.geld)}</div></div></div>
+    ${karten ? `<div class="bkarten">${karten}</div>` : '<p>Hat noch nichts gekauft.</p>'}`,
+    [...(darf ? [['✏️ Name ändern', 'name', 'zweit']] : []), ['Schließen', null]]).then(w => { if (w === 'name') nameAendern(p); });
+}
+$('#spielerliste').onclick = e => { const el = e.target.closest('.sp'); if (el && st) { Ton.klick(); spielerDialog(+el.dataset.p); } };
+
+// Namen ändern – im Spiel und in der Warteliste (online: für alle Geräte)
+async function nameAendern(p, lobbyStand = null) {
+  const alt = (lobbyStand || st).spieler[p].n;
+  const w = await dialog(`<h2>✏️ Neuer Name</h2><input id="d-name" maxlength="14" value="${esc(alt)}" style="width:100%">`, [['Abbrechen', null, 'zweit'], ['Speichern', 'ok']]);
+  if (w !== 'ok') return;
+  const n = $('#d-name').value.trim(); if (!n || n === alt) return;
+  const aendere = s => { s.spieler[p].n = n; if (s.status === 'laeuft') { s.ablauf = []; s.nr++; log(s, `✏️ ${alt} heißt jetzt ${n}.`); } return s; };
+  if (modus === 'lokal') return standZeigen(aendere(kopie(st)));
+  const id = (lobbyStand || st).id;
+  try {
+    const neu = await Sync.aendern(s => s && s.id === id && s.spieler[p] && ['wartet', 'laeuft'].includes(s.status) ? aendere(s) : null);
+    lobbyJson = '';
+    if (neu && neu.status === 'laeuft' && st && st.id === id) standZeigen(neu); else Online.tick();
+  } catch (e) { toastZeigen('⚠', e.message); }
 }
 
 /* ---------- Dialog ---------- */
@@ -1648,8 +1744,10 @@ function spielStarten(neu) {
 $('#spielmenue').onclick = async () => {
   Ton.klick();
   const w = await dialog('<h2>☰ Menü</h2><p class="klein">Das Spiel wird gespeichert – du kannst später weiterspielen.</p>',
-    [['🏆 Spiel jetzt auswerten', 'aus', 'zweit'], ['📖 Regeln', 'regeln', 'zweit'], ['⬅ Zum Menü', 'menue', 'zweit'], ['Weiterspielen', 'weiter']]);
+    [['🏆 Spiel jetzt auswerten', 'aus', 'zweit'], ['📖 Regeln', 'regeln', 'zweit'], ['Ansicht: ' + ANSICHTEN[ansicht], 'ansicht', 'zweit'], ['⬅ Zum Menü', 'menue', 'zweit'], ['Weiterspielen', 'weiter']]);
   if (w === 'menue') return menue();
+  // Ansicht weiterschalten: flach → Klötzchen → geneigt → beides
+  if (w === 'ansicht') { ansicht = (ansicht + 1) % ANSICHTEN.length; speicher.schreib('sb-ansicht', ansicht); layout(); return $('#spielmenue').onclick(); }
   if (w === 'regeln') { regelnAusSpiel = true; return zeige('s-regeln'); }
   if (w === 'aus' && st && st.status === 'laeuft') {
     if (!await dialog('<h2>Spiel beenden?</h2><p>Wer am meisten besitzt (Geld + Straßen + Häuser), gewinnt.</p>', [['Nein', false, 'zweit'], ['Auswerten', true]])) return;
@@ -1815,12 +1913,14 @@ const Sync = {
     if (res.status === 304) return this.stand;
     if (res.status === 404) { this.sha = this.etag = this.stand = null; return null; }
     if (res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
+    this.pausePruefen(res);
     if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
     const j = await res.json();
     const neu = await this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
-    // GitHub schickt kurz nach dem Speichern manchmal noch den ALTEN Stand.
-    // Den erkennen wir am Zähler rev und behalten dann lieber unseren eigenen.
-    if (this.stand && Date.now() - this.geschrieben < 30000 && (neu.rev || 0) < (this.stand.rev || 0)) return this.stand;
+    // GitHub schickt manchmal noch einen ALTEN Stand (auch Stände der anderen Geräte!).
+    // Den erkennen wir am Zähler rev und behalten dann lieber den neueren, den wir schon kennen –
+    // sonst würde z. B. ein beigetretenes Gerät wieder als „frei“ erscheinen.
+    if (this.stand && (neu.rev || 0) < (this.stand.rev || 0)) return this.stand;
     this.sha = j.sha; this.stand = neu;
     this.etag = res.headers.get('ETag');
     return this.stand;
@@ -1832,10 +1932,22 @@ const Sync = {
     if (sha) body.sha = sha;
     const res = await fetch(this.url(), { method: 'PUT', headers: { ...this.kopf(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.status === 409 || res.status === 422) return false;          // jemand war schneller
+    this.pausePruefen(res);
     if (res.status === 403 || res.status === 404) throw new Error('Token darf nicht schreiben (Contents: Read and write?).');
     if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
     const j = await res.json(); this.sha = j.content.sha; this.stand = stand; this.etag = null; this.geschrieben = Date.now();
     return true;
+  },
+  // Alle Geräte teilen sich EINEN Token. Bei 3 Geräten sagt GitHub schnell „zu viele Anfragen“ –
+  // dann sagen wir klar, wie lange die Pause dauert (statt „Token darf nicht schreiben“).
+  pause: 0,
+  pausePruefen(res) {
+    if (res.status !== 403 && res.status !== 429) return;
+    const rest = res.headers.get('x-ratelimit-remaining'), reset = +res.headers.get('x-ratelimit-reset'), spaeter = +res.headers.get('retry-after');
+    if (rest !== '0' && !spaeter && res.status !== 429) return;
+    this.pause = spaeter ? Date.now() + spaeter * 1000 : reset ? reset * 1000 : Date.now() + 60000;
+    const uhr = new Date(this.pause).toTimeString().slice(0, 5);
+    throw new Error(`GitHub macht Pause (zu viele Anfragen von allen Geräten) – weiter um ${uhr} Uhr.`);
   },
   // Ändern = neu lesen, Funktion anwenden, zurückschreiben. Bei Gleichzeitigkeit: nochmal.
   async aendern(fn) {
@@ -1857,8 +1969,13 @@ const Online = {
   timer: null, tickt: false,
   start() { this.stop(); this.timer = setInterval(() => this.tick(), 2000); this.tick(); },
   stop() { clearInterval(this.timer); this.timer = null; },
+  zaehler: 0,
   async tick() {
     if (this.tickt || Sync.aendert || document.hidden || !this.timer) return;
+    if (!Lokal.an && Date.now() < Sync.pause) return;          // GitHub-Pause abwarten
+    // Ab 3 Geräten nur alle 4 s fragen (alle teilen sich einen Token)
+    const g = (Sync.stand && Sync.stand.geraete || []).length;
+    if (!Lokal.an && g >= 3 && this.zaehler++ % 2) return;
     this.tickt = true;
     try { this.empfang(await Sync.lesen()); verbindungAnzeigen(''); }
     catch (e) { verbindungAnzeigen(e.message, e); }
@@ -1910,6 +2027,7 @@ function lobbyZeigen(s) {
     const liste = s.spieler.map((p, k) => `<div class="verw"><span class="nm" style="--g:${p.f}">${bild(p.fig)} ${esc(p.n)}</span><span>${p.ki ? '🤖' : p.g === ich ? '📱 dieses Gerät' : p.g ? '✅ beigetreten' : '⏳ frei'}</span></div>`).join('');
     const frei = s.spieler.map((p, k) => (!p.ki && !p.g) ? k : -1).filter(k => k >= 0);
     const knoepfe = frei.map(k => [`🙋 ICH SPIELE ${s.spieler[k].fig} ${esc(s.spieler[k].n)}`, () => platzNehmen(k)]);
+    s.spieler.forEach((p, k) => { if (p.g === ich) knoepfe.push([`✏️ NAME ÄNDERN: ${p.fig} ${esc(p.n)}`, () => nameAendern(k, s), 'zweit']); });
     if (s.geraete[0] === ich) knoepfe.push([frei.length ? `▶ STARTEN (${frei.length} Platz/Plätze noch frei)` : "▶ LOS GEHT'S", () => onlineStarten(), frei.length ? 'zweit' : ''], ['✕ SPIEL ABBRECHEN', onlineAbbrechen, 'zweit']);
     return lobby(`<b>Spiel wartet auf Mitspieler</b>${liste}<p class="klein">Jedes Gerät tippt auf „Ich spiele …“. Ein Gerät darf auch mehrere Spieler übernehmen.</p>`, knoepfe);
   }
