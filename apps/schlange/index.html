@@ -67,7 +67,7 @@
       <div class="zeile">Gegner-Schlangen</div>
       <div class="wahl" id="gegner"></div>
       <button class="los" id="start">▶ Los!</button>
-      <div id="hilfe">Wischen oder Pfeiltasten. Iss Obst und werde lang! Die größere Schlange frisst die kleinere – <b style="color:#7CFF8A">grüne</b> Zahl = fressbar, <b style="color:#FF8A7C">rote</b> Zahl = Vorsicht!</div>
+      <div id="hilfe">Wischen oder Pfeiltasten. Iss Obst und werde lang! Die größere Schlange frisst die kleinere. Triffst du einen Gegner <b>am Kopf</b>, frisst du ihn immer! <b style="color:#7CFF8A">grüne</b> Zahl = fressbar, <b style="color:#FF8A7C">rote</b> Zahl = Vorsicht!</div>
     </div>
   </div>
 
@@ -84,7 +84,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.4';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -263,8 +263,8 @@ function botDenkt(b, wer) {
     const da = wer.get(feldNr(nx, ny));
     if (da === b) wertung -= 1000;                                 // nicht in sich selbst beißen
     else if (da) wertung += da.koerper.length < len ? 40 : -1000;  // kleinere fressen, größere meiden
-    for (const s of schlangen) {                                   // Abstand halten von großen Köpfen
-      if (s === b || !s.lebt || s.koerper.length < len) continue;
+    for (const s of schlangen) {                                   // Abstand halten von großen Köpfen – und von deinem!
+      if (s === b || !s.lebt || (s.koerper.length < len && s !== ich)) continue;
       const d = Math.abs(abst(s.koerper[0].x - nx, WB)) + Math.abs(abst(s.koerper[0].y - ny, WH));
       if (d <= 2) wertung -= (3 - d) * 60;
     }
@@ -324,8 +324,17 @@ function schritt() {
     if (s === ich) gewinn(wert, e, wert > 1 ? '#FFD54A' : '#FF5A4A');
     if (!e.rest) legeEssen(zufallsObst());          // Reste von Schlangen wachsen nicht nach
   }
+  // Kopftreffer (Superkraft, nur für dich): Triffst du mit deinem Kopf den Kopf
+  // einer Gegnerschlange, frisst du sie – egal wie groß sie ist!
+  // (Feld 0 = Kopf, Feld 1 = da war der Kopf gerade noch – zählt auch, sonst wäre es zu schwer.)
+  if (ich.lebt) {
+    const k = ich.koerper[0];
+    for (const b of schlangen) {
+      if (b === ich || !b.lebt) continue;
+      if (b.koerper.slice(0, 2).some(t => t.x === k.x && t.y === k.y)) { fressen(ich, b, true); break; }
+    }
+  }
   // Zusammenstöße: Wer größer ist, frisst den anderen!
-  wer = karte();
   for (const a of schlangen) {
     if (!a.lebt) continue;
     const k = a.koerper[0];
@@ -347,12 +356,13 @@ function schritt() {
   takt = Math.max(70, TEMPOS[einst.tempo] - ich.koerper.length * 0.6);   // je länger, desto schneller
 }
 
-function fressen(gross, klein) {
+function fressen(gross, klein, kopftreffer) {
   klein.lebt = false;
   gross.wachsen += klein.koerper.length;
   const k = klein.koerper[0];
   spritzer(k.x, k.y, FARBEN[klein.farbe][0], 34);
   if (gross === ich) { gewinn(klein.koerper.length, k, FARBEN[klein.farbe][0]); ton(300, 0.15, 'square', 0.1); setTimeout(() => ton(900, 0.2, 'triangle', 0.12), 100); }
+  if (kopftreffer) { texte.push({ x: k.x + 0.5, y: k.y - 0.6, t: '💥 KOPFTREFFER!', leben: 1.4 }); wackeln = 8; spritzer(k.x, k.y, '#FFE14D', 30); }
   if (klein === ich) ende('Eine größere Schlange hat dich gefressen!');
 }
 // Ohne Fresser zerfällt die Schlange zu Obst
