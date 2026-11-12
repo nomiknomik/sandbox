@@ -74,6 +74,7 @@
   .feld.links{flex-direction:row-reverse}.feld.rechts{flex-direction:row}
   .bar{flex:0 0 24%;display:flex;align-items:center;justify-content:center;gap:1px;border:.5px solid var(--linie)}
   .links .bar,.rechts .bar{flex-direction:column}
+  .links .bar .haus,.rechts .bar .haus{margin:calc(var(--u)*-.03) 0}
   .inhalt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
           padding:calc(var(--u)*.05) 1px;font-size:calc(var(--u)*.17);line-height:1.05;min-width:0}
   .inhalt b{font-weight:600;word-break:break-word;hyphens:auto;-webkit-hyphens:auto}
@@ -89,8 +90,8 @@
   .feld .besitzer{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 calc(var(--u)*.07) var(--o)}
   .feld.hyp .inhalt{opacity:.35}
   .feld.hyp::after{content:'H';position:absolute;right:2px;bottom:1px;font-size:calc(var(--u)*.22);font-weight:800;color:#D33B3B}
-  .haus{width:calc(var(--u)*.22);height:calc(var(--u)*.22);background:url(bilder/haus.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
-  .hotel{width:calc(var(--u)*.36);height:calc(var(--u)*.36);background:url(bilder/hotel.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
+  .haus{width:calc(var(--u)*.3);height:calc(var(--u)*.3);margin:0 calc(var(--u)*-.03);background:url(bilder/haus.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
+  .hotel{width:calc(var(--u)*.5);height:calc(var(--u)*.5);background:url(bilder/hotel.webp) center/contain no-repeat;filter:drop-shadow(0 1px 1px #0008)}
   img.bild{height:1.25em;width:auto;vertical-align:middle;-webkit-user-select:none;user-select:none}
   .figur img.bild{height:96%;filter:drop-shadow(0 1px 1px #0007)}
   .feld.blink{animation:blink .9s ease 2}
@@ -137,7 +138,7 @@
   .figur.dran{z-index:4;box-shadow:0 0 0 3px #FFD54A,0 2px 6px #0007}
   .figur.weg{display:none}
 
-  /* 3D-Ansicht (☰ → Ansicht): „kloetze“ = dicke Felder, „geneigt“ = Brett gekippt wie auf dem Tisch */
+  /* 3D-Ansicht (☰ → Ansicht): „kloetze“ = dicke Felder */
   .kloetze #brett{border-color:#1E2B22;box-shadow:0 calc(var(--u)*.2) 0 #1E2B22,0 calc(var(--u)*.32) 22px #0007}
   .kloetze .feld{box-shadow:inset calc(var(--u)*.035) calc(var(--u)*.035) 0 #fffa,inset calc(var(--u)*-.045) calc(var(--u)*-.06) 0 #0003}
   .kloetze .bar{box-shadow:inset 0 calc(var(--u)*.035) 0 #fff7,inset 0 calc(var(--u)*-.05) 0 #0004}
@@ -145,9 +146,6 @@
   .kloetze .haus,.kloetze .hotel{filter:drop-shadow(calc(var(--u)*.02) calc(var(--u)*.04) 0 #0007) drop-shadow(0 2px 2px #0005)}
   .kloetze .figur{box-shadow:0 calc(var(--u)*.07) 0 #0007,0 calc(var(--u)*.12) 6px #0006}
   .kloetze #mitte{box-shadow:inset 0 calc(var(--u)*.08) calc(var(--u)*.2) #0002}
-  #spielflaeche.geneigt{perspective:calc(var(--u)*30)}
-  .geneigt #brett{transform:rotateX(30deg);transform-style:preserve-3d;margin-top:calc(var(--u)*-.6);margin-bottom:calc(var(--u)*-.4);--steh:-30deg}
-  .geneigt .figur{transform-origin:50% 90%}
 
   /* Seitenleiste: Spieler + Verlauf */
   #seite{flex:1;min-width:250px;max-width:380px;display:flex;flex-direction:column;gap:8px;height:100%;overflow:auto}
@@ -233,11 +231,12 @@
   /* Besitz-Karten mit Bild (Spieler-Ansicht, Tauschen) */
   .bkarten{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;margin:6px 0}
   .bkarte{background:#fff;color:#1B2A22;border-radius:10px;box-shadow:0 2px 6px #0003;overflow:hidden;text-align:center;position:relative}
-  .bk-bar{background:var(--g);height:20px;display:flex;align-items:center;justify-content:center;gap:1px}
-  .bk-bar .haus{width:16px;height:16px}.bk-bar .hotel{width:20px;height:20px}
+  .bk-bar{background:var(--g);height:26px;display:flex;align-items:center;justify-content:center;gap:1px}
+  .bk-bar .haus{width:22px;height:22px;margin:0 -2px}.bk-bar .hotel{width:28px;height:28px}
   .bk-bild img.bild{height:50px;display:block;margin:6px auto 2px}
   .bk-name{font-size:12px;font-weight:700;padding:0 3px 6px;line-height:1.1}
   .bkarte.hyp .bk-bild{opacity:.35}
+  .bk-wert{font-size:11px;line-height:1.25;padding:0 2px 5px;color:#4A5A50;font-variant-numeric:tabular-nums}.bk-wert b{color:#1B2A22}
   .bk-hyp{color:#D33B3B;font-size:11px;font-weight:800;margin-top:-4px;padding-bottom:4px}
   .bkarte.wahl{cursor:pointer;opacity:.6;transition:transform .15s}
   .bkarte.wahl.an{opacity:1;outline:3px solid #FFD54A;transform:translateY(-3px)}
@@ -408,8 +407,8 @@
       </ul>
       <h3>Miete</h3><ul>
         <li>Alle Straßen einer Farbe = doppelte Miete. Dann darfst du Häuser bauen – <b>gleichmäßig</b> (erst überall eins, dann das zweite …). 4 Häuser → Hotel.</li>
-        <li>Bahnhöfe: 25 / 50 / 100 / 200, je nachdem wie viele man hat.</li>
-        <li>Werke: 4× die Augen (beide Werke: 10×).</li>
+        <li>Bahnhöfe (🚌 Busbahnhof, ⚓ Hafen, ✈️ Flughafen, 🚡 Seilbahn): 25 / 50 / 100 / 200, je nachdem wie viele man hat.</li>
+        <li>Werke (⚡ Kraftwerk, 💧 Wasserwerk): Miete = gewürfelte Zahl (die Augen) × 4. Hast du beide Werke: × 10. Beispiel: 8 gewürfelt → 32 🪙 (beide: 80 🪙).</li>
       </ul>
       <h3>Gefängnis</h3><p>Raus kommst du mit 50 🪙, mit der Raus-Karte oder mit einem Pasch. Nach 3 Versuchen ohne Pasch zahlst du 50 und gehst los. Miete kassieren darfst du auch im Gefängnis.</p>
       <h3>Geld knapp?</h3><p>Häuser zum halben Preis verkaufen oder eine Straße mit <b>Hypothek</b> belasten (halber Kaufpreis). Zurückkaufen kostet 10 % mehr. Auf Hypothek-Feldern gibt es keine Miete. Kannst du gar nicht zahlen, bist du pleite.</p>
@@ -428,7 +427,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -560,7 +559,7 @@ const KARTEN = {
     { x: '🚌 Fahr zum Busbahnhof! (Über START? +200)', a: 'geh', z: 5 },
     { x: '🚂 Ab zum nächsten Bahnhof! Gehört er jemandem: doppelte Miete.', a: 'bahn' },
     { x: '🚂 Ab zum nächsten Bahnhof! Gehört er jemandem: doppelte Miete.', a: 'bahn' },
-    { x: '⚡ Ab zum nächsten Werk! Gehört es jemandem: 10× die Würfel-Augen zahlen.', a: 'werk' },
+    { x: '⚡ Ab zum nächsten Werk! Gehört es jemandem: Nochmal würfeln und die Zahl mal 10 zahlen (7 gewürfelt = 70 🪙).', a: 'werk' },
     { x: '💡 Du hast etwas erfunden! +50', a: 'geld', b: 50 },
     { x: '🎫 RAUS-AUS-DEM-GEFÄNGNIS-Karte! Heb sie gut auf.', a: 'frei' },
     { x: '🙃 Ups, falsch abgebogen! 3 Felder zurück.', a: 'zurueck' },
@@ -722,7 +721,8 @@ function landen(st, p, augen, extra) {
     if (b.hyp) { log(st, `${f.n} hat eine Hypothek – keine Miete.`); return; }
     if (extra === 'werk10') augen = 2 + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6);
     const m = miete(st, i, augen, extra);
-    log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${fName(i)}).`);
+    const rechnung = f.t === 'w' ? ` – 🎲 ${augen} × ${m / augen}` : '';   // Werk: Würfel-Zahl mal 4 oder 10
+    log(st, `${spName(st, p)} zahlt ${geld(m)} Miete an ${spName(st, b.o)} (${fName(i)}${rechnung}).`);
     zahle(st, p, m, b.o, 'Miete für ' + f.n);
     toast(st, '🪙', `${spName(st, p)} zahlt ${m} 🪙 Miete an ${spName(st, b.o)}`);
     return;
@@ -926,6 +926,16 @@ function anwenden(st, a) {
         st.handel = { von: p, an: q, gib: g, nimm: n, zurueck: st.phase }; st.phase = 'handel';
         log(st, `${spName(st, p)} macht ${spName(st, q)} ein Angebot.`); return true;
       }
+      case 'gegen': {
+        const H = st.handel;
+        if (st.phase !== 'handel' || p !== H.an) return false;
+        const q = H.von, o = st.spieler[q], g = a.gib, n = a.nimm;
+        if (!g.f.every(i => handelbar(st, i, p)) || !n.f.every(i => handelbar(st, i, q))) return false;
+        if (g.g < 0 || n.g < 0 || g.g > s.geld || n.g > o.geld || g.k > s.frei.length || n.k > o.frei.length) return false;
+        if (!g.f.length && !n.f.length && !g.g && !n.g && !g.k && !n.k) return false;
+        st.handel = { von: p, an: q, gib: g, nimm: n, zurueck: H.zurueck };
+        log(st, `🔁 ${spName(st, p)} macht ein Gegenangebot.`); return true;
+      }
       case 'handelJa': case 'handelNein': case 'handelWeg': {
         const H = st.handel;
         if (st.phase !== 'handel' || (a.t === 'handelWeg' ? p !== H.von : p !== H.an)) return false;
@@ -1099,20 +1109,16 @@ function augenHTML(z) {
 }
 
 // Größe: Brett so groß wie möglich, Seitenleiste daneben (quer) oder darunter (hoch)
-// 3D-Ansicht: 0 = flach, 1 = Klötzchen, 2 = geneigt, 3 = beides (dieses Gerät merkt es sich)
-const ANSICHTEN = ['⬜ Flach', '🧊 Klötzchen', '📐 Geneigt', '🧊📐 Beides'];
-let ansicht = speicher.lies('sb-ansicht') ?? 3;
-function ansichtSetzen() {
-  $('#spielflaeche').classList.toggle('kloetze', ansicht === 1 || ansicht === 3);
-  $('#spielflaeche').classList.toggle('geneigt', ansicht >= 2);
-}
+// 3D-Ansicht: 0 = flach, 1 = Klötzchen (dieses Gerät merkt es sich). Das gekippte Brett gibt es nicht mehr.
+const ANSICHTEN = ['⬜ Flach', '🧊 Klötzchen'];
+let ansicht = speicher.lies('sb-ansicht') === 0 ? 0 : 1;
+function ansichtSetzen() { $('#spielflaeche').classList.toggle('kloetze', ansicht === 1); }
 function layout() {
   ansichtSetzen();
   const W = innerWidth - 16, H = innerHeight - 56 - 16;
   const quer = W > H * 1.25;
   $('#spielflaeche').classList.toggle('hoch', !quer);
-  // Geneigt wirkt das Brett unten breiter – darum etwas kleiner
-  const groesse = Math.floor((quer ? Math.min(H, W - 260) : Math.min(W, H - 150)) * (ansicht >= 2 ? (quer ? .86 : .95) : 1));
+  const groesse = Math.floor(quer ? Math.min(H, W - 260) : Math.min(W, H - 150));
   const brett = $('#brett');
   brett.style.width = brett.style.height = groesse + 'px';
   document.documentElement.style.setProperty('--u', (groesse / 12) + 'px');
@@ -1138,7 +1144,7 @@ function figurenSetzen(sanft = true) {
     const pos = anzeige.pos[p] ?? s.pos, gleich = st.spieler.map((t, q) => q).filter(q => !st.spieler[q].pleite && (anzeige.pos[q] ?? st.spieler[q].pos) === pos);
     const [x, y] = figurPunkt(pos, gleich.indexOf(p), gleich.length);
     if (!sanft) el.style.transition = 'none';
-    el.style.transform = `translate(${x}px,${y}px) rotateX(var(--steh,0deg))`;
+    el.style.transform = `translate(${x}px,${y}px)`;
     if (!sanft) { el.offsetWidth; el.style.transition = ''; }
   });
 }
@@ -1296,7 +1302,7 @@ async function standAbspielen(neu) {
   figurenSetzen();
   beschaeftigt = false;
   zeichneAlles();
-  if (modus === 'lokal' && st.status !== 'wartet') speicher.schreib('sb-spiel', st);
+  if (modus === 'lokal' && st.status !== 'wartet') spielMerken(st);
   if (st.status === 'ende') return endeZeigen();
   kiPruefen();
 }
@@ -1405,7 +1411,7 @@ function zeichneKnoepfe() {
       break;
     case 'handel': {
       const H = st.handel;
-      if (p === H.an) { knopf('✅ Annehmen', { t: 'handelJa' }); knopf('❌ Ablehnen', { t: 'handelNein' }, { kl: 'zweit' }); }
+      if (p === H.an) { knopf('✅ Annehmen', { t: 'handelJa' }); knopf('🔁 Gegenangebot', () => handelDialog(H.von, { gib: kopie(H.nimm), nimm: kopie(H.gib) }, true), { kl: 'zweit' }); knopf('❌ Ablehnen', { t: 'handelNein' }, { kl: 'zweit' }); }
       break;
     }
   }
@@ -1478,12 +1484,14 @@ function feldInfo(i) {
   let tab = '';
   if (f.t === 's') tab = [['Miete', f.m[0]], ['Ganze Farbe', f.m[0] * 2], ['1 Haus', f.m[1]], ['2 Häuser', f.m[2]], ['3 Häuser', f.m[3]], ['4 Häuser', f.m[4]], ['Hotel', f.m[5]], ['Haus kostet', GRUPPEN[f.g][1]]]
     .map(([a, z]) => `<tr><td>${a}</td><td>${geld(z)}</td></tr>`).join('');
-  else if (f.t === 'b') tab = [1, 2, 3, 4].map(n => `<tr><td>${n} Bahnhof${n > 1 ? 'e' : ''}</td><td>${geld(25 * 2 ** (n - 1))}</td></tr>`).join('');
-  else tab = '<tr><td>1 Werk</td><td>4× Augen</td></tr><tr><td>beide Werke</td><td>10× Augen</td></tr>';
+  const erkl = f.t === 'b' ? '<p class="klein">Ein Bahnhof wie Bus, Hafen, Flughafen und Seilbahn: Je mehr davon du hast, desto mehr Miete zahlt, wer hier landet.</p>'
+    : f.t === 'w' ? '<p class="klein">„Augen“ = die Zahl, die man gewürfelt hat. Wer hier landet, zahlt diese Zahl × 4 (hast du beide Werke: × 10).<br>Beispiel: 8 gewürfelt → 32 🪙 (beide Werke: 80 🪙).</p>' : '';
+  if (f.t === 'b') tab = [1, 2, 3, 4].map(n => `<tr><td>${n} Bahnhof${n > 1 ? 'e' : ''}</td><td>${geld(25 * 2 ** (n - 1))}</td></tr>`).join('');
+  else if (f.t === 'w') tab = '<tr><td>1 Werk</td><td>4× Augen</td></tr><tr><td>beide Werke</td><td>10× Augen</td></tr>';
   tab += `<tr><td>Hypothek</td><td>${geld(f.p / 2)}</td></tr>`;
   const html = `<div class="titelkarte" style="background:${farbe};color:${['braun', 'rot', 'gruen', 'blau', 'pink'].includes(f.g) ? '#fff' : '#1B2A22'}">${f.e || f.i || ''} ${f.n}</div>
     <p>Preis: <b>${geld(f.p)}</b> · ${b ? 'Besitzer: <b>' + esc(spName(st, b.o)) + '</b>' + (b.hyp ? ' (Hypothek)' : '') : 'gehört der Bank'}</p>
-    <table class="mieten">${tab}</table>`;
+    ${erkl}<table class="mieten">${tab}</table>`;
   if (b && meins(b.o) && verwalten(st, b.o)) {
     dialog(html + '<div id="fi-knoepfe" class="reihe" style="margin-top:10px"></div>', [['Schließen', true, 'zweit']]);
     verwaltenKnoepfe($('#fi-knoepfe'), i, () => feldInfo(i));
@@ -1518,8 +1526,8 @@ function verwaltenDialog() {
 }
 
 /* ---------- Handeln ---------- */
-function handelDialog(an = null, auswahl = null) {
-  const p = st.dran, andere = aktive(st).filter(q => q !== p);
+function handelDialog(an = null, auswahl = null, gegen = false) {
+  const p = gegen ? st.handel.an : st.dran, andere = aktive(st).filter(q => q !== p);
   if (an === null) {
     if (andere.length === 1) return handelDialog(andere[0]);
     dialog('<h2>🤝 Mit wem tauschen?</h2>', [...andere.map(q => [spName(st, q), q]), ['Abbrechen', null, 'zweit']]).then(q => q !== null && q !== undefined && handelDialog(q));
@@ -1545,15 +1553,15 @@ function handelDialog(an = null, auswahl = null) {
   const summe = `<div class="w-summe"><div>➡️ ${der} bekommt von dir: ${gibt || '<b>nichts</b>'}</div>
     <div>⬅️ Du bekommst: ${kriegt || '<b class="rot">NICHTS</b>'}</div>
     ${gibt && !kriegt ? '<div class="w-warn">⚠️ Du bekommst nichts zurück – das wäre ein Geschenk!</div>' : ''}</div>`;
-  const a = { t: 'handel', p, an, gib: A.gib, nimm: A.nimm };
+  const a = gegen ? { t: 'gegen', p, gib: A.gib, nimm: A.nimm } : { t: 'handel', p, an, gib: A.gib, nimm: A.nimm };
   const geht = !!anwenden(kopie(st), a);
-  dialog(`<h2>🤝 Tauschen mit ${der}</h2><div class="waage">${seite(p, A.gib, 'gib')}<div class="w-pfeil">⇄</div>${seite(an, A.nimm, 'nimm')}</div>${summe}
+  dialog(`<h2>${gegen ? '🔁 Gegenangebot an' : '🤝 Tauschen mit'} ${der}</h2>${gegen ? '<p class="klein">Ändere Karten oder Geld – z. B. mehr 🪙 verlangen – und schick es zurück.</p>' : ''}<div class="waage">${seite(p, A.gib, 'gib')}<div class="w-pfeil">⇄</div>${seite(an, A.nimm, 'nimm')}</div>${summe}
     <p class="klein">Bebaute Farben kann man erst nach dem Verkauf der Häuser tauschen.</p>`, [['Abbrechen', false, 'zweit'], ['Angebot schicken', 'los']]).then(w => { if (w === 'los') tun(a); });
   if (!geht) $$('#dlg-knoepfe button')[1].disabled = true;
   const box = $('#dlg-inhalt');
-  box.querySelectorAll('.bkarte[data-i]').forEach(c => c.onclick = () => { const l = A[c.dataset.k], i = +c.dataset.i; l.f = l.f.includes(i) ? l.f.filter(x => x !== i) : [...l.f, i]; Ton.klick(); handelDialog(an, A); });
-  box.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const l = A[b.dataset.k], wer = b.dataset.k === 'gib' ? p : an; l.g = Math.max(0, Math.min(st.spieler[wer].geld, l.g + +b.dataset.g)); Ton.klick(); handelDialog(an, A); });
-  box.querySelectorAll('[data-karte]').forEach(c => c.onchange = () => { A[c.dataset.k].k = c.checked ? 1 : 0; handelDialog(an, A); });
+  box.querySelectorAll('.bkarte[data-i]').forEach(c => c.onclick = () => { const l = A[c.dataset.k], i = +c.dataset.i; l.f = l.f.includes(i) ? l.f.filter(x => x !== i) : [...l.f, i]; Ton.klick(); handelDialog(an, A, gegen); });
+  box.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const l = A[b.dataset.k], wer = b.dataset.k === 'gib' ? p : an; l.g = Math.max(0, Math.min(st.spieler[wer].geld, l.g + +b.dataset.g)); Ton.klick(); handelDialog(an, A, gegen); });
+  box.querySelectorAll('[data-karte]').forEach(c => c.onchange = () => { A[c.dataset.k].k = c.checked ? 1 : 0; handelDialog(an, A, gegen); });
 }
 
 /* ---------- Besitz-Karte mit großem Bild (Spieler-Ansicht und Tauschen) ---------- */
@@ -1561,7 +1569,14 @@ function besitzKarte(i, attr = '', kl = '') {
   const f = F[i], b = st.besitz[i], farbe = f.t === 's' ? GRUPPEN[f.g][0] : '#9AA5A0';
   const haeuser = !b || !b.h ? '' : b.h === 5 ? '<span class="hotel"></span>' : '<span class="haus"></span>'.repeat(b.h);
   return `<div class="bkarte ${kl} ${b && b.hyp ? 'hyp' : ''}" style="--g:${farbe}" ${attr}><div class="bk-bar">${haeuser}</div>
-    <div class="bk-bild">${bild(f.e || f.i || '')}</div><div class="bk-name">${f.n}</div>${b && b.hyp ? '<div class="bk-hyp">Hypothek</div>' : ''}</div>`;
+    <div class="bk-bild">${bild(f.e || f.i || '')}</div><div class="bk-name">${f.n}</div>${b && b.hyp ? '<div class="bk-hyp">Hypothek</div>' : ''}${kartenWert(i)}</div>`;
+}
+// Was ist die Karte wert? Kaufpreis (+ Häuser) und was man gerade an Miete bekommt
+function kartenWert(i) {
+  const f = F[i], b = st.besitz[i];
+  const wert = f.p + (b && f.t === 's' ? b.h * GRUPPEN[f.g][1] : 0);
+  const m = !b ? '' : b.hyp ? '0' : f.t === 'w' ? (WERKE.every(k => besitzer(st, k) === b.o) ? '🎲×10' : '🎲×4') : miete(st, i, 0);
+  return `<div class="bk-wert"><div>Wert <b>${wert}</b></div>${m !== '' ? `<div>Miete <b>${m}</b></div>` : ''}</div>`;
 }
 
 /* ---------- Spieler-Kachel antippen: alles groß zeigen, was er hat ---------- */
@@ -1625,16 +1640,51 @@ function endeZeigen() {
    MENÜ & NEUES SPIEL
    ===================================================================== */
 function zeige(id) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); $('#portal').hidden = id === 's-spiel'; if (id === 's-spiel') { layout(); } }
+/* ---------- Gespeicherte Spiele (ein Gerät): mehrere nebeneinander ---------- */
+// Jedes Spiel liegt unter seiner id. Fertige Spiele fliegen raus, höchstens 8 werden gemerkt.
+function gespeicherte() {
+  const l = speicher.lies('sb-spiele') || {};
+  const alt = speicher.lies('sb-spiel');                 // früher gab es nur einen Speicherplatz
+  if (alt && alt.status === 'laeuft' && !l[alt.id]) { l[alt.id] = { z: Date.now(), st: alt }; speicher.schreib('sb-spiele', l); }
+  if (alt) speicher.weg('sb-spiel');
+  return l;
+}
+function spielMerken(s) {
+  const l = gespeicherte();
+  if (s.status === 'laeuft') l[s.id] = { z: Date.now(), st: s }; else delete l[s.id];
+  Object.keys(l).sort((a, b) => l[b].z - l[a].z).slice(8).forEach(k => delete l[k]);
+  speicher.schreib('sb-spiele', l);
+}
+function spielWahl() {
+  const l = gespeicherte(), ids = Object.keys(l).sort((a, b) => l[b].z - l[a].z);
+  if (ids.length === 1) { modus = 'lokal'; return spielStarten(l[ids[0]].st); }
+  const zeile = (id, k) => {
+    const g = l[id].st, d = new Date(l[id].z);
+    const wer = g.spieler.map(p => `${bild(p.fig)} ${esc(p.n)}`).join(' · ');
+    return `<div class="verw"><span class="nm" style="--g:${g.spieler[g.dran].f}"><b>Spiel ${k + 1}</b> <span class="klein">Runde ${g.runde || 1} · ${d.toLocaleDateString('de-DE')} ${d.toTimeString().slice(0, 5)}</span><br>${wer}</span>
+      <button data-spiel="${id}">▶</button><button class="zweit" data-spielweg="${id}">🗑</button></div>`;
+  };
+  dialog(`<h2>💾 Gespeicherte Spiele</h2><p class="klein">Jedes Spiel speichert sich von selbst. Wähle, welches du weiterspielst.</p>${ids.map(zeile).join('')}`, [['Zurück', null, 'zweit']]);
+  $$('[data-spiel]').forEach(b => b.onclick = () => { Ton.klick(); $('#dlg').classList.remove('on'); dialogFertig && dialogFertig(null); modus = 'lokal'; spielStarten(l[b.dataset.spiel].st); });
+  $$('[data-spielweg]').forEach(b => b.onclick = async () => {
+    Ton.klick();
+    if (await dialog('<h2>Spiel löschen?</h2><p>Das gespeicherte Spiel ist dann weg.</p>', [['Nein', false, 'zweit'], ['Löschen', true, 'rot']])) {
+      const n = gespeicherte(); delete n[b.dataset.spielweg]; speicher.schreib('sb-spiele', n);
+    }
+    menue(); if (Object.keys(gespeicherte()).length) spielWahl();
+  });
+}
 function menue() {
   Online.stop(); clearTimeout(kiTimer);
-  const g = speicher.lies('sb-spiel');
-  $('#m-weiter').hidden = !(g && g.status === 'laeuft');
+  const n = Object.keys(gespeicherte()).length;
+  $('#m-weiter').hidden = !n;
+  $('#m-weiter').textContent = n > 1 ? `▶ WEITERSPIELEN (${n} SPIELE)` : '▶ WEITERSPIELEN';
   zeige('s-menue');
 }
 let regelnAusSpiel = false;
 $$('.zummenue').forEach(b => b.onclick = () => { Ton.klick(); if (regelnAusSpiel && b.closest('#s-regeln')) { regelnAusSpiel = false; return zeige('s-spiel'); } menue(); });
 $('#m-regeln').onclick = () => { Ton.klick(); zeige('s-regeln'); };
-$('#m-weiter').onclick = () => { Ton.klick(); modus = 'lokal'; spielStarten(speicher.lies('sb-spiel')); };
+$('#m-weiter').onclick = () => { Ton.klick(); spielWahl(); };
 
 const einstellung = speicher.lies('sb-einstellung') || { anzahl: 2, start: 1500, topf: false,
   spieler: FARBEN.map((f, k) => ({ n: 'Spieler ' + (k + 1), fig: FIGUREN[k], f, ki: k > 0 })) };
@@ -1744,9 +1794,10 @@ function spielStarten(neu) {
 $('#spielmenue').onclick = async () => {
   Ton.klick();
   const w = await dialog('<h2>☰ Menü</h2><p class="klein">Das Spiel wird gespeichert – du kannst später weiterspielen.</p>',
-    [['🏆 Spiel jetzt auswerten', 'aus', 'zweit'], ['📖 Regeln', 'regeln', 'zweit'], ['Ansicht: ' + ANSICHTEN[ansicht], 'ansicht', 'zweit'], ['⬅ Zum Menü', 'menue', 'zweit'], ['Weiterspielen', 'weiter']]);
+    [['🏆 Spiel jetzt auswerten', 'aus', 'zweit'], ['📖 Regeln', 'regeln', 'zweit'], ['Ansicht: ' + ANSICHTEN[ansicht], 'ansicht', 'zweit'], ...(modus === 'online' && !Lokal.an ? [[`🪑 Tisch ${Sync.tisch} · wechseln`, 'tisch', 'zweit']] : []), ['⬅ Zum Menü', 'menue', 'zweit'], ['Weiterspielen', 'weiter']]);
+  if (w === 'tisch') return tischDialog();
   if (w === 'menue') return menue();
-  // Ansicht weiterschalten: flach → Klötzchen → geneigt → beides
+  // Ansicht weiterschalten: flach ↔ Klötzchen
   if (w === 'ansicht') { ansicht = (ansicht + 1) % ANSICHTEN.length; speicher.schreib('sb-ansicht', ansicht); layout(); return $('#spielmenue').onclick(); }
   if (w === 'regeln') { regelnAusSpiel = true; return zeige('s-regeln'); }
   if (w === 'aus' && st && st.status === 'laeuft') {
@@ -1874,7 +1925,20 @@ const Sync = {
   // Zugang: eigener oder der aus den anderen Spielen (gleiche Adresse, gleicher Gerätespeicher)
   cfg: speicher.lies('sb-sync') || speicher.lies('mb-sync') || speicher.lies('wu-sync') || speicher.lies('tk-sync'),
   geraet: speicher.lies('sb-geraet') || (() => { const id = b64(crypto.getRandomValues(new Uint8Array(6))); speicher.schreib('sb-geraet', id); return id; })(),
-  pfad: 'stadtbaron/aktuell.json',
+  // Mehrere Spiele gleichzeitig: jeder „Tisch“ ist eine eigene Datei (Tisch 1 = die alte Datei)
+  tisch: speicher.lies('sb-tisch') || 1,
+  get pfad() { return this.pfadVon(this.tisch); },
+  pfadVon(n) { return n === 1 ? 'stadtbaron/aktuell.json' : `stadtbaron/tisch${n}.json`; },
+  tischWaehlen(n) { this.tisch = n; speicher.schreib('sb-tisch', n); this.etag = this.sha = this.stand = null; },
+  // Nur nachschauen, was auf einem Tisch liegt (ändert nichts am aktuellen Tisch)
+  async blick(n) {
+    const res = await fetch(`https://api.github.com/repos/${this.cfg.o}/${this.cfg.r}/contents/${this.pfadVon(n)}`, { headers: this.kopf(), cache: 'no-store' });
+    if (res.status === 404) return null;
+    this.pausePruefen(res);
+    if (!res.ok) throw new Error('GitHub antwortet ' + res.status);
+    const j = await res.json();
+    return this.entschluesseln(JSON.parse(atob(j.content.replace(/\s/g, ''))));
+  },
   etag: null, sha: null, stand: null, schluessel: null, geschrieben: 0,
 
   einladung() { const c = this.cfg; return ['MB1', c.o, c.r, c.t, c.k].join('~'); },
@@ -2005,7 +2069,7 @@ function lobby(text, knoepfe) {
   if (Lokal.an) {
     if (!Lokal.verbunden()) text += '<br>⚠ Nicht verbunden';
     knoepfe = [...knoepfe, ['📶 VERBINDUNG (QR-CODES)', () => Lokal.dialog(lokalLobby), 'zweit'], ['⏹ OHNE INTERNET BEENDEN', lokalBeenden, 'zweit']];
-  }
+  } else if (knoepfe.length) knoepfe = [...knoepfe, [`🪑 TISCH ${Sync.tisch} · ANDEREN TISCH WÄHLEN`, tischDialog, 'zweit']];
   $('#o-status').innerHTML = text;
   const box = $('#o-knoepfe'); box.innerHTML = '';
   knoepfe.forEach(([t, fn, kl]) => { const b = document.createElement('button'); b.innerHTML = t; if (kl) b.className = kl; b.onclick = () => { Ton.klick(); fn(); }; box.appendChild(b); });
@@ -2035,7 +2099,7 @@ function lobbyZeigen(s) {
   const dabei = s.spieler.some(p => p.g === ich) || s.geraete[0] === ich;
   if (dabei) { modus = 'online'; if (!$('#s-spiel').classList.contains('on') || !st || st.id !== s.id) { spielStarten(s); } return; }
   zeige('s-online');
-  lobby('Es läuft ein Spiel ohne dieses Gerät.', [['👀 ZUSCHAUEN', () => { modus = 'online'; spielStarten(s); }], ['🎲 NEUES SPIEL (beendet das alte)', () => neuZeigen(true), 'zweit']]);
+  lobby('Es läuft ein Spiel ohne dieses Gerät. Ihr könnt an einem anderen Tisch ein neues Spiel anfangen.', [['👀 ZUSCHAUEN', () => { modus = 'online'; spielStarten(s); }], ['🎲 NEUES SPIEL (beendet das alte)', () => neuZeigen(true), 'zweit']]);
 }
 
 async function onlineErstellen(spieler, opt) {
@@ -2091,12 +2155,34 @@ async function onlineAbbrechen() {
 function onlineMenue() {
   modus = 'online'; clearTimeout(kiTimer);
   if (Lokal.an) return lokalLobby();
-  $('#o-titel').textContent = 'Online · mehrere Geräte'; $('#o-github').hidden = false;
+  $('#o-titel').textContent = `Online · Tisch ${Sync.tisch}`; $('#o-github').hidden = false;
   if (!Sync.cfg) return setupZeigen();
   zeige('s-online'); lobbyJson = ''; lobby('Verbinde mit GitHub …', []);
   Online.start();
 }
 $('#m-online').onclick = () => { Ton.klick(); Lokal.an = false; onlineMenue(); };
+
+// Tische: mehrere Online-Spiele nebeneinander. Alle Geräte eines Spiels sitzen am selben Tisch.
+const TISCHE = 3;
+async function tischDialog() {
+  dialog('<h2>🪑 Tische</h2><p>Schaue nach …</p>', [['Zurück', null, 'zweit']]);
+  const zeilen = [];
+  for (let n = 1; n <= TISCHE; n++) {
+    let text;
+    try {
+      const s = await Sync.blick(n);
+      text = !s || !s.spieler || !s.spieler.length || s.status === 'ende' ? 'frei'
+        : (s.status === 'wartet' ? '⏳ wartet: ' : `🎲 Runde ${s.runde || 1}: `) + s.spieler.map(p => `${bild(p.fig)} ${esc(p.n)}`).join(' · ');
+    } catch (e) { text = '⚠ ' + esc(e.message); }
+    zeilen.push([n, text]);
+  }
+  if (!$('#dlg').classList.contains('on')) return;          // schon weggetippt
+  const w = await dialog(`<h2>🪑 Tische</h2><p class="klein">Jeder Tisch ist ein eigenes Spiel. Alle Geräte eines Spiels wählen denselben Tisch.</p>
+    ${zeilen.map(([n, t]) => `<div class="verw"><span class="nm" style="--g:${n === Sync.tisch ? '#2FA84F' : '#ccc'}"><b>Tisch ${n}</b>${n === Sync.tisch ? ' (hier)' : ''}<br><span class="klein">${t}</span></span></div>`).join('')}`,
+    [...zeilen.map(([n]) => [`Tisch ${n}`, n, n === Sync.tisch ? '' : 'zweit']), ['Zurück', null, 'zweit']]);
+  if (!w) return;
+  Online.stop(); Sync.tischWaehlen(w); st = null; onlineMenue();
+}
 
 /* ---------- Ohne Internet: Geräte per QR-Code direkt verbinden (lokal.js) ---------- */
 Lokal.einrichten({
