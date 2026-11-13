@@ -84,7 +84,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.4';
+const APP_VERSION = '0.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -266,7 +266,7 @@ function botDenkt(b, wer) {
     for (const s of schlangen) {                                   // Abstand halten von großen Köpfen – und von deinem!
       if (s === b || !s.lebt || (s.koerper.length < len && s !== ich)) continue;
       const d = Math.abs(abst(s.koerper[0].x - nx, WB)) + Math.abs(abst(s.koerper[0].y - ny, WH));
-      if (d <= 2) wertung -= (3 - d) * 60;
+      if (s === ich ? d <= 1 : d <= 2) wertung -= (s === ich ? 30 : (3 - d) * 60);   // vor dir laufen sie nur noch wenig weg
     }
     if (wertung > -500 && platz(nx, ny, wer, Math.min(len + 4, 50)) < Math.min(len + 4, 50)) wertung -= 400;   // Sackgasse?
     if (ziel) wertung -= (Math.abs(abst(ziel.x - nx, WB)) + Math.abs(abst(ziel.y - ny, WH))) * 3;
@@ -326,12 +326,15 @@ function schritt() {
   }
   // Kopftreffer (Superkraft, nur für dich): Triffst du mit deinem Kopf den Kopf
   // einer Gegnerschlange, frisst du sie – egal wie groß sie ist!
-  // (Feld 0 = Kopf, Feld 1 = da war der Kopf gerade noch – zählt auch, sonst wäre es zu schwer.)
+  // Leicht gemacht: Es zählt auch, wenn du die ersten 4 Felder (Kopf + Hals) triffst
+  // oder direkt neben dem Kopf landest (auch schräg).
   if (ich.lebt) {
     const k = ich.koerper[0];
     for (const b of schlangen) {
       if (b === ich || !b.lebt) continue;
-      if (b.koerper.slice(0, 2).some(t => t.x === k.x && t.y === k.y)) { fressen(ich, b, true); break; }
+      const bk = b.koerper[0];
+      const nebenKopf = Math.abs(abst(bk.x - k.x, WB)) <= 1 && Math.abs(abst(bk.y - k.y, WH)) <= 1;
+      if (nebenKopf || b.koerper.slice(0, 4).some(t => t.x === k.x && t.y === k.y)) { fressen(ich, b, true); break; }
     }
   }
   // Zusammenstöße: Wer größer ist, frisst den anderen!
