@@ -113,6 +113,18 @@ lernt man, wie zwei Geräte miteinander reden.
 - Karten: 4 Duell-Karten + Zufallskarten, alle um 180° gedreht gleich (fair).
 - Extras im Duell: Uhr friert den Gegner ein, Granate trifft ihn, Schaufel schützt die eigene Basis.
 
+## Танчики v7.2 – zu dritt über das Netz
+- Spieler 1 (Gastgeber) kann **zwei** Geräte verbinden: erst wie bisher eins, dann im
+  Menü „➕ Drittes Gerät“ (QR-Code oder Automatisch finden). Jedes Gerät = eine eigene
+  WebRTC-Verbindung (`Verbindung`), `Netz.liste` hält alle; Bilder gehen an alle.
+- Der Gastgeber sagt jedem Gast seinen Platz (`{k:'du', sp}`), damit der Gast weiß,
+  welcher Panzer seiner ist (ohne Pufferzeit fahren).
+- Automatisch finden für Gerät 3: Der Gastgeber legt ein Angebot mit `dazu: 1` hin.
+  Hat das neue Gerät schon selbst ein Angebot hingelegt, merkt es das und antwortet.
+- Zu dritt: Klassisch und Angriff (3. Startplatz links neben Spieler 1). Duell bleibt zu zweit.
+- Gerät weg: „Ohne Spieler X weiter“ (Panzer verschwindet, Platz bleibt frei, `weg`)
+  oder „Neu verbinden“ – auch mitten im Spiel kann ein Gerät (wieder) dazukommen.
+
 ## Танчики v5.6 – Angriff
 - Spielart „Angriff 🎯“ (allein oder zu zweit zusammen, auch über zwei Geräte):
   oben steht die rote Computer-Basis, die zerstört werden muss; die eigene unten schützen.

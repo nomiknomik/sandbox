@@ -130,12 +130,13 @@
 <div id="menue" class="schicht">
   <div class="innen">
     <h1 class="logo"><img src="logo.webp" alt="ТАНЧИКИ – Pixel Warfare" width="960" height="230"></h1>
-    <div id="m-netz" class="karte versteckt"><p class="ok" style="margin:0">✓ Verbunden mit dem anderen Gerät – du bist Spieler 1.</p></div>
+    <div id="m-netz" class="karte versteckt"><p class="ok" style="margin:0" id="m-netz-text">✓ Verbunden mit dem anderen Gerät – du bist Spieler 1.</p></div>
     <button class="gross blau versteckt" id="b-netzstart"><span class="sym">▶</span><span>SPIEL STARTEN<small id="k-netzstart">2 Spieler · zwei Geräte</small></span></button>
+    <button class="gross versteckt" id="b-dritter"><span class="sym">➕</span><span>DRITTES GERÄT<small>noch jemand spielt mit – Spieler 3</small></span></button>
     <button class="gross gruen normal-start versteckt" id="b-fortsetzen"><span class="sym">⏯</span><span>WEITERSPIELEN<small id="fortsetzen-text"></small></span></button>
     <button class="gross normal-start" data-start="solo"><span class="sym">▶</span><span>1 SPIELER<small id="k-solo">gegen die Computer-Panzer</small></span></button>
     <button class="gross gruen normal-start" data-start="lokal"><span class="sym">👥</span><span>2 SPIELER · EIN GERÄT<small id="k-lokal">zusammen auf dem iPad – klappt immer, auch im Flugzeug</small></span></button>
-    <button class="gross blau normal-start" id="b-netz"><span class="sym">📶</span><span>2 SPIELER · ZWEI GERÄTE<small>iPhone + iPad im selben WLAN / Hotspot</small></span></button>
+    <button class="gross blau normal-start" id="b-netz"><span class="sym">📶</span><span>2–3 SPIELER · MEHRERE GERÄTE<small>iPhone + iPad im selben WLAN / Hotspot</small></span></button>
     <button class="gross grau versteckt" id="b-trennen"><span class="sym">✕</span><span>Verbindung trennen</span></button>
     <div class="einst">
       <div class="reihe"><span>Spielart</span>
@@ -182,6 +183,7 @@
       <ul>
         <li><b>Touch:</b> Links irgendwo hinlegen und schieben = fahren. Rechts tippen/halten = schießen.</li>
         <li><b>2 Spieler auf einem Gerät:</b> Jeder hat seine Seite – unten fahren, oben schießen. Tipp: Auto-Feuer anschalten.</li>
+        <li><b>3 Spieler:</b> drei Geräte im selben WLAN. Spieler 1 verbindet erst ein Gerät, dann im Menü „➕ Drittes Gerät“. Zu dritt geht Klassisch und Angriff (Duell nur zu zweit).</li>
         <li>Spieler 1 = <b style="color:#9BD06A">olivgrün</b>, Spieler 2 = <b style="color:var(--cyan)">stahlblau</b> (in der klassischen Grafik gelb/grün).</li>
         <li><b>Gamecontroller</b> (per Bluetooth am iPad/iPhone): Steuerkreuz + A/B. Start = Pause.</li>
         <li><b>Tastatur:</b> Spieler 1: W A S D + Leertaste · Spieler 2: Pfeile + Enter · P = Pause</li>
@@ -218,14 +220,14 @@
 <!-- Netzwerk -->
 <div id="netz" class="schicht versteckt">
   <div class="innen">
-    <div class="titel" style="font-size:36px">ZWEI GERÄTE</div>
+    <div class="titel" style="font-size:36px">MEHRERE GERÄTE</div>
     <div id="n-wahl">
       <div class="karte" style="margin-bottom:10px"><p>Beide Geräte müssen im <b>selben WLAN</b> sein (oder eins macht einen Hotspot).</p></div>
       <div style="display:grid;gap:10px">
         <button class="gross blau" id="n-finden"><span class="sym">🔎</span><span>AUTOMATISCH FINDEN<small>auf beiden Geräten tippen – braucht kurz Internet (wie bei Würmer)</small></span></button>
         <div class="klein" style="margin:4px 0 -2px">– oder ohne Internet, mit QR-Code –</div>
         <button class="gross" id="n-wirt"><span class="sym">📡</span><span>SPIEL ERSTELLEN<small>dieses Gerät ist Spieler 1</small></span></button>
-        <button class="gross gruen" id="n-gast"><span class="sym">📷</span><span>MITSPIELEN<small>QR-Code vom anderen Gerät scannen – Spieler 2</small></span></button>
+        <button class="gross gruen" id="n-gast"><span class="sym">📷</span><span>MITSPIELEN<small>QR-Code vom Gerät von Spieler 1 scannen</small></span></button>
         <button class="gross grau" id="n-einfuegen-start"><span class="sym">📋</span><span>Code einfügen<small>falls die Kamera nicht geht</small></span></button>
         <button class="gross grau" id="n-einladung"><span class="sym">🔑</span><span>Einladung zeigen<small>ein neues Gerät fürs automatische Finden einrichten</small></span></button>
       </div>
@@ -280,7 +282,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '7.1';
+const APP_VERSION = '7.2';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -324,7 +326,7 @@ const FB = KX * 16, FH = KY * 16;              // Feld in Punkten: Breite, Höhe
 const W2D = FB + 48;                           // ganzes Bild in der flachen Grafik (Rand + Seitenleiste)
 const LEER = 0, ZIEGEL = 1, STAHL = 2, WASSER = 3, WALD = 4, EIS = 5;
 const BX = FB / 2 - 8, BY = FH - 16;           // da steht die Basis (unten in der Mitte)
-const START_SP = [[BX - 32, BY], [BX + 32, BY]];                                    // Startplätze Spieler 1 und 2
+const START_SP = [[BX - 32, BY], [BX + 32, BY], [BX - 64, BY]];                     // Startplätze Spieler 1, 2 und 3
 const START_GEG = [[BX, 0], [FB - 16, 0], [0, 0], [BX - 96, 0], [BX + 96, 0]];       // Startplätze der Gegner
 // Duell (gegeneinander): Spieler 2 hat oben eine eigene Basis – alles genau um 180° gedreht, damit es fair ist
 const BX2 = FB - 16 - BX, BY2 = 0;
@@ -421,6 +423,7 @@ const FARBEN = {
   oliv: ['#D8E890', '#7C9C20', '#3C4C08'],
   gold: ['#FCF0B0', '#D8B000', '#6C5000'],
   hgruen: ['#D0FCC8', '#58C868', '#1C6C2C'],
+  blau: ['#C8E0FC', '#3070E0', '#102C70'],
   boss: ['#E8C8FF', '#8A40C8', '#3A1060'],
 };
 function panzerBild(form, bild, pal) {
@@ -774,7 +777,7 @@ function levelStart(S) {
   const L = S.duell || S.angriff ? duellKarte(S.level) : levelHolen(S.level);
   Object.assign(S, { levelName: L.n, karte: basisVorbereiten(viertelZuKarte(L.v), S.duell, S.angriff), mapVoll: true, panzer: [], kugeln: [], effekte: [], bonus: null,
     basisKaputt: false, basis2Kaputt: false, basisHp: S.duell ? 1 : S.st.adler || 1, adlerMax: S.duell ? 1 : S.st.adler || 1, sieger: -1, bonusT: 420, schaufel: 0, schaufel2: 0, uhr: 0, liste: gegnerMix(S.level, S.st, S.duell || S.angriff), gegnerIdx: 0, spawnT: 30, spawnOrt: 0,
-    maxG: S.st.maxG + 1 + (S.spieler === 2 ? 1 : 0), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
+    maxG: S.st.maxG + 1 + (S.spieler - 1), spawnPause: Math.max(50, 190 - S.level * 4 - (S.spieler - 1) * 20 + S.st.pause),
     phase: 'intro', pt: 0, endeT: 0, vorbei: false, pause: false, boss: 0, bossWarn: 0, bossMax: 0 });
   S.md.length = 0; S.kv++;
   if (S.st.stahl && !S.duell) ring(S, STAHL);              // Leicht: Adler von Anfang an hinter Stahl
@@ -782,7 +785,7 @@ function levelStart(S) {
     p.kills = [0, 0, 0, 0]; p.warte = 0;
     if (S.duell) { p.leben = 2; p.aus = false; p.lvl = 0; }    // Duell: jede Runde fängt für beide gleich an (3 Panzer)
     if (p.aus) { p.aus = false; p.leben = 0; p.lvl = 0; }    // wer raus war, darf im neuen Level mit einem Panzer wieder mitmachen
-    spielerSetzen(S, i);
+    if (!p.weg) spielerSetzen(S, i);                        // weg = Gerät nicht mehr verbunden
   });
   S.ton.push('start');
   // Start-Level im Menü immer auf das zuletzt erreichte Level setzen (nicht erst bei Game Over)
@@ -1177,7 +1180,7 @@ function spielerTreffer(S, p) {
   p.tot = true; knall(S, 'g', p.x + 8, p.y + 8); S.ton.push('explosion');
   const sp = S.sp[p.sp]; sterneWeg(sp, S.st.sterne ?? 99);  // Leicht: Sterne bleiben, Normal: einer weg, Schwer: alle weg
   if (sp.leben > 0) { sp.leben--; sp.warte = 70; }
-  else { sp.aus = true; if (S.duell) rundeEnde(S, 1 - p.sp); else if (S.sp.every(s => s.aus) && S.phase === 'spiel') spielVorbei(S); }
+  else { sp.aus = true; if (S.duell) rundeEnde(S, 1 - p.sp); else if (S.sp.every(s => s.aus || s.weg) && S.phase === 'spiel') spielVorbei(S); }
 }
 function gegnerTreffer(S, p, von, schaden = 1) {
   if (p.tot) return;
@@ -1390,7 +1393,7 @@ function spielMalen(V) {
     let form, farbe;
     if (p.sp >= 0) {
       if (p.starr > 0 && blink(6)) continue;
-      form = panzerForm(V, p); farbe = p.sp ? 'gruen' : 'gelb';
+      form = panzerForm(V, p); farbe = ['gelb', 'gruen', 'blau'][p.sp] || 'gelb';
     } else {
       form = 'g' + Math.min(3, p.typ);
       farbe = p.typ === 4 || p.stark ? 'boss' : p.typ === 3 ? ['silber', 'hgruen', 'gold', 'oliv'][begrenze(p.hp, 1, 4) - 1] : 'silber';
@@ -1444,8 +1447,9 @@ function seitenleiste(V) {
   if (V.angriff) { schreibe(sg, 'ZIEL', PX, 20, '#000'); sg.drawImage(basisHin(V, 1) ? ADLER_KAPUTT : ADLER, PX + 2, 32); }
   if (V.duell) (V.siege || [0, 0]).forEach((n, i) => { schreibe(sg, (i + 1) + 'P', PX, 20 + i * 30, '#000'); schreibe(sg, n, PX + 4, 30 + i * 30, i ? '#1060A0' : '#A03000'); });
   for (let i = 0; i < rest; i++) sg.drawImage(MINI_GEGNER, PX + (i % 2) * 9, 16 + Math.floor(i / 2) * 8);
+  const drei = V.sp.length > 2;
   V.sp.forEach((s, i) => {
-    const y = 128 + i * 24;
+    const y = (drei ? 116 : 128) + i * (drei ? 21 : 24);
     schreibe(sg, (i + 1) + 'P', PX, y, '#000');
     sg.drawImage(MINI_SPIELER, PX, y + 9);
     schreibe(sg, s.aus ? '-' : Math.min(9, s.leben), PX + 10, y + 9, '#000');
@@ -1466,6 +1470,11 @@ function duellBilanz(V, text, s) {
   if (V.vorbei) text('SPIELER ' + (V.sieger + 1) + ' IST SIEGER!', 128, 184 * s, 6, '#FFE040');
   else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) text('TIPPEN = NÄCHSTE RUNDE', 128, 196 * s, 4, '#bbb');
 }
+// Wo stehen die Spalten der Punkte-Tabelle? (1–2 Spieler wie früher, 3 Spieler enger)
+function bilanzSpalten(n) {
+  if (n > 2) return { lab: [32, 108, 184], pkt: [92, 168, 244], xp: [52, 128, 204], bild: 4, linie: [24, 224] };
+  return { lab: [36, 160], pkt: [100, 224], xp: [56, 152], bild: 120, linie: [60, 136] };
+}
 function rechts(text, x, y, f) { schreibe(sg, text, x - String(text).length * 6 + 1, y, f); }
 function bilanzMalen(V) {
   sg.fillStyle = '#000'; sg.fillRect(0, 0, W2D, 224);
@@ -1473,19 +1482,16 @@ function bilanzMalen(V) {
   sg.save(); sg.translate((W2D - 256) / 2, 0);            // Tabelle in der Mitte
   schreibe(sg, 'REKORD', 92, 10, '#F83800'); rechts(Math.max(rekord, V.rekord || 0), 196, 10, '#F8B800');
   schreibe(sg, 'LEVEL ' + V.level, 128, 26, '#fff', true);
-  const zwei = V.sp.length > 1;
-  schreibe(sg, '1P', 36, 44, '#F83800'); rechts(V.sp[0].punkte, 100, 56, '#F8B800');
-  if (zwei) { schreibe(sg, '2P', 160, 44, '#F83800'); rechts(V.sp[1].punkte, 224, 56, '#F8B800'); }
+  const T = bilanzSpalten(V.sp.length);
+  V.sp.forEach((s, i) => { schreibe(sg, (i + 1) + 'P', T.lab[i], 44, '#F83800'); rechts(s.punkte, T.pkt[i], 56, '#F8B800'); });
   for (let t = 0; t < 4; t++) {
     const y = 78 + t * 22;
-    sg.drawImage(panzerSprite('g' + t, 'silber', 0, 0), 120, y - 4);
-    const zeile = (s, xp) => { rechts(s.kills[t] * GEGNER[t].pkt, xp, y, '#fff'); schreibe(sg, 'PKT', xp + 4, y, '#fff'); rechts(s.kills[t], xp + 40, y, '#fff'); };
-    zeile(V.sp[0], 56);
-    if (zwei) zeile(V.sp[1], 152);
+    sg.drawImage(panzerSprite('g' + t, 'silber', 0, 0), T.bild, y - 4);
+    V.sp.forEach((s, i) => { const xp = T.xp[i]; rechts(s.kills[t] * GEGNER[t].pkt, xp, y, '#fff'); schreibe(sg, 'PKT', xp + 4, y, '#fff'); rechts(s.kills[t], xp + 40, y, '#fff'); });
   }
-  sg.fillStyle = '#fff'; sg.fillRect(60, 166, 136, 2);
-  schreibe(sg, 'SUMME', 56, 174, '#fff'); rechts(V.sp[0].kills.reduce((a, b) => a + b, 0), 96, 174, '#fff');
-  if (zwei) rechts(V.sp[1].kills.reduce((a, b) => a + b, 0), 192, 174, '#fff');
+  sg.fillStyle = '#fff'; sg.fillRect(T.linie[0], 166, T.linie[1], 2);
+  if (V.sp.length < 3) schreibe(sg, 'SUMME', 56, 174, '#fff');
+  V.sp.forEach((s, i) => rechts(s.kills.reduce((a, b) => a + b, 0), T.xp[i] + 40, 174, '#fff'));
   if (V.vorbei) schreibe(sg, 'GAME OVER', 128, 196, '#F83800', true);
   else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) schreibe(sg, 'TIPPEN = WEITER', 128, 200, '#A8A8A8', true);
   sg.restore();
@@ -2446,7 +2452,7 @@ function hudZeichnen(c, V, W, H, k) {
   const zeit = String(Math.floor(sek / 60)).padStart(2, '0') + ':' + String(sek % 60).padStart(2, '0');
   const boss = V.panzer.find(p => p.typ === 4 && p.spawn === 0), rest = 20 - (V.gegnerIdx || 0);
   const knopf = $('ingame').getBoundingClientRect();
-  const spielerFarbe = i => i ? '#47D7E8' : '#FF9A4A';
+  const spielerFarbe = i => ['#FF9A4A', '#47D7E8', '#B8A0FF'][i] || '#fff';
   if (D3.hudModus === 'seite') {
     // schmal in den Spalten links und rechts (oben, über Joystick und Feuerknopf)
     const sp = Math.min(D3.luecke * k - 16, 230), y0 = (knopf.bottom + 8) * k;
@@ -2462,6 +2468,7 @@ function hudZeichnen(c, V, W, H, k) {
     const xl = (rand.l + 8) * k, xr = W - (rand.r + 8) * k - sp;
     block(xl, y0, 0);
     if (V.sp[1]) block(xr, y0, 1);
+    if (V.sp[2]) block(xr, y0 + 108, 2);                   // Spieler 3: rechts unter Spieler 2
     const yl = y0 + 108, xs = V.sp[1] ? xl : xr;           // Level-Kästchen: links (oder rechts, wenn nur 1 Spieler)
     pille(c, xs, V.sp[1] ? yl : y0, sp, 96);
     const ys = V.sp[1] ? yl : y0;
@@ -2475,7 +2482,7 @@ function hudZeichnen(c, V, W, H, k) {
     // oben ein schmaler Streifen, alles einzeilig
     let hoch = Math.max(40, Math.min(58, D3.streifen * k - 10)), gr = hoch > 50 ? 3 : 2;
     const x1 = (knopf.right + 8) * k, platz = W - x1 - (rand.r + 10) * k;
-    const passt = g => (44 * g + 160 + hoch - 50) * (V.sp[1] ? 2 : 1) + 24 + 22 * 6 * g + 40 * g + 24 <= platz;
+    const passt = g => (44 * g + 160 + hoch - 50) * V.sp.length + 12 * (V.sp.length - 1) + 24 + 22 * 6 * g + 40 * g + 24 <= platz;
     if (gr === 3 && !passt(3)) { gr = 2; hoch = Math.min(hoch, 44); }        // zu eng? kleinere Schrift
     const y = Math.max(4, (D3.streifen * k - hoch) / 2), breit = 44 * gr + 160 + hoch - 50;
     const zeile = (x, i) => {
@@ -2489,8 +2496,11 @@ function hudZeichnen(c, V, W, H, k) {
       schrift(c, String(s.punkte), x + hoch + 14 + 44 * gr, ty, gr, '#D8C49A');
     };
     zeile(x1, 0);
-    if (V.sp[1]) zeile(W - (rand.r + 10) * k - breit, 1);
-    const mb = 24 + 22 * 6 * gr + 40 * gr, mx = W / 2 - mb / 2, ty = y + (hoch - 7 * gr) / 2;
+    const xr = W - (rand.r + 10) * k - breit;
+    if (V.sp[2]) { zeile(xr - breit - 12, 1); zeile(xr, 2); }   // zu dritt: 2P und 3P nebeneinander rechts
+    else if (V.sp[1]) zeile(xr, 1);
+    const mb = 24 + 22 * 6 * gr + 40 * gr, ty = y + (hoch - 7 * gr) / 2;
+    const mx = V.sp[2] ? (x1 + breit + xr - breit - 12) / 2 - mb / 2 : W / 2 - mb / 2;   // Mitte zwischen den Kästchen
     pille(c, mx, y, mb, hoch);
     schrift(c, (V.duell ? 'RUNDE ' : 'LEVEL ') + V.level + '  ' + zeit, mx + 12, ty, gr, '#fff');
     if (V.duell) schrift(c, (V.siege || [0, 0]).join(':'), mx + 12 + 16 * 6 * gr, ty, gr, '#FFE040');
@@ -2537,18 +2547,16 @@ function bilanzHD(V, c, W, H) {
   if (V.duell) { duellBilanz(V, (t, x, y, gr, f) => schrift(c, t, x * s, y, gr, f, true), s); return c.restore(); }
   schrift(c, 'REKORD ' + Math.max(rekord, V.rekord || 0), W / 2, 36, 5, '#FFB830', true);
   schrift(c, 'LEVEL ' + V.level, W / 2, 100, 7, '#fff', true);
-  const zwei = V.sp.length > 1, rechtsHD = (t, x, y, f) => schrift(c, t, x - String(t).length * 24 + 4, y, 4, f);
-  schrift(c, '1P', 36 * s, 44 * s, 4, '#FF9A4A'); rechtsHD(V.sp[0].punkte, 100 * s, 56 * s, '#FFB830');
-  if (zwei) { schrift(c, '2P', 160 * s, 44 * s, 4, '#47D7E8'); rechtsHD(V.sp[1].punkte, 224 * s, 56 * s, '#FFB830'); }
+  const T = bilanzSpalten(V.sp.length), rechtsHD = (t, x, y, f) => schrift(c, t, x - String(t).length * 24 + 4, y, 4, f);
+  V.sp.forEach((sp, i) => { schrift(c, (i + 1) + 'P', T.lab[i] * s, 44 * s, 4, ['#FF9A4A', '#47D7E8', '#B8A0FF'][i]); rechtsHD(sp.punkte, T.pkt[i] * s, 56 * s, '#FFB830'); });
   for (let t = 0; t < 4; t++) {
     const y = (78 + t * 22) * s;
-    c.drawImage(panzerHD('g' + t, t === 3 ? 'oliv' : 'silber', 0, 0).bild, 112 * s, y - 24);
-    const zeile = (sp, xp) => { rechtsHD(sp.kills[t] * GEGNER[t].pkt, xp * s, y, '#fff'); schrift(c, 'PKT', (xp + 4) * s, y, 4, '#aaa'); rechtsHD(sp.kills[t], (xp + 40) * s, y, '#fff'); };
-    zeile(V.sp[0], 56); if (zwei) zeile(V.sp[1], 152);
+    c.drawImage(panzerHD('g' + t, t === 3 ? 'oliv' : 'silber', 0, 0).bild, (T.bild - 8) * s, y - 24);
+    V.sp.forEach((sp, i) => { const xp = T.xp[i]; rechtsHD(sp.kills[t] * GEGNER[t].pkt, xp * s, y, '#fff'); schrift(c, 'PKT', (xp + 4) * s, y, 4, '#aaa'); rechtsHD(sp.kills[t], (xp + 40) * s, y, '#fff'); });
   }
-  c.fillStyle = '#fff'; c.fillRect(60 * s, 166 * s, 136 * s, 8);
-  schrift(c, 'SUMME', 56 * s, 174 * s, 4, '#fff'); rechtsHD(V.sp[0].kills.reduce((a, b) => a + b, 0), 96 * s, 174 * s, '#fff');
-  if (zwei) rechtsHD(V.sp[1].kills.reduce((a, b) => a + b, 0), 192 * s, 174 * s, '#fff');
+  c.fillStyle = '#fff'; c.fillRect(T.linie[0] * s, 166 * s, T.linie[1] * s, 8);
+  if (V.sp.length < 3) schrift(c, 'SUMME', 56 * s, 174 * s, 4, '#fff');
+  V.sp.forEach((sp, i) => rechtsHD(sp.kills.reduce((a, b) => a + b, 0), (T.xp[i] + 40) * s, 174 * s, '#fff'));
   if (V.vorbei) schrift(c, 'GAME OVER', W / 2, 194 * s, 7, '#FF4020', true);
   else if (V.pt > 80 && Math.floor(V.pt / 25) % 2) schrift(c, 'TIPPEN = WEITER', W / 2, 198 * s, 4, '#bbb', true);
   c.restore();
@@ -2694,22 +2702,46 @@ function codeZuSdp(a) {
 const codeFinden = text => (String(text || '').match(/TK1~[^\s#&]+/) || [])[0] || null;
 const linkFuer = code => (window.letzterCode = code, location.origin + location.pathname + '#' + code);
 
-const Netz = {
-  pc: null, kanal: null, offen: false, nr: '', letzte: 0, ping: 0,
-  stop() {
+/* Eine Verbindung = ein anderes Gerät. Der Gastgeber hat bis zu zwei davon
+   (Spieler 2 und Spieler 3), ein Mitspieler genau eine (zum Gastgeber). */
+const MAX_GAESTE = 2;
+class Verbindung {
+  constructor() {
+    this.offen = false; this.letzte = 0; this.ping = 0; this.nr = ''; this.platz = 0; this.farbe = null;
+    this.pc = new RTCPeerConnection({ iceServers: [] });
+    this.pc.onconnectionstatechange = () => { if (this.pc && this.pc.connectionState === 'failed') this.getrennt(); };
+  }
+  schliessen() {
     this.offen = false;
-    try { this.kanal && this.kanal.close(); } catch {}
-    try { this.schnell && this.schnell.close(); } catch {}
-    this.schnell = null;
-    try { this.pc && this.pc.close(); } catch {}
-    this.pc = this.kanal = null;
-  },
-  neu() {
-    this.stop();
-    const pc = this.pc = new RTCPeerConnection({ iceServers: [] });
-    pc.onconnectionstatechange = () => { if (pc === this.pc && pc.connectionState === 'failed') this.getrennt(); };
-    return pc;
-  },
+    for (const k of [this.kanal, this.schnell, this.pc]) try { k && k.close(); } catch {}
+    this.pc = this.kanal = this.schnell = null;
+  }
+  kanalSetzen(k) {
+    this.kanal = k;
+    k.onopen = () => { if (k !== this.kanal) return; this.offen = true; this.letzte = performance.now(); netzVerbunden(this); };
+    k.onclose = () => { if (k === this.kanal) this.getrennt(); };
+    k.onmessage = e => { if (k !== this.kanal) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
+  }
+  schnellSetzen(k) {
+    this.schnell = k;
+    k.onmessage = e => { if (k !== this.schnell) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
+  }
+  senden(o) { if (this.offen && this.kanal && this.kanal.readyState === 'open') try { this.kanal.send(typeof o === 'string' ? o : JSON.stringify(o)); } catch {} }
+  sendenSchnell(o) {
+    if (this.offen && this.schnell && this.schnell.readyState === 'open') { try { this.schnell.send(o); return; } catch {} }
+    this.senden(o);
+  }
+  getrennt() { if (!this.offen) return; this.schliessen(); Netz.liste = Netz.liste.filter(v => v !== this); netzGetrennt(this); }
+}
+const Netz = {
+  liste: [], nr: '',                                   // alle Verbindungen; nr = Nummer des gerade gezeigten Angebots
+  get offen() { return this.liste.some(v => v.offen); },
+  get ping() { return Math.max(0, ...this.liste.filter(v => v.offen).map(v => v.ping)); },
+  anzahl() { return this.liste.filter(v => v.offen).length; },
+  stop() { for (const v of this.liste) v.schliessen(); this.liste = []; },
+  // die noch nicht verbundene Verbindung (Angebot gezeigt, aber noch keine Antwort) wegwerfen
+  wartendWeg() { for (const v of this.liste) if (!v.offen) v.schliessen(); this.liste = this.liste.filter(v => v.pc); },
+  wartend() { return this.liste.find(v => !v.offen); },
   iceFertig(pc) {
     return new Promise(ok => {
       if (pc.iceGatheringState === 'complete') return ok();
@@ -2721,52 +2753,43 @@ const Netz = {
   async kameraKurz() {
     try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch {}
   },
+  // Gastgeber: neues Angebot für das nächste Gerät (schon verbundene bleiben verbunden)
   async erstellen() {
     if (!window.RTCPeerConnection) throw new Error('Dieser Browser kann kein WebRTC');
+    this.wartendWeg();
+    if (this.anzahl() >= MAX_GAESTE) throw new Error('Es sind schon ' + MAX_GAESTE + ' Geräte verbunden (mehr als 3 Spieler gehen nicht).');
     await this.kameraKurz();
-    const pc = this.neu();
-    this.nr = String(1000 + zufall(9000));
-    this.kanalSetzen(pc.createDataChannel('tk', { ordered: true }));
-    this.schnellSetzen(pc.createDataChannel('tks', { ordered: false, maxRetransmits: 0 }));   // Bewegung: lieber weglassen als warten
+    const v = new Verbindung(), pc = v.pc; this.liste.push(v);
+    this.nr = v.nr = String(1000 + zufall(9000));
+    v.kanalSetzen(pc.createDataChannel('tk', { ordered: true }));
+    v.schnellSetzen(pc.createDataChannel('tks', { ordered: false, maxRetransmits: 0 }));   // Bewegung: lieber weglassen als warten
     await pc.setLocalDescription(await pc.createOffer());
     await this.iceFertig(pc);
-    return sdpZuCode(pc.localDescription.sdp, 'A', this.nr);
+    return sdpZuCode(pc.localDescription.sdp, 'A', v.nr);
   },
+  // Mitspieler: auf das Angebot des Gastgebers antworten
   async beitreten(code) {
     const a = codeLesen(code);
     if (!window.RTCPeerConnection) throw new Error('Dieser Browser kann kein WebRTC');
     await this.kameraKurz();
-    const pc = this.neu();
-    this.nr = a.nr;
-    pc.ondatachannel = e => e.channel.label === 'tks' ? this.schnellSetzen(e.channel) : this.kanalSetzen(e.channel);
+    this.stop();
+    const v = new Verbindung(), pc = v.pc; this.liste.push(v);
+    this.nr = v.nr = a.nr;
+    pc.ondatachannel = e => e.channel.label === 'tks' ? v.schnellSetzen(e.channel) : v.kanalSetzen(e.channel);
     await pc.setRemoteDescription({ type: 'offer', sdp: codeZuSdp(a) });
     await pc.setLocalDescription(await pc.createAnswer());
     await this.iceFertig(pc);
-    return sdpZuCode(pc.localDescription.sdp, 'B', this.nr);
+    return sdpZuCode(pc.localDescription.sdp, 'B', v.nr);
   },
   async antwort(code) {
-    const a = codeLesen(code);
-    if (!this.pc || this.pc.signalingState !== 'have-local-offer') throw new Error('Bitte erst „Spiel erstellen“');
-    await this.pc.setRemoteDescription({ type: 'answer', sdp: codeZuSdp(a) });
+    const a = codeLesen(code), v = this.wartend();
+    if (!v || v.pc.signalingState !== 'have-local-offer') throw new Error('Bitte erst „Spiel erstellen“');
+    await v.pc.setRemoteDescription({ type: 'answer', sdp: codeZuSdp(a) });
   },
-  kanalSetzen(k) {
-    this.kanal = k;
-    k.onopen = () => { if (k !== this.kanal) return; this.offen = true; this.letzte = performance.now(); netzVerbunden(); };
-    k.onclose = () => { if (k === this.kanal) this.getrennt(); };
-    k.onmessage = e => { if (k !== this.kanal) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data)); } catch (f) { console.error(f); } };
-  },
-  schnellSetzen(k) {
-    this.schnell = k;
-    k.onmessage = e => { if (k !== this.schnell) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data)); } catch (f) { console.error(f); } };
-  },
-  senden(o) { if (this.offen && this.kanal && this.kanal.readyState === 'open') try { this.kanal.send(JSON.stringify(o)); } catch {} },
+  senden(o) { const t = JSON.stringify(o); for (const v of this.liste) v.senden(t); },
   // Bewegungsdaten über den schnellen Kanal (verlorene Pakete werden nicht nachgeschickt → kein Stau)
-  sendenSchnell(o) {
-    if (this.offen && this.schnell && this.schnell.readyState === 'open') { try { this.schnell.send(JSON.stringify(o)); return; } catch {} }
-    this.senden(o);
-  },
-  wachen() { if (this.offen && performance.now() - this.letzte > 4500) this.getrennt(); },   // 4,5 s nichts gehört → weg
-  getrennt() { if (!this.offen) return; this.offen = false; netzGetrennt(); },
+  sendenSchnell(o) { const t = JSON.stringify(o); for (const v of this.liste) v.sendenSchnell(t); },
+  wachen() { for (const v of [...this.liste]) if (v.offen && performance.now() - v.letzte > 4500) v.getrennt(); },   // 4,5 s nichts gehört → weg
 };
 
 // Was der Gastgeber 30× pro Sekunde schickt
@@ -2778,7 +2801,7 @@ function zuAnsicht(S) {
     K: S.kugeln.map(k => [k.id, Math.round(k.x), Math.round(k.y), k.r]),
     E: S.effekte.map(e => [e.art, Math.round(e.x), Math.round(e.y), e.t, e.w || 0]),
     B: S.bonus ? [S.bonus.art, S.bonus.x, S.bonus.y] : 0,
-    SP: S.sp.map(s => [s.leben, s.punkte, s.lvl, s.aus ? 1 : 0, ...s.kills, s.reserve || 0]),
+    SP: S.sp.map(s => [s.leben, s.punkte, s.lvl, s.aus || s.weg ? 1 : 0, ...s.kills, s.reserve || 0]),
     ack: fernSeq };
   return a;
 }
@@ -2830,7 +2853,7 @@ const Puffer = {
     V.alpha = s0 === s1 ? 1 : begrenze((zeit - s0.a.t) / (s1.a.t - s0.a.t), 0, 1);
     // der eigene Panzer: ohne Pufferzeit (sonst reagiert er träge)
     const neu = l[l.length - 1], vor = l[l.length - 2];
-    const eigen = V.panzer.find(p => p.sp === 1);
+    const eigen = V.panzer.find(p => p.sp === meinPlatz && !p.drohne);
     if (eigen && neu) {
       const pn = neu.a.P.find(q => q[0] === eigen.id), pv = vor && vor.a.P.find(q => q[0] === eigen.id);
       if (pn) { eigen.x = pn[3]; eigen.y = pn[4]; eigen.r = pn[5]; eigen.anim = pn[6]; eigen.x0 = pv ? pv[3] : pn[3]; eigen.y0 = pv ? pv[4] : pn[4];
@@ -2852,17 +2875,44 @@ function ansichtLesen(a, vorher) {
                      gegnerIdx: a.gi, vorbei: !!a.vb, rekord: a.rek, bossWarn: a.BW, bossMax: a.BM, farben: a.F, empfangen: performance.now(), alpha: 0 });
 }
 
-let gastFarbe = null, fernSeq = 0, gastSeq = 0, fern = { r: -1, f: false }, fernVorher = false, gastGesendet = '';
-function fernEingabe() { const neu = fern.f && !fernVorher; fernVorher = fern.f; return { r: fern.r, f: fern.f, neu }; }
-function netzNachricht(m) {
-  if (m.k === 'ping') return Netz.senden({ k: 'pong', t: m.t });
-  if (m.k === 'pong') { Netz.ping = Netz.ping ? Netz.ping * 0.7 + (performance.now() - m.t) * 0.3 : performance.now() - m.t; return; }
-  if (m.k === 'hallo') { if (m.farbe && SPIELERFARBEN[m.farbe]) gastFarbe = m.farbe; if (m.v !== APP_VERSION) meldung('Achtung: Das andere Gerät hat v' + m.v + ', dieses v' + APP_VERSION + '. Bitte beide aktualisieren (Version antippen).', 7000); return; }
+// fern[i] = Knöpfe von Spieler i auf einem anderen Gerät (nur beim Gastgeber)
+let fernSeq = 0, gastSeq = 0, fern = [], fernVorher = [], gastGesendet = '', meinPlatz = 1;
+function fernEingabe(i) { const e = fern[i] || { r: -1, f: false }, neu = e.f && !fernVorher[i]; fernVorher[i] = e.f; return { r: e.r, f: e.f, neu }; }
+const neuerSpieler = S => ({ leben: S.st.leben - 1, punkte: 0, lvl: 0, aus: false, kills: [0, 0, 0, 0], warte: 0, extra: 0 });
+// Farben ohne doppelte: wer die gleiche will wie ein anderer, bekommt die nächste freie
+function farbenVerteilen(wunsch) {
+  const frei = Object.keys(SPIELERFARBEN), raus = [];
+  for (const w of wunsch) raus.push(w && !raus.includes(w) ? w : frei.find(f => !raus.includes(f) && !wunsch.includes(f)) || frei.find(f => !raus.includes(f)));
+  return raus;
+}
+// Ein Gerät kommt (wieder) dazu, während das Spiel läuft
+function spielerDazu(S, i, farbe) {
+  if (S.duell && i > 1) return;                        // Duell geht nur zu zweit – Spieler 3 schaut zu
+  while (S.sp.length <= i) { const n = neuerSpieler(S); n.weg = S.sp.length < i; S.sp.push(n); }
+  S.spieler = S.sp.length;
+  const sp = S.sp[i];
+  if (sp.weg || !S.panzer.some(p => p.sp === i && !p.drohne)) { sp.weg = false; sp.aus = false; if (!sp.warte) sp.warte = 1; }   // gleich wieder ins Spiel
+  if (!S.farben[i] || farbe) S.farben = farbenVerteilen([...S.farben.slice(0, i), farbe || S.farben[i], ...S.farben.slice(i + 1)]);
+}
+// Ein Gerät ist weg und soll nicht wiederkommen: sein Panzer verschwindet
+function spielerEntfernen(S, i) {
+  if (!S.sp[i]) return;
+  S.panzer = S.panzer.filter(p => p.sp !== i); S.kugeln = S.kugeln.filter(k => k.sp !== i);
+  Object.assign(S.sp[i], { weg: true, warte: 0, drohneZeit: 0 });
+  while (S.sp.length > 1 && S.sp[S.sp.length - 1].weg) S.sp.pop();       // ganz hinten? Dann einfach kürzer
+  S.spieler = S.sp.length;
+  if (!Netz.anzahl()) rolle = 'lokal';
+}
+function netzNachricht(m, v) {
+  if (m.k === 'ping') return v.senden({ k: 'pong', t: m.t });
+  if (m.k === 'pong') { v.ping = v.ping ? v.ping * 0.7 + (performance.now() - m.t) * 0.3 : performance.now() - m.t; return; }
+  if (m.k === 'hallo') { if (m.farbe && SPIELERFARBEN[m.farbe]) v.farbe = m.farbe; if (m.v !== APP_VERSION) meldung('Achtung: Das andere Gerät hat v' + m.v + ', dieses v' + APP_VERSION + '. Bitte beide aktualisieren (Version antippen).', 7000); return; }
   if (rolle === 'wirt') {
-    if (m.k === 'e') { fern = { r: m.r, f: !!m.f }; fernSeq = m.n || 0; }
+    if (m.k === 'e') { fern[v.platz] = { r: m.r, f: !!m.f }; fernSeq = m.n || 0; }
     if (m.k === 'pause' && S) S.pause = !!m.an;
     if (m.k === 'weiter' && S) S.tipp = true;
   } else if (rolle === 'gast') {
+    if (m.k === 'du') { meinPlatz = m.sp; if (modus !== 'spiel') gastWarten(); }
     if (m.k === 'w') karteLesen(m);
     if (m.k === 's') {
       Puffer.neu(m);
@@ -2872,27 +2922,36 @@ function netzNachricht(m) {
     if (m.k === 'lobby' && modus === 'spiel') { modus = 'menue'; V = null; Puffer.leeren(); gastWarten(); }
   }
 }
-function netzVerbunden() {
+function netzVerbunden(v) {
   if (Finder.aktiv) { Finder.stop(); if (rolle === 'wirt' && Ablage.cfg()) Ablage.aendern(() => ({ fertig: Date.now() })).catch(() => {}); }
   clearTimeout(verbindTimer);
-  Netz.senden({ k: 'hallo', v: APP_VERSION, farbe: einst.farbe1 });
-  Netz.ping = 0;
-  meldung('✓ Verbunden!');
+  v.senden({ k: 'hallo', v: APP_VERSION, farbe: einst.farbe1 });
+  v.ping = 0;
   if (rolle === 'wirt') {
-    if (S && S.spieler === 2) { modus = 'spiel'; zeigen(null); S.mapVoll = true; S.pause = true; aufteilen(); }
-    else zumMenue();
-  } else gastWarten();
-}
-function netzGetrennt() {
-  if (rolle === 'wirt') {
+    // freien Platz suchen: Spieler 2 oder Spieler 3
+    const belegt = Netz.liste.filter(w => w !== v && w.offen).map(w => w.platz);
+    v.platz = [1, 2].find(i => !belegt.includes(i)) || 1;
+    fern[v.platz] = { r: -1, f: false };
+    v.senden({ k: 'du', sp: v.platz });
+    meldung('✓ Spieler ' + (v.platz + 1) + ' ist verbunden!');
     if (S && modus === 'spiel') {
+      setTimeout(() => { if (S && v.offen) { spielerDazu(S, v.platz, v.farbe); S.mapVoll = true; } }, 400);   // kurz warten, bis die Farbe da ist
+      S.mapVoll = true; S.pause = true; zeigen(null); aufteilen();
+    } else zumMenue();
+  } else { meldung('✓ Verbunden!'); if (modus !== 'spiel') gastWarten(); }   // läuft das Spiel schon (Bild kam zuerst)? Dann nicht verdecken
+}
+function netzGetrennt(v) {
+  if (rolle === 'wirt') {
+    fern[v.platz] = { r: -1, f: false };
+    if (S && modus === 'spiel' && S.sp[v.platz]) {
       S.pause = true;
       zeigen('netz');
-      netzSchritt('<b>Die Verbindung zum anderen Gerät ist weg.</b><br>Vielleicht war ein Bildschirm gesperrt oder das WLAN weg.', null, [
+      const wer = 'Spieler ' + (v.platz + 1);
+      netzSchritt('<b>Die Verbindung zu ' + wer + ' ist weg.</b><br>Vielleicht war ein Bildschirm gesperrt oder das WLAN weg.', null, [
         ['📡 Neu verbinden', wirtStarten, 'blau'],
-        ['▶ Allein weiter', () => { rolle = 'lokal'; S.sp.length = 1; S.spieler = 1; S.panzer = S.panzer.filter(p => p.sp !== 1); S.kugeln = S.kugeln.filter(k => k.sp !== 1); zeigen(null); aufteilen(); }, 'gruen'],
-        ['⌂ Menü', () => { rolle = 'lokal'; zumMenue(); }]]);
-    } else { meldung('Verbindung getrennt'); rolle = 'lokal'; menueAnpassen(); }
+        [Netz.anzahl() ? '▶ Ohne ' + wer + ' weiter' : '▶ Allein weiter', () => { spielerEntfernen(S, v.platz); zeigen(null); aufteilen(); }, 'gruen'],
+        ['⌂ Menü', () => { if (!Netz.anzahl()) rolle = 'lokal'; zumMenue(); }]]);
+    } else { meldung('Verbindung zu Spieler ' + (v.platz + 1) + ' getrennt'); if (!Netz.anzahl()) rolle = 'lokal'; if (modus === 'menue') menueAnpassen(); }
   } else if (rolle === 'gast') {
     modus = 'menue'; V = null; Puffer.leeren();
     zeigen('netz');
@@ -2972,12 +3031,21 @@ const Finder = {
   lauf: 0,
   stop() { this.lauf++; this.aktiv = false; clearInterval(this.timer); this.timer = null; },
   async start() {
-    this.stop(); this.aktiv = true; const lauf = this.lauf, weiter = () => lauf === this.lauf && !Netz.offen;
+    // Gastgeber mit schon verbundenem Gerät: sucht ein weiteres (Spieler 3) – dann legt er immer das Angebot hin
+    const dazu = rolle === 'wirt' && Netz.offen;
+    this.stop(); this.aktiv = true; const lauf = this.lauf, vorher = this.vorher = Netz.anzahl(), weiter = () => lauf === this.lauf && Netz.anzahl() === vorher;
     zeigen('netz');
     if (!Ablage.cfg()) return einladungFehlt();
-    netzSchritt('<b>Suche das andere Gerät …</b><br>Auf dem anderen Gerät auch „Automatisch finden“ tippen.', null, [['Abbrechen', () => { this.stop(); Netz.stop(); rolle = 'lokal'; netzWahl(); }]], '🔎 suche …');
+    netzSchritt(dazu ? '<b>Suche noch ein Gerät …</b><br>Auf dem neuen Gerät „Automatisch finden“ tippen.' : '<b>Suche das andere Gerät …</b><br>Auf dem anderen Gerät auch „Automatisch finden“ tippen.', null,
+      [['Abbrechen', () => { this.stop(); if (dazu) { Netz.wartendWeg(); return zumMenue(); } Netz.stop(); rolle = 'lokal'; netzWahl(); }]], '🔎 suche …');
     try {
       const fremd = s => s && s.a && s.a.von !== geraetId && Date.now() - s.a.zeit < FRISCH && !s.b ? s.a : null;
+      if (dazu) {
+        const code = await Netz.erstellen();
+        if (!weiter()) return;
+        await Ablage.aendern(() => ({ a: { von: geraetId, code, zeit: Date.now(), dazu: 1 } }));
+        return this.warteAufAntwort(code, lauf);
+      }
       let angebot = fremd(await Ablage.lesen());
       if (!angebot) {
         // Ich bin zuerst da → Spieler 1: Angebot hinlegen (falls das andere Gerät nicht gleichzeitig schneller war)
@@ -2999,11 +3067,15 @@ const Finder = {
     } catch (e) { if (weiter()) netzSchritt('Automatisch finden ging nicht: ' + e.message, null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]); }
   },
   warteAufAntwort(code, lauf) {
-    const beginn = Date.now(); let auffrischen = Date.now(), fertig = false;
+    const beginn = Date.now(), vorher = this.vorher; let auffrischen = Date.now(), fertig = false;
     this.timer = setInterval(async () => {
-      if (lauf !== this.lauf || Netz.offen || fertig) return clearInterval(this.timer);
+      if (lauf !== this.lauf || Netz.anzahl() > vorher || fertig) return clearInterval(this.timer);
       try {
         const s = await Ablage.lesen();
+        // Ein Gastgeber sucht gerade Spieler 3 und hat sein Angebot hingelegt → dann bin ich der Mitspieler
+        if (!vorher && s && s.a && s.a.dazu && s.a.code !== code && s.a.von !== geraetId && !s.b && Date.now() - s.a.zeit < FRISCH) {
+          fertig = true; clearInterval(this.timer); Netz.stop(); return this.start();
+        }
         if (s && s.a && s.a.code === code && s.b && !fertig) {
           fertig = true; clearInterval(this.timer);
           netzStatus('🔎 Gefunden! Verbinde …');
@@ -3020,7 +3092,7 @@ const Finder = {
   },
   nichtsGeklappt(lauf, ms) {
     setTimeout(() => {
-      if (lauf === this.lauf && !Netz.offen) netzSchritt('<b>Gefunden, aber keine Verbindung.</b><br>Sind beide Geräte im <b>selben WLAN</b>? (Mit Mobilfunk allein geht es nicht.)', null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]);
+      if (lauf === this.lauf && Netz.anzahl() <= this.vorher) netzSchritt('<b>Gefunden, aber keine Verbindung.</b><br>Sind beide Geräte im <b>selben WLAN</b>? (Mit Mobilfunk allein geht es nicht.)', null, [['Nochmal', () => this.start(), 'blau'], ['QR-Code nehmen', netzWahl]]);
     }, ms);
   },
 };
@@ -3108,7 +3180,7 @@ async function angebotBenutzen(text) {
 }
 function gastWarten() {
   zeigen('netz');
-  netzSchritt('<b class="ok">✓ Verbunden!</b><br>Du bist <b>Spieler 2</b>. Das andere Gerät wählt jetzt Level und startet.', null, [
+  netzSchritt('<b class="ok">✓ Verbunden!</b><br>Du bist <b>Spieler ' + (meinPlatz + 1) + '</b>. Spieler 1 wählt jetzt Level und startet.', null, [
     ['Trennen', () => { rolle = 'lokal'; Netz.stop(); zumMenue(); }]]);
 }
 function einfuegenZeigen() { $('n-paste').classList.remove('versteckt'); $('n-feld').value = ''; $('n-feld').focus(); }
@@ -3132,9 +3204,14 @@ $('n-gast').onclick = () => { Finder.stop(); gastStarten(); };
 $('n-einfuegen-start').onclick = () => { netzSchritt('Code vom anderen Gerät hier einfügen:', null, []); einfuegenZeigen(); };
 $('n-zurueck').onclick = () => {
   Finder.stop();
+  if (rolle === 'wirt') Netz.wartendWeg();
   if (!Netz.offen) { Netz.stop(); rolle = 'lokal'; }
   if (rolle === 'gast' && Netz.offen) return gastWarten();
-  if (S && modus === 'spiel') { rolle = 'lokal'; S.sp.length = 1; S.spieler = 1; S.panzer = S.panzer.filter(p => p.sp !== 1); zeigen(null); aufteilen(); return; }
+  if (S && modus === 'spiel') {          // Spieler ohne Gerät verschwinden, die anderen spielen weiter
+    const da = Netz.liste.filter(v => v.offen).map(v => v.platz);
+    for (let i = S.sp.length - 1; i > 0; i--) if (!da.includes(i)) spielerEntfernen(S, i);
+    zeigen(null); aufteilen(); return;
+  }
   zumMenue();
 };
 // Wurde ein Code mit der iPhone-Kamera-App gescannt, öffnet sich Safari mit #TK1~…
@@ -3306,7 +3383,8 @@ function einstZeigen() {
   $('k-solo').textContent = einst.art === 'angriff' ? 'Angriff auf die Computer-Basis' : 'gegen die Computer-Panzer';
   // Untertitel der 2-Spieler-Knöpfe passend zur Spielart
   $('k-lokal').textContent = einst.art === 'angriff' ? 'zusammen angreifen – auf einem iPad' : einst.duell ? 'gegeneinander: jeder hat eine Basis – wer zuerst 3 Runden gewinnt' : 'zusammen auf dem iPad – klappt immer, auch im Flugzeug';
-  $('k-netzstart').textContent = einst.duell ? 'gegeneinander · zwei Geräte' : einst.art === 'angriff' ? 'Angriff · zwei Geräte' : '2 Spieler · zwei Geräte';
+  const n = 1 + Netz.anzahl(), geraete = n === 3 ? 'drei Geräte' : 'zwei Geräte';
+  $('k-netzstart').textContent = einst.duell ? (n === 3 ? 'Duell nur zu zweit – zu dritt: Klassisch' : 'gegeneinander · zwei Geräte') : (einst.art === 'angriff' ? 'Angriff · ' : n + ' Spieler · ') + geraete;
   $('reihe-freund').classList.toggle('versteckt', !!einst.duell);
   for (const n of [1, 2]) {                                // Panzerfarben: Kästchen in Grundfarbe mit Streifenfarbe
     const box = $('w-farbe' + n); box.innerHTML = '';
@@ -3327,7 +3405,8 @@ function einstZeigen() {
 $('l-minus').onclick = () => { einst.level = einst.level <= 1 ? alleLevel().length : einst.level - 1; einstSpeichern(); };
 $('l-plus').onclick = () => { einst.level = einst.level >= alleLevel().length ? 1 : einst.level + 1; einstSpeichern(); };
 for (const b of document.querySelectorAll('[data-start]')) b.onclick = () => { Ton.start(); rolle = 'lokal'; spielStarten(b.dataset.start === 'lokal' ? 2 : 1); };
-$('b-netzstart').onclick = () => { Ton.start(); if (Netz.offen) spielStarten(2); };
+$('b-netzstart').onclick = () => { Ton.start(); if (Netz.offen) spielStarten(1 + Netz.anzahl()); };
+$('b-dritter').onclick = () => { zeigen('netz'); netzWahl(); };
 $('b-trennen').onclick = () => { Netz.stop(); rolle = 'lokal'; menueAnpassen(); };
 $('b-hilfe').onclick = () => zeigen('hilfe');
 $('b-bauen').onclick = editorOeffnen;
@@ -3351,6 +3430,8 @@ function menueAnpassen() {
   const netz = rolle === 'wirt' && Netz.offen;
   for (const b of document.querySelectorAll('.normal-start')) b.classList.toggle('versteckt', netz);
   for (const id of ['m-netz', 'b-netzstart', 'b-trennen']) $(id).classList.toggle('versteckt', !netz);
+  $('b-dritter').classList.toggle('versteckt', !netz || Netz.anzahl() >= MAX_GAESTE);
+  if (netz) $('m-netz-text').textContent = Netz.anzahl() > 1 ? '✓ Drei Geräte verbunden – du bist Spieler 1.' : '✓ Verbunden mit dem anderen Gerät – du bist Spieler 1.';
   let stand = speicher.lies('stand', null);
   if (stand && (!stand.karte || stand.karte.length !== NX * NY)) { speicher.schreib('stand', null); stand = null; }
   $('b-fortsetzen').classList.toggle('versteckt', netz || !stand);
@@ -3358,9 +3439,13 @@ function menueAnpassen() {
   einstZeigen();
 }
 function spielStarten(spieler) {
-  let f2 = rolle === 'wirt' ? (gastFarbe || 'p2') : einst.farbe2;
-  if (f2 === einst.farbe1) f2 = einst.farbe1 === 'p2' ? 'p1' : 'p2';           // zwei gleiche Farben? Dann eine andere
-  neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund, farben: [einst.farbe1, f2], duell: spieler === 2 && einst.art === 'duell', angriff: einst.art === 'angriff' });
+  // Farben: über das Netz bringt jedes Gerät seine eigene mit
+  const gaeste = rolle === 'wirt' ? Netz.liste.filter(v => v.offen).sort((a, b) => a.platz - b.platz) : [];
+  if (rolle === 'wirt') spieler = 1 + gaeste.length;
+  const wunsch = rolle === 'wirt' ? [einst.farbe1, ...gaeste.map(v => v.farbe || 'p2')] : [einst.farbe1, einst.farbe2];
+  neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund, farben: farbenVerteilen(wunsch), duell: spieler === 2 && einst.art === 'duell', angriff: einst.art === 'angriff' });
+  // Ist ein Platz frei (z. B. nur Spieler 3 da, Spieler 2 weg)? Dann sitzt jeder Gast auf seinem Platz
+  if (rolle === 'wirt' && gaeste.some((v, i) => v.platz !== i + 1)) { fern = []; gaeste.forEach((v, i) => { v.platz = i + 1; v.senden({ k: 'du', sp: v.platz }); }); }
   modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
 }
 // Spielstand sichern: iPhone/iPad beenden Apps im Hintergrund manchmal einfach
@@ -3389,7 +3474,7 @@ function spielEnde() {
   $('e-titel').textContent = info.duell ? 'SIEG!' : 'GAME OVER';
   $('e-nochmal-text').textContent = info.duell ? 'REVANCHE!' : 'NOCHMAL AB LEVEL ' + einst.level;
   zeigen('ende');
-  $('e-nochmal').onclick = () => { Ton.start(); if (rolle === 'wirt' && !Netz.offen) rolle = 'lokal'; spielStarten(rolle === 'wirt' ? 2 : info.spieler); };
+  $('e-nochmal').onclick = () => { Ton.start(); if (rolle === 'wirt' && !Netz.offen) rolle = 'lokal'; spielStarten(rolle === 'wirt' ? 1 + Netz.anzahl() : info.spieler); };
   $('e-menue').onclick = () => { zeigen('menue'); menueAnpassen(); };
 }
 function zumMenue() {
@@ -3477,7 +3562,7 @@ function tick() {
   const fahr = modus === 'spiel' && (ansicht() || {}).phase === 'spiel' && !(ansicht() || {}).pause;
   Ton.motor(fahr && (eingabeZuletzt[0] >= 0 || eingabeZuletzt[1] >= 0));
   if (modus === 'spiel' && S && rolle !== 'gast') {
-    const ein = [eingabe(0), rolle === 'wirt' ? fernEingabe() : S.spieler > 1 ? eingabe(1) : null];
+    const ein = rolle === 'wirt' ? S.sp.map((_, i) => i ? fernEingabe(i) : eingabe(0)) : [eingabe(0), S.spieler > 1 ? eingabe(1) : null];
     schritt(S, ein);
     for (const t of S.ton) Ton.spiel(t);
     if (rolle === 'wirt' && Netz.offen) {
