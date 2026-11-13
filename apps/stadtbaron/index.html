@@ -427,7 +427,7 @@
 <script src="lokal.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '1.14';
+const APP_VERSION = '1.15';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -1337,6 +1337,19 @@ function zeichneAlles() {
 
 // Knöpfe in der Mitte – je nach Phase
 let endeTimer = null;
+// Countdown auf einem Knopf: nach 10 Sekunden passiert die Aktion von selbst
+// (Pause, solange ein Fenster offen ist oder etwas läuft)
+function countdown(b, text, phase, aktion, p) {
+  let rest = 10;
+  const zeig = () => b.innerHTML = bildText(text) + ` <small>(${rest})</small>`;
+  zeig();
+  endeTimer = setInterval(() => {
+    if ($('#dlg').classList.contains('on') || beschaeftigt) { rest = 10; return zeig(); }
+    if (--rest > 0) return zeig();
+    clearInterval(endeTimer);
+    if (st && st.phase === phase && amZug(st) === p) tun(aktion());
+  }, 1000);
+}
 function zeichneKnoepfe() {
   clearInterval(endeTimer);
   const box = $('#knoepfe'); box.innerHTML = '';
@@ -1370,7 +1383,11 @@ function zeichneKnoepfe() {
         knopf('🎲 Pasch versuchen', { t: 'wurf', w: wuerfeln() });
         knopf('💶 50 zahlen', { t: 'knastZahlen' }, { kl: 'zweit' });
         if (s.frei.length) knopf('🎫 Raus-Karte', { t: 'knastKarte' }, { kl: 'zweit' });
-      } else knopf(st.nochmal ? '🎲 Nochmal würfeln' : '🎲 Würfeln', { t: 'wurf', w: wuerfeln() }, { kl: 'voll' });
+      } else {
+        // Nach 10 Sekunden würfelt es von selbst
+        const text = st.nochmal ? '🎲 Nochmal würfeln' : '🎲 Würfeln';
+        countdown(knopf(text, { t: 'wurf', w: wuerfeln() }, { kl: 'voll' }), text, 'wuerfeln', () => ({ t: 'wurf', w: wuerfeln(), p }), p);
+      }
       verw(); break;
     case 'kaufen': {
       const f = F[s.pos];
@@ -1388,17 +1405,8 @@ function zeichneKnoepfe() {
       break;
     }
     case 'zugEnde': {
-      // Nach 10 Sekunden endet der Zug von selbst (Pause, solange ein Fenster offen ist)
-      const b = knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }); verw();
-      let rest = 10;
-      const zeig = () => b.innerHTML = `✅ Zug beenden <small>(${rest})</small>`;
-      zeig();
-      endeTimer = setInterval(() => {
-        if ($('#dlg').classList.contains('on') || beschaeftigt) { rest = 10; return zeig(); }
-        if (--rest > 0) return zeig();
-        clearInterval(endeTimer);
-        if (st && st.phase === 'zugEnde' && amZug(st) === p) tun({ t: 'fertig', p });
-      }, 1000);
+      // Nach 10 Sekunden endet der Zug von selbst
+      countdown(knopf('✅ Zug beenden', { t: 'fertig' }, { kl: 'voll' }), '✅ Zug beenden', 'zugEnde', () => ({ t: 'fertig', p }), p); verw();
       break;
     }
     case 'karte': knopf(`👆 ${KARTEN_NAME[st.ziehen.d][1]} Karte ziehen`, { t: 'ziehen' }, { kl: 'voll' }); break;
