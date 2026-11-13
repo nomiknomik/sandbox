@@ -282,7 +282,7 @@
 <script src="grafik3d.js"></script>
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '7.2';
+const APP_VERSION = '7.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -2720,11 +2720,16 @@ class Verbindung {
     this.kanal = k;
     k.onopen = () => { if (k !== this.kanal) return; this.offen = true; this.letzte = performance.now(); netzVerbunden(this); };
     k.onclose = () => { if (k === this.kanal) this.getrennt(); };
-    k.onmessage = e => { if (k !== this.kanal) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
+    k.onmessage = e => { if (k !== this.kanal) return; this.gehoert(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
+  }
+  // Wie lange kam von diesem Gerät nichts? (Gäste senden mind. 10×/s, der Gastgeber 6–30×/s)
+  gehoert() {
+    const jetzt = performance.now(), luecke = jetzt - this.letzte; this.letzte = jetzt;
+    if (modus === 'spiel' && !document.hidden && luecke > 500 && luecke < 4500) Messung.merk('netz', luecke, rolle === 'wirt' ? 'von Spieler ' + (this.platz + 1) : 'von Spieler 1');
   }
   schnellSetzen(k) {
     this.schnell = k;
-    k.onmessage = e => { if (k !== this.schnell) return; this.letzte = performance.now(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
+    k.onmessage = e => { if (k !== this.schnell) return; this.gehoert(); try { netzNachricht(JSON.parse(e.data), this); } catch (f) { console.error(f); } };
   }
   senden(o) { if (this.offen && this.kanal && this.kanal.readyState === 'open') try { this.kanal.send(typeof o === 'string' ? o : JSON.stringify(o)); } catch {} }
   sendenSchnell(o) {
@@ -2917,7 +2922,7 @@ function netzNachricht(m, v) {
     if (m.k === 's') {
       Puffer.neu(m);
       if (!V) { karteLesen({}); Puffer.ansicht(); }
-      if (modus !== 'spiel') { modus = 'spiel'; zeigen(null); aufteilen(); wachHalten(); }
+      if (modus !== 'spiel') { modus = 'spiel'; zeigen(null); aufteilen(); wachHalten(); Messung.neu(); }
     }
     if (m.k === 'lobby' && modus === 'spiel') { modus = 'menue'; V = null; Puffer.leeren(); gastWarten(); }
   }
@@ -3446,7 +3451,7 @@ function spielStarten(spieler) {
   neuesSpiel({ spieler, stufe: einst.stufe, level: einst.level, freund: einst.freund, farben: farbenVerteilen(wunsch), duell: spieler === 2 && einst.art === 'duell', angriff: einst.art === 'angriff' });
   // Ist ein Platz frei (z. B. nur Spieler 3 da, Spieler 2 weg)? Dann sitzt jeder Gast auf seinem Platz
   if (rolle === 'wirt' && gaeste.some((v, i) => v.platz !== i + 1)) { fern = []; gaeste.forEach((v, i) => { v.platz = i + 1; v.senden({ k: 'du', sp: v.platz }); }); }
-  modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten();
+  modus = 'spiel'; zeiger.clear(); zeigen(null); aufteilen(); wachHalten(); Messung.neu();
 }
 // Spielstand sichern: iPhone/iPad beenden Apps im Hintergrund manchmal einfach
 function spielSichern() {
@@ -3553,6 +3558,22 @@ document.addEventListener('visibilitychange', () => {
 /* =====================================================================
    HAUPTSCHLEIFE – 60 Schritte pro Sekunde, egal wie schnell der Bildschirm ist
    ===================================================================== */
+/* Hänger-Messer: Wo hakt es? „Bild“ = dieses Gerät war zu beschäftigt,
+   „Netz“ = vom anderen Gerät kam eine Weile nichts an. */
+const Messung = {
+  bild: { n: 0, max: 0 }, netz: { n: 0, max: 0, wer: '' },
+  neu() { this.bild = { n: 0, max: 0 }; this.netz = { n: 0, max: 0, wer: '' }; this.start = performance.now(); },
+  start: 0,
+  merk(art, ms, wer = '') {
+    if (performance.now() - this.start < 3000) return;        // die ersten Sekunden (Verbinden, Laden) zählen nicht
+    const m = this[art]; m.n++; if (ms > m.max) { m.max = ms; m.wer = wer; }
+    if (ms > 1000) meldung('⚠ Hänger ' + (ms / 1000).toFixed(1).replace('.', ',') + ' s – ' + (art === 'bild' ? 'dieses Gerät war zu beschäftigt' : 'keine Daten ' + (wer || 'vom Netz')), 2500);
+  },
+  text() {
+    const t = (m, name) => m.n ? ' · ' + name + ' ' + m.n + '× ' + (m.max / 1000).toFixed(1).replace('.', ',') + 's' : '';
+    return t(this.bild, '⚠Bild') + t(this.netz, '⚠Netz');
+  },
+};
 let letzte = performance.now(), rest = 0, sichtbar = {};
 function tick() {
   ticks++;
@@ -3591,7 +3612,7 @@ function oberflaeche() {
   setz('pause', modus === 'spiel' && !!V && !!V.pause && V.phase !== 'bilanz' && !netzSchicht, w => {
     $('pausemenue').classList.toggle('versteckt', !w); $('p-neu').classList.toggle('versteckt', rolle === 'gast');
   });
-  const info = rolle === 'lokal' ? '' : Netz.offen ? '📶 ' + (Netz.ping ? Math.round(Netz.ping) + ' ms' : 'verbunden') : '📶 getrennt';
+  const info = rolle === 'lokal' ? '' : (Netz.offen ? '📶 ' + (Netz.ping ? Math.round(Netz.ping) + ' ms' : 'verbunden') : '📶 getrennt') + (modus === 'spiel' ? Messung.text() : '');
   setz('info', info, w => $('netzinfo').textContent = w);
 }
 // Ruckelt es (weniger als ~45 Bilder/s)? Dann spart die Block-Grafik ein paar Effekte ein.
@@ -3605,6 +3626,7 @@ function ruckelWaechter(d) {
 function schleife(jetzt) {
   requestAnimationFrame(schleife);
   ruckelWaechter(jetzt - letzte);
+  if (modus === 'spiel' && rolle !== 'lokal' && !document.hidden && jetzt - letzte > 400) Messung.merk('bild', jetzt - letzte);
   rest += Math.min(100, jetzt - letzte); letzte = jetzt;
   while (rest >= 1000 / 60) { rest -= 1000 / 60; try { tick(); } catch (e) { console.error(e); } }
   if (V && rolle === 'gast') Puffer.ansicht();
