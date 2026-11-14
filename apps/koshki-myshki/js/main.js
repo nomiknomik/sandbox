@@ -2,6 +2,7 @@
 import * as THREE from '../vendor/three.js';
 import * as RAPIER from '../vendor/rapier.js';
 import { baueHaus } from './haus.js';
+import { setzeMoebel } from './modelle.js';
 import { Katze } from './katze.js';
 import { Babulya } from './bewohner.js';
 import { baueWegnetz } from './wege.js';
@@ -54,6 +55,7 @@ scene.add(sonne, sonne.target);
 const world = new R.World({ x: 0, y: -9.81, z: 0 });
 world.timestep = 1 / 60;
 const haus = await (await fetch('level/haus.json')).json();
+try { setzeMoebel(await (await fetch('modelle/moebel.json')).json()); } catch {}   // echte 3D-Möbel (sonst die einfachen)
 const bau = baueHaus(haus, scene, world, R);
 sonne.position.copy(bau.mitte).add(new T.Vector3(-11, 13, 15));
 sonne.target.position.copy(bau.mitte);

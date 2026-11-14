@@ -11,7 +11,7 @@ const mats = new Map();
 // Материал с кэшем: одинаковые цвета – один материал (так iPad рисует быстрее)
 export function mat(farbe, o = {}) {
   const key = farbe + JSON.stringify(o);
-  if (!mats.has(key)) mats.set(key, new T.MeshStandardMaterial({ color: farbe, roughness: o.r ?? 0.75, metalness: o.m ?? 0, transparent: !!o.op, opacity: o.op ?? 1, emissive: o.e ?? 0x000000, emissiveIntensity: o.ei ?? 1, depthWrite: o.op ? false : true }));
+  if (!mats.has(key)) mats.set(key, new T.MeshStandardMaterial({ color: farbe, roughness: o.r ?? 0.75, metalness: o.m ?? 0, transparent: !!o.op, opacity: o.op ?? 1, emissive: o.e ?? 0x000000, emissiveIntensity: o.ei ?? 1, depthWrite: o.op ? false : true, flatShading: !!o.flach }));
   return mats.get(key);
 }
 
@@ -353,6 +353,48 @@ const DYN = {
   },
 };
 
+// ---------- Echte 3D-Möbel (Quaternius „Ultimate House Interior“, CC0) ----------
+// Welcher Gegenstand welches Modell bekommt. Das Modell wird genau in die Kollisions-Kisten
+// des alten Möbelstücks eingepasst – so stimmt das Bild mit dem überein, wo die Katze stehen kann.
+// farben: welches Teil des Modells (Nummer) welche Farbe bekommt – damit es so bunt bleibt wie vorher.
+const ECHT = {
+  sofa: ['Couch_Medium1', o => ({ 0: o.farbe || '#3E8E9E' })],
+  sessel: ['Couch_Small1', o => ({ 0: o.farbe || '#C4573F' })],
+  stuhl: ['Chair_2'], kuehlschrank: ['Kitchen_Fridge'], kommode: ['Drawer_4'], nachttisch: ['NightStand_1'],
+  bett: ['Bed_King', o => ({ 0: '#F4F1EA', 1: o.decke || '#E8A0A8', 4: o.decke || '#E8A0A8' })],
+  kinderbett: ['Bed_Single', () => ({ 0: '#F4F1EA', 1: '#5B8DEF', 4: '#5B8DEF' })],
+  badewanne: ['Bathroom_Bathtub'], waschbecken: ['Bathroom_Sink'], toilette: ['Bathroom_Toilet'], waschmaschine: ['Bathroom_WashingMachine'],
+};
+let MOEBEL = null;
+export function setzeMoebel(daten) { MOEBEL = daten; }
+const echtGeo = new Map();
+function echtesModell(g, [name, farbFn], boxen, o) {
+  const farben = farbFn ? farbFn(o) : {};
+  const m = MOEBEL && MOEBEL[name];
+  if (!m || !boxen.length) return false;
+  // Rahmen um alle Kollisions-Kisten
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const [x, y, z, w, h, d] of boxen) {
+    const mitte = [x, y, z], halb = [w / 2, h / 2, d / 2];
+    for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], mitte[i] - halb[i]); hi[i] = Math.max(hi[i], mitte[i] + halb[i]); }
+  }
+  const gr = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+  g.clear();
+  m.teile.forEach((t, n) => {
+    const key = name + n + gr.join() + lo.join();
+    if (!echtGeo.has(key)) {
+      const e = t.ecken, p = new Float32Array(e.length);
+      for (let k = 0; k < e.length; k += 3) for (let i = 0; i < 3; i++) p[k + i] = lo[i] + e[k + i] / 1000 * gr[i];
+      const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(p, 3)); geo.computeVertexNormals();
+      echtGeo.set(key, geo);
+    }
+    // eigene Farbe – oder die des Modells, etwas heller (die Modelle sind recht dunkel)
+    const farbe = farben[n] || '#' + new T.Color(t.farbe).multiplyScalar(2).getHexString();
+    mesh(echtGeo.get(key), mat(farbe, { r: 0.75, flach: true }), 0, 0, 0, g);
+  });
+  return true;
+}
+
 // Предмет строится здесь.  anim = список функций, которые зовутся каждый кадр (рыбки и т.п.)
 export function baueObjekt(o, anim) {
   const g = new T.Group();
@@ -364,5 +406,6 @@ export function baueObjekt(o, anim) {
   const f = BAU[o.typ];
   if (f) f(g, boxen, o, anim);
   else kasten(g, 0.4, 0.4, 0.4, '#FF00FF', 0, 0, 0, { boxen });   // неизвестный предмет – розовый куб
+  if (ECHT[o.typ]) echtesModell(g, ECHT[o.typ], boxen, o);
   return { obj: g, boxen };
 }
