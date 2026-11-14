@@ -95,3 +95,20 @@ export function hops() {
   huelle(g, t, 0.005, 0, 0.08, 0.12);
   o.connect(g); g.connect(laut); o.start(t); o.stop(t + 0.12);
 }
+
+// БОНГ! Сковородка
+export function bong() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (const [f, v, d] of [[310, 0.5, 0.9], [742, 0.3, 0.7], [1285, 0.18, 0.5], [2010, 0.1, 0.3]]) {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f;
+    huelle(g, t, 0.002, 0, d, v); o.connect(g); g.connect(laut); o.start(t); o.stop(t + d + 0.05);
+  }
+  plopp(1);
+}
+export function mampf() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 500 + i * 120;
+    huelle(g, t + i * 0.12, 0.005, 0.02, 0.06, 0.15); o.connect(g); g.connect(laut); o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.12); }
+}

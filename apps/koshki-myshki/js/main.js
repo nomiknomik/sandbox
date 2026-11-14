@@ -3,6 +3,8 @@ import * as THREE from '../vendor/three.js';
 import * as RAPIER from '../vendor/rapier.js';
 import { baueHaus } from './haus.js';
 import { Katze } from './katze.js';
+import { Babulya } from './bewohner.js';
+import { baueWegnetz } from './wege.js';
 import { Steuerung } from './steuerung.js';
 import * as ton from './ton.js';
 
@@ -64,6 +66,11 @@ if (Q.schatten) {
 const startEtage = haus.etagen.find(e => e.id === haus.start.etage);
 const startPunkt = { x: haus.start.x, y: startEtage.y, z: haus.start.z };
 const katze = new Katze(scene, world, R, startPunkt);
+world.step();                                    // einmal rechnen, damit Abfragen gehen
+const netz = baueWegnetz(haus, world, R);
+const bewohner = (haus.bewohner || []).map(d => new Babulya(scene, world, R, netz, haus, d));
+for (const b of bewohner) b.m.kamera = kamera;
+const aergern = (wo, plus, laut) => bewohner.forEach(b => b.aergern(wo, plus, laut));
 const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera' });
 
 // ---------- Счёт и сообщения ----------
@@ -101,6 +108,7 @@ function zerbrechen(d) {
   }
   while (scherben.length > 300) { const s = scherben.shift(); scene.remove(s.m); }
   ton.krach(1);
+  aergern(p, 60, true);
   schalk(d.k.punkte || 5, `💥 ${d.k.name} – вдребезги!`);
 }
 function scherbenSchritt(dt) {
@@ -141,11 +149,69 @@ function pfote() {
   for (const h of [0.0, 0.15]) {
     const hit = world.castRay(new R.Ray({ x: p.x, y: p.y + h, z: p.z }, { x: fx, y: 0, z: fz }), 0.45, true, R.QueryFilterFlags.EXCLUDE_DYNAMIC, undefined, katze.col);
     const meta = hit && bau.kratz.get(hit.collider.handle);
-    if (meta) {
+    if (meta && meta.kratzbar) {
       ton.kratzen();
       if (meta.kratzbar === 'gut') { katze.zufrieden = (katze.zufrieden || 0) + 1; meldung('😺 Царап-царап! Когти острые.'); setTimeout(ton.schnurren, 450); }
-      else schalk(3, `😾 ${meta.name} поцарапан!`);
+      else { schalk(3, `😾 ${meta.name} поцарапан!`); aergern(p, 45, false); }
       return;
+    }
+  }
+}
+
+// ---------- Сковородкой по голове ----------
+function getroffen(b) {
+  const f = b.fuesse, k = katze.fuesse;
+  katze.stoss(k.x - f.x, k.z - f.z);
+  ton.bong();
+  sterne(1.6);
+  herzen = Math.max(0, herzen - 1); hud();
+  b.wut = Math.max(0, b.wut - 35);
+  if (herzen > 0) { meldung('🍳 БОНГ! −❤️'); return; }
+  meldung('😿 Бабуля поймала! Кошка просыпается в секретной комнате …');
+  laeuft = false;
+  setTimeout(() => {
+    katze.teleport(startPunkt); katze.unverwundbar = 2;
+    for (const x of bewohner) x.reset();
+    herzen = 5; hud(); laeuft = true;
+  }, 1800);
+}
+// Звёздочки над головой
+const sternGruppe = new T.Group(); scene.add(sternGruppe);
+for (let i = 0; i < 5; i++) { const s = new T.Mesh(new T.OctahedronGeometry(0.035), new T.MeshBasicMaterial({ color: '#FFD23F' })); sternGruppe.add(s); }
+let sternZeit = 0;
+function sterne(s) { sternZeit = s; }
+function sterneSchritt(dt) {
+  sternGruppe.visible = sternZeit > 0;
+  if (sternZeit <= 0) return;
+  sternZeit -= dt;
+  const p = katze.pos;
+  sternGruppe.children.forEach((s, i) => { const a = zeit * 5 + i * 1.257; s.position.set(p.x + Math.cos(a) * 0.15, p.y + 0.28 + Math.sin(a * 2) * 0.02, p.z + Math.sin(a) * 0.15); s.rotation.y = a * 2; });
+}
+// Миска и сон: +❤️
+const naepfe = [];
+haus.etagen.forEach(e => e.objekte.filter(o => o.typ === 'napf').forEach(o => naepfe.push({ x: o.x, y: e.y, z: o.z, warte: 0 })));
+const SCHLAF = new Set(['sofa', 'sessel', 'bett', 'kinderbett', 'katzenkissen']);
+let stillZeit = 0, schlafWarte = 0;
+function heilen(dt) {
+  const k = katze.fuesse;
+  for (const n of naepfe) {
+    n.warte -= dt;
+    if (n.warte <= 0 && Math.hypot(k.x - n.x, k.z - n.z) < 0.4 && Math.abs(k.y - n.y) < 0.3) {
+      n.warte = 25;
+      if (herzen < 5) { herzen++; hud(); meldung('😋 Ням-ням! +❤️'); } else meldung('😋 Ням-ням!');
+      ton.mampf();
+    }
+  }
+  schlafWarte -= dt;
+  if (katze.tempo < 0.05 && katze.amBoden) stillZeit += dt; else stillZeit = 0;
+  if (stillZeit > 3 && schlafWarte <= 0) {
+    const p = katze.pos;
+    const hit = world.castRay(new R.Ray(p, { x: 0, y: -1, z: 0 }), 0.4, true, R.QueryFilterFlags.EXCLUDE_DYNAMIC, undefined, katze.col);
+    const meta = hit && bau.kratz.get(hit.collider.handle);
+    if (meta && SCHLAF.has(meta.typ)) {
+      schlafWarte = 15; stillZeit = 0;
+      ton.schnurren();
+      if (herzen < 5) { herzen++; hud(); meldung('😴 Мурр … отдохнула. +❤️'); } else meldung('😴 Мурр …');
     }
   }
 }
@@ -199,13 +265,14 @@ function frame() {
     blickYaw -= ein.dx * empf; blickPitch -= ein.dy * empf;
     blickPitch = Math.max(ichSicht ? -1.35 : -1.2, Math.min(ichSicht ? 1.35 : 0.7, blickPitch));
     if (ein.kamera) { ichSicht = !ichSicht; $('bKamera').textContent = ichSicht ? '🎥' : '👁️'; meldung(ichSicht ? '👁️ Глазами кошки' : '🎥 Вид сзади'); }
-    if (ein.miau) { ton.miau(); katze.miauZeit = 0.6; }
+    if (ein.miau) { ton.miau(); katze.miauZeit = 0.6; aergern(katze.fuesse, 4, false); }
     if (ein.pfote) pfote();
     rest += dt;
     let n = 0, springen = ein.springen;
     while (rest >= SCHRITT && n < 5) {
       katze.schritt(SCHRITT, { ...ein, springen }, blickYaw, ichSicht);
       springen = false;
+      for (const b of bewohner) if (b.schritt(SCHRITT, katze) === 'treffer') getroffen(b);
       world.step();
       rest -= SCHRITT; n++;
     }
@@ -213,6 +280,8 @@ function frame() {
     // Gefallen ins Nichts? Zurück in die Geheimkammer
     if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Ой! Кошка снова дома.'); }
     ortZeigen();
+    heilen(dt);
+    for (const b of bewohner) if (b.spruch) { meldung('👵 ' + b.spruch); b.spruch = ''; }
   }
   // Bewegliche Sachen nachziehen + zerbrechen?
   for (const d of bau.dyn) {
@@ -225,13 +294,15 @@ function frame() {
       if (d.k.zerbrechlich) { zerbrechen(d); continue; }
       ton.plopp(d.prev / 4);
     }
-    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} упала!`); }
+    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) { schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} упала!`); aergern(p, 15, true); } }
     if (p.y < -8) { world.removeRigidBody(d.body); scene.remove(d.obj); d.weg = true; }
     d.prev = sp;
   }
   scherbenSchritt(dt);
   for (const a of bau.anim) a(zeit);
   katze.zeichne(dt, zeit, !ichSicht);
+  for (const b of bewohner) b.zeichne(dt, zeit);
+  sterneSchritt(dt);
   kameraSetzen(dt);
   renderer.render(scene, kamera);
   fps(dt);
@@ -258,4 +329,4 @@ $('start').onclick = () => {
   meldung('🐱 Ты в секретной комнате на чердаке. Иди хулиганить!');
 };
 // Für Tests im Browser
-window.__km = { renderer, sonne, scene, katze, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

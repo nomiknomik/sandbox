@@ -215,7 +215,7 @@ export function baueHaus(haus, scene, world, R) {
       (anim.length && o.typ === 'aquarium' ? extra : statisch).add(teil.obj);
       teil.obj.updateMatrixWorld(true);
       const q = new T.Quaternion().setFromEuler(new T.Euler(0, rot, 0));
-      const meta = k.kratzbar ? { typ: o.typ, name: k.name, kratzbar: k.kratzbar } : null;
+      const meta = { typ: o.typ, name: k.name, kratzbar: k.kratzbar };
       if (!k.flach) for (const [cx, cy, cz, w, h, d] of teil.boxen) {
         tmp.set(cx, cy, cz).applyMatrix4(teil.obj.matrixWorld);
         kollider(tmp.x, tmp.y, tmp.z, w, h, d, q, meta);

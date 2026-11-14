@@ -49,7 +49,10 @@ bzw. ein Werkzeug, das diese Datei schreibt.
 
 ## Stufen
 1. ✅ v0.1 – Haus (4 Ebenen) + Laufen/Springen + Vasen zerbrechen + Licht/Schatten
-2. ⏳ Бабуля (Wut-Leiste, Wegfindung über Treppen) + Herzen + Game over
+2. ✅ v0.2 – Бабуля: Runde durchs Haus, Wut-Leiste (Balken über dem Kopf), Jagd über alle
+   Treppen, Pfanne = −❤️ + Sterne, Game over → Geheimkammer; Napf und Schlafen (Sofa,
+   Bett, Kissen) = +❤️. Wegfindung: Raster 25 cm + A* (`js/wege.js`), Katzenklappen sind
+   für Menschen automatisch zu.
 3. ⏳ Maus, Aquarium-Minispiel, Aufgabenliste, im Maul tragen
 4. ⏳ weitere Figuren, Aufzug, Sounds aus CC0, echte 3D-Modelle
 5. ⏳ Editor, Garten/Pool, zu zweit spielen

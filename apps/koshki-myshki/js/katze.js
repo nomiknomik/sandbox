@@ -24,6 +24,7 @@ export class Katze {
     this.ctrl = c;
     this.vy = 0; this.amBoden = false; this.yaw = 0; this.phase = 0; this.tempo = 0;
     this.pfoteZeit = 0; this.miauZeit = 0; this.luftZeit = 0;
+    this.schub = { x: 0, z: 0 }; this.unverwundbar = 0;
     this.start = start;
     this.modell = baueKatze();
     scene.add(this.modell.wurzel);
@@ -49,7 +50,9 @@ export class Katze {
     // Gravitation und Sprung
     this.vy -= SCHWERE * dt;
     if (ein.springen && (this.amBoden || this.luftZeit < 0.12)) { this.vy = SPRUNG; this.amBoden = false; this.luftZeit = 1; this.gesprungen = true; }
-    const want = { x: mx * v * dt, y: this.vy * dt, z: mz * v * dt };
+    const want = { x: (mx * v + this.schub.x) * dt, y: this.vy * dt, z: (mz * v + this.schub.z) * dt };
+    const abkl = Math.exp(-4 * dt); this.schub.x *= abkl; this.schub.z *= abkl;
+    if (this.unverwundbar > 0) this.unverwundbar -= dt;
     this.ctrl.computeColliderMovement(this.col, want, this.R.QueryFilterFlags.EXCLUDE_SENSORS);
     const m = this.ctrl.computedMovement();
     const p = this.body.translation();
@@ -68,10 +71,13 @@ export class Katze {
     }
   }
 
+  // Weggeschleudert (von der Pfanne)
+  stoss(dx, dz) { const l = Math.hypot(dx, dz) || 1; this.schub = { x: dx / l * 5, z: dz / l * 5 }; this.vy = 5; this.unverwundbar = 2.5; }
+
   // Bild aktualisieren (Beine, Schwanz …)
   zeichne(dt, zeit, sichtbar) {
     const md = this.modell, p = this.body.translation();
-    md.wurzel.visible = sichtbar;
+    md.wurzel.visible = sichtbar && !(this.unverwundbar > 0 && Math.floor(zeit * 10) % 2);
     md.wurzel.position.set(p.x, p.y - MITTE, p.z);
     md.wurzel.rotation.y = this.yaw;
     const lauf = Math.min(1, this.tempo / RENNEN);
