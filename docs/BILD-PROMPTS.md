@@ -229,3 +229,16 @@ A cute green voxel snake winds through and around the letters, its smiling head 
 A small red voxel apple sits on top of the letter "A".
 Leave a generous transparent margin around everything, nothing cut off. No other text.
 ```
+
+## Кошки-мышки – App-Icon + Logo (ein Sammel-Prompt)
+Ausnahme vom Voxel-Stil: Das 3D-Spiel ist weich-cartoonig, darum hier „3D-Cartoon“.
+Links das Icon-Motiv (Claude legt den Hintergrund darunter), rechts der Schriftzug.
+
+```
+Create ONE image, 1536x1024, with a REAL transparent background (alpha channel, NOT a checkerboard pattern).
+Two separate elements side by side with lots of empty space between and around them. No frames, no grid lines.
+Style for both: polished 3D cartoon render (soft clay / toy look), rounded shapes, soft light from top left, subtle gloss, warm bright cheerful colors, kid-friendly. Own original design, not from any existing cartoon or game.
+LEFT element (square, about 700x700): the head and front paws of a cute ginger tabby cat with big green eyes, peeking over the edge of a wooden table, a small grey mouse sitting on the table right in front of its nose, both look surprised and funny. A tipped-over blue flower vase on the table. Clear and simple so it reads at 60 px.
+RIGHT element (wide): a game title logo with the Russian words "КОШКИ-МЫШКИ" (exactly: К О Ш К И - М Ы Ш К И) in chunky rounded 3D letters, warm orange with a darker orange 3D side and a thin dark brown outline. Small cat ears on top of the first letter "К", a thin mouse tail curling from the last letter "И". No other text.
+```
+Dateien danach: `apps/koshki-myshki/icon-*.png` (Motiv links + Hintergrund) und `logo.webp` (rechts).
