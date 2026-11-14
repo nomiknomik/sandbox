@@ -1,0 +1,2 @@
+Rapier (@dimforge/rapier3d-compat 0.19.3) – Apache License 2.0
+https://github.com/dimforge/rapier  –  https://www.apache.org/licenses/LICENSE-2.0

@@ -1,0 +1,195 @@
+{
+  "name": "Дом бабули",
+  "info": "Единицы: метры. x → восток, z → юг (на плане вниз). rot: 0 = передом на юг, 90 = на восток, 180 = на север, 270 = на запад. y у предмета = на какой высоте он стоит (например, ваза на столе).",
+  "groesse": [14, 10],
+  "start": { "etage": "dg", "x": 12, "z": 8 },
+  "etagen": [
+    {
+      "id": "keller", "name": "Подвал", "y": -2.8, "hoehe": 2.8, "wandfarbe": "#BDB6AA",
+      "raeume": [
+        { "name": "Прачечная", "x0": 0, "z0": 0, "x1": 7, "z1": 10, "boden": "beton" },
+        { "name": "Мастерская", "x0": 7, "z0": 0, "x1": 14, "z1": 10, "boden": "beton" }
+      ],
+      "waende": [
+        { "a": [0, 0], "b": [14, 0], "aussen": true },
+        { "a": [0, 10], "b": [14, 10], "aussen": true },
+        { "a": [0, 0], "b": [0, 10], "aussen": true },
+        { "a": [14, 0], "b": [14, 10], "aussen": true },
+        { "a": [7, 0], "b": [7, 10], "oeffnungen": [{ "typ": "tuer", "pos": 5 }] }
+      ],
+      "loecher": [],
+      "lampen": [{ "x": 3.5, "z": 5, "y": 2.4 }, { "x": 10.5, "z": 5, "y": 2.4 }],
+      "objekte": [
+        { "typ": "treppe", "x0": 10.3, "z0": 0.3, "x1": 13.7, "z1": 1.3, "richtung": "+x" },
+        { "typ": "waschmaschine", "x": 0.45, "z": 1.0, "rot": 90 },
+        { "typ": "waschmaschine", "x": 0.45, "z": 1.7, "rot": 90 },
+        { "typ": "regal", "x": 3.5, "z": 0.3, "rot": 0 },
+        { "typ": "glas", "x": 3.2, "z": 0.3, "y": 1.8 },
+        { "typ": "glas", "x": 3.5, "z": 0.3, "y": 1.8 },
+        { "typ": "glas", "x": 3.8, "z": 0.3, "y": 1.8 },
+        { "typ": "heizung", "x": 5.0, "z": 9.85, "rot": 180 },
+        { "typ": "werkbank", "x": 13.6, "z": 5.0, "rot": 270 },
+        { "typ": "kiste", "x": 8.0, "z": 9.4 },
+        { "typ": "kiste", "x": 8.6, "z": 9.4 },
+        { "typ": "kiste", "x": 8.3, "z": 9.4, "y": 0.5 }
+      ]
+    },
+    {
+      "id": "eg", "name": "1 этаж", "y": 0, "hoehe": 2.8, "wandfarbe": "#F3E6CF",
+      "raeume": [
+        { "name": "Прихожая", "x0": 0, "z0": 0, "x1": 10, "z1": 3.5, "boden": "fliesen" },
+        { "name": "Кладовка", "x0": 10, "z0": 0, "x1": 14, "z1": 3.5, "boden": "beton" },
+        { "name": "Гостиная", "x0": 0, "z0": 3.5, "x1": 8, "z1": 10, "boden": "holz" },
+        { "name": "Кухня", "x0": 8, "z0": 3.5, "x1": 14, "z1": 10, "boden": "fliesen" }
+      ],
+      "waende": [
+        { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "haustuer", "pos": 7 }, { "typ": "fenster", "pos": 11.8, "breite": 0.8 }] },
+        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2 }, { "typ": "fenster", "pos": 5.5 }, { "typ": "fenster", "pos": 9.8 }, { "typ": "fenster", "pos": 12.5 }] },
+        { "a": [0, 0], "b": [0, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2.2 }] },
+        { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7, "unten": 1.05 }] },
+        { "a": [0, 3.5], "b": [14, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 7.2 }, { "typ": "tuer", "pos": 9.0 }, { "typ": "klappe", "pos": 12.0 }] },
+        { "a": [8, 3.5], "b": [8, 10], "oeffnungen": [{ "typ": "tuer", "pos": 1.5, "breite": 1.2 }] },
+        { "a": [10, 0], "b": [10, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] }
+      ],
+      "loecher": [],
+      "lampen": [],
+      "objekte": [
+        { "typ": "treppe", "x0": 1, "z0": 0.3, "x1": 5, "z1": 1.3, "richtung": "+x" },
+        { "typ": "teppich", "x": 7, "z": 1.9, "breite": 2.2, "tiefe": 1.2, "farbe": "#8C3B3B" },
+        { "typ": "schuhschrank", "x": 9.2, "z": 0.32, "rot": 0 },
+        { "typ": "vase", "x": 9.2, "z": 0.32, "y": 0.9 },
+        { "typ": "pflanze", "x": 0.5, "z": 3.0 },
+
+        { "typ": "regal", "x": 13.8, "z": 2.5, "rot": 270 },
+        { "typ": "glas", "x": 13.8, "z": 2.3, "y": 1.8 },
+        { "typ": "glas", "x": 13.8, "z": 2.7, "y": 1.8 },
+        { "typ": "kiste", "x": 10.8, "z": 3.0 },
+        { "typ": "kiste", "x": 11.4, "z": 3.0 },
+
+        { "typ": "teppich", "x": 3.5, "z": 7.4, "breite": 3.2, "tiefe": 2.2, "farbe": "#3F6E8C" },
+        { "typ": "sofa", "x": 3.5, "z": 9.45, "rot": 180 },
+        { "typ": "couchtisch", "x": 3.5, "z": 7.5 },
+        { "typ": "vase", "x": 3.2, "z": 7.5, "y": 0.45 },
+        { "typ": "tasse", "x": 3.9, "z": 7.4, "y": 0.45 },
+        { "typ": "sessel", "x": 6.9, "z": 7.3, "rot": 270 },
+        { "typ": "tvschrank", "x": 2.8, "z": 3.85, "rot": 0 },
+        { "typ": "aquarium", "x": 5.8, "z": 3.85, "rot": 0 },
+        { "typ": "kratzbaum", "x": 1.2, "z": 4.5 },
+        { "typ": "regal", "x": 7.8, "z": 8.6, "rot": 270 },
+        { "typ": "vase", "x": 7.8, "z": 8.35, "y": 1.8 },
+        { "typ": "buch", "x": 7.8, "z": 8.85, "y": 1.8 },
+        { "typ": "pflanze", "x": 7.4, "z": 9.55 },
+        { "typ": "wollknaeuel", "x": 4.8, "z": 6.3 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 6.0, "y": 0.45 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 6.7, "y": 0.85 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 7.4, "y": 1.25 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 8.1, "y": 1.65 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 8.8, "y": 2.05 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 9.5, "y": 2.4 },
+
+        { "typ": "kuechenzeile", "x": 13.68, "z": 6.3, "rot": 270, "laenge": 5.0 },
+        { "typ": "kuehlschrank", "x": 13.6, "z": 9.5, "rot": 270 },
+        { "typ": "topf", "x": 13.7, "z": 4.6, "y": 0.9 },
+        { "typ": "tasse", "x": 13.7, "z": 7.9, "y": 0.9 },
+        { "typ": "esstisch", "x": 10.8, "z": 7.0 },
+        { "typ": "stuhl", "x": 10.4, "z": 6.25, "rot": 0 },
+        { "typ": "stuhl", "x": 11.2, "z": 6.25, "rot": 0 },
+        { "typ": "stuhl", "x": 10.4, "z": 7.75, "rot": 180 },
+        { "typ": "stuhl", "x": 11.2, "z": 7.75, "rot": 180 },
+        { "typ": "vase", "x": 10.8, "z": 7.0, "y": 0.75 },
+        { "typ": "tasse", "x": 10.3, "z": 6.8, "y": 0.75 },
+        { "typ": "teller", "x": 11.3, "z": 7.2, "y": 0.75 },
+        { "typ": "napf", "x": 8.5, "z": 9.5 }
+      ]
+    },
+    {
+      "id": "og", "name": "2 этаж", "y": 2.8, "hoehe": 2.8, "wandfarbe": "#E4EEF2",
+      "raeume": [
+        { "name": "Коридор", "x0": 0, "z0": 0, "x1": 9, "z1": 3.5, "boden": "holz" },
+        { "name": "Ванная", "x0": 9, "z0": 0, "x1": 14, "z1": 3.5, "boden": "fliesen" },
+        { "name": "Спальня", "x0": 0, "z0": 3.5, "x1": 7, "z1": 10, "boden": "teppich" },
+        { "name": "Детская", "x0": 7, "z0": 3.5, "x1": 14, "z1": 10, "boden": "holz" }
+      ],
+      "waende": [
+        { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7 }, { "typ": "fenster", "pos": 11.5, "breite": 0.8 }] },
+        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2 }, { "typ": "fenster", "pos": 5 }, { "typ": "fenster", "pos": 9.5 }, { "typ": "fenster", "pos": 12.5 }] },
+        { "a": [0, 0], "b": [0, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7.8 }] },
+        { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 5.0 }] },
+        { "a": [0, 3.5], "b": [14, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 5.6 }, { "typ": "tuer", "pos": 8.0 }, { "typ": "klappe", "pos": 12.0 }] },
+        { "a": [7, 3.5], "b": [7, 10], "oeffnungen": [{ "typ": "klappe", "pos": 4.5 }] },
+        { "a": [9, 0], "b": [9, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] }
+      ],
+      "loecher": [{ "x0": 0.12, "z0": 9.15, "x1": 0.82, "z1": 9.85, "info": "кошачий лаз из гостиной" }],
+      "lampen": [],
+      "objekte": [
+        { "typ": "treppe", "x0": 1, "z0": 2.0, "x1": 5, "z1": 3.0, "richtung": "+x" },
+        { "typ": "gelaender", "x": 3.0, "z": 1.42, "laenge": 4.0 },
+        { "typ": "kommode", "x": 7.6, "z": 0.35, "rot": 0 },
+        { "typ": "vase", "x": 7.6, "z": 0.35, "y": 0.85 },
+
+        { "typ": "badewanne", "x": 13.05, "z": 0.52, "rot": 0 },
+        { "typ": "waschbecken", "x": 10.0, "z": 0.32, "rot": 0 },
+        { "typ": "tasse", "x": 10.25, "z": 0.3, "y": 0.86 },
+        { "typ": "toilette", "x": 13.6, "z": 2.8, "rot": 270 },
+
+        { "typ": "teppich", "x": 3.5, "z": 6.6, "breite": 2.6, "tiefe": 1.6, "farbe": "#C9A15B" },
+        { "typ": "bett", "x": 3.5, "z": 8.9, "rot": 180 },
+        { "typ": "nachttisch", "x": 2.25, "z": 9.65, "rot": 180 },
+        { "typ": "nachttisch", "x": 4.75, "z": 9.65, "rot": 180 },
+        { "typ": "wecker", "x": 2.25, "z": 9.65, "y": 0.5 },
+        { "typ": "tasse", "x": 4.75, "z": 9.65, "y": 0.5 },
+        { "typ": "kleiderschrank", "x": 0.42, "z": 5.5, "rot": 90 },
+        { "typ": "kommode", "x": 6.65, "z": 5.2, "rot": 270 },
+        { "typ": "vase", "x": 6.65, "z": 5.2, "y": 0.85 },
+
+        { "typ": "teppich", "x": 10.8, "z": 6.6, "breite": 2.4, "tiefe": 2.0, "farbe": "#5BAA6A" },
+        { "typ": "kinderbett", "x": 9.0, "z": 9.48, "rot": 90 },
+        { "typ": "schreibtisch", "x": 11.2, "z": 9.62, "rot": 180 },
+        { "typ": "tasse", "x": 11.5, "z": 9.62, "y": 0.75 },
+        { "typ": "spielzeugkiste", "x": 13.0, "z": 4.0 },
+        { "typ": "ball", "x": 10.4, "z": 6.0 },
+        { "typ": "bauklotz", "x": 11.2, "z": 5.6 },
+        { "typ": "bauklotz", "x": 11.5, "z": 5.7 },
+        { "typ": "bauklotz", "x": 11.35, "z": 5.65, "y": 0.2 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 6.0, "y": 0.45 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 6.7, "y": 0.85 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 7.4, "y": 1.25 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 8.1, "y": 1.65 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 8.8, "y": 2.05 },
+        { "typ": "katzenbrett", "x": 13.67, "z": 9.5, "y": 2.4 }
+      ]
+    },
+    {
+      "id": "dg", "name": "Чердак", "y": 5.6, "hoehe": 2.4, "wandfarbe": "#D9C2A0",
+      "raeume": [
+        { "name": "Чердак", "x0": 0, "z0": 0, "x1": 14, "z1": 6.5, "boden": "dielen" },
+        { "name": "Чердак", "x0": 0, "z0": 6.5, "x1": 10, "z1": 10, "boden": "dielen" },
+        { "name": "Секретная комната", "x0": 10, "z0": 6.5, "x1": 14, "z1": 10, "boden": "teppich", "geheim": true }
+      ],
+      "waende": [
+        { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 4, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }, { "typ": "fenster", "pos": 9, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }] },
+        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 3, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }, { "typ": "fenster", "pos": 7, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }, { "typ": "fenster", "pos": 12, "breite": 0.7, "hoehe": 0.7, "unten": 0.9 }] },
+        { "a": [0, 0], "b": [0, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 5, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }] },
+        { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 3, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }] },
+        { "a": [10, 6.5], "b": [10, 10] },
+        { "a": [10, 6.5], "b": [14, 6.5], "oeffnungen": [{ "typ": "klappe", "pos": 2.0 }] }
+      ],
+      "loecher": [{ "x0": 13.2, "z0": 9.2, "x1": 13.8, "z1": 9.8, "info": "кошачий лаз из детской" }],
+      "lampen": [{ "x": 6, "z": 5, "y": 2.1 }],
+      "objekte": [
+        { "typ": "kiste", "x": 8.0, "z": 0.6 },
+        { "typ": "kiste", "x": 8.6, "z": 0.6 },
+        { "typ": "kiste", "x": 8.3, "z": 0.6, "y": 0.5 },
+        { "typ": "kiste", "x": 6.4, "z": 9.4 },
+        { "typ": "truhe", "x": 12.4, "z": 0.6, "rot": 0 },
+        { "typ": "sessel", "x": 3.0, "z": 8.2, "rot": 0 },
+        { "typ": "regal", "x": 0.3, "z": 7.0, "rot": 90 },
+        { "typ": "vase", "x": 0.3, "z": 6.8, "y": 1.8 },
+        { "typ": "wollknaeuel", "x": 5.5, "z": 6.0 },
+        { "typ": "katzenkissen", "x": 12.2, "z": 8.6 },
+        { "typ": "regal", "x": 13.75, "z": 7.6, "rot": 270 },
+        { "typ": "spielzeugmaus", "x": 11.3, "z": 7.6 }
+      ]
+    }
+  ]
+}

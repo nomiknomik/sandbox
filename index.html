@@ -61,6 +61,7 @@
   </header>
   <ul>
 <!-- APPS -->
+    <li><a href="apps/koshki-myshki/"><img src="apps/koshki-myshki/icon-192.png" alt="">Кошки-мышки</a></li>
     <li><a href="apps/schlange/"><img src="apps/schlange/icon-192.png" alt="">Schlange</a></li>
     <li><a href="apps/stadtbaron/"><img src="apps/stadtbaron/icon-192.png?v=2" alt="">Stadtbaron</a></li>
     <li><a href="apps/tanchiki/"><img src="apps/tanchiki/icon-192.png" alt="">Танчики</a></li>
@@ -72,7 +73,7 @@
 </main>
 <script>
 // Bei jeder Änderung am Portal hochzählen (und CACHE in sw.js).
-const PORTAL_VERSION = '1.4';
+const PORTAL_VERSION = '1.5';
 
 // Kurze Beschreibung und Farbe pro Spiel (neue Spiele ohne Eintrag gehen auch)
 const INFO = {
@@ -81,6 +82,7 @@ const INFO = {
   'apps/wuermer/': ['Würmer-Schlacht', '#5FC24A'],
   'apps/morskoj-boj/': ['Schiffe versenken', '#47D7E8'],
   'apps/stadtbaron/': ['Straßen kaufen, Häuser bauen', '#2E9D5B'],
+  'apps/koshki-myshki/': ['Als Katze durchs Haus toben (3D)', '#E8833A'],
 };
 const liste = document.querySelectorAll('ul li a');
 if (liste.length) document.getElementById('leer').remove();
