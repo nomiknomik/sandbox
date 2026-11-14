@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>План дома – Кошки-мышки</title>
+<title>Hausplan – Katz und Maus</title>
 <style>
   :root{--bg:#FBF6EE;--text:#2B2118;--muted:#7A6B5C;--accent:#E8833A;--card:#fff;--line:#5A4A3A}
   @media (prefers-color-scheme:dark){:root{--bg:#1B1612;--text:#F3EADF;--muted:#B5A693;--card:#2A221B;--line:#E8DCCB}}
@@ -28,22 +28,22 @@
 </style>
 </head>
 <body>
-<h1>🏠 План дома</h1>
-<p class="sub">Нажми на значок, чтобы узнать, что это. Что поменять? Скажи папе, и Claude переставит.</p>
+<h1>🏠 Hausplan</h1>
+<p class="sub">Tipp auf ein Zeichen, dann siehst du, was es ist. Etwas ändern? Sag es Papa, dann stellt Claude es um.</p>
 <div class="tabs" id="tabs"></div>
 <div class="karte"><svg id="plan" viewBox="-0.6 -0.9 15.2 11.7"></svg></div>
-<div id="info">Выбери предмет на плане.</div>
+<div id="info">Wähle etwas auf dem Plan.</div>
 <div class="legende">
-  <span><i class="kasten" style="background:#5A4A3A"></i>стена</span>
-  <span><i class="kasten" style="background:#7EC8E3"></i>окно</span>
-  <span><i class="kasten" style="background:#fff;border:1px dashed #999"></i>дверь</span>
-  <span><i class="kasten" style="background:#FF8C2B"></i>кошачий ход (люди не пролезут)</span>
-  <span><i class="kasten" style="background:repeating-linear-gradient(90deg,#c9b79c 0 3px,#9c8a70 3px 5px)"></i>лестница</span>
-  <span><i class="kasten" style="background:#222"></i>дыра в полу (кошачий лаз)</span>
+  <span><i class="kasten" style="background:#5A4A3A"></i>Wand</span>
+  <span><i class="kasten" style="background:#7EC8E3"></i>Fenster</span>
+  <span><i class="kasten" style="background:#fff;border:1px dashed #999"></i>Tür</span>
+  <span><i class="kasten" style="background:#FF8C2B"></i>Katzenweg (Menschen passen nicht durch)</span>
+  <span><i class="kasten" style="background:repeating-linear-gradient(90deg,#c9b79c 0 3px,#9c8a70 3px 5px)"></i>Treppe</span>
+  <span><i class="kasten" style="background:#222"></i>Loch im Boden (Katzenloch)</span>
 </div>
-<h3>Как кошка попадает на другой этаж</h3>
+<h3>Wie die Katze in ein anderes Stockwerk kommt</h3>
 <ul id="wege"></ul>
-<p><a href="./">← назад в игру</a></p>
+<p><a href="./">← zurück ins Spiel</a></p>
 
 <script type="module">
 import { KATALOG, grundflaeche, OEFFNUNG } from './js/katalog.js';
@@ -57,10 +57,10 @@ const el = (tag, attrs, eltern = svg) => { const e = document.createElementNS(NS
 
 // Kurz beschreiben, wie man nach oben/unten kommt
 const wege = [
-  '🪜 Обычная лестница: подвал ↔ 1 этаж (кладовка), 1 ↔ 2 этаж (прихожая), 2 этаж ↔ чердак (коридор).',
-  '🐾 Кошачьи ступеньки на стене гостиной → лаз в спальню (2 этаж).',
-  '🐾 Кошачьи ступеньки в детской → лаз прямо в секретную комнату на чердаке.',
-  '🚪 Кошачьи дверцы: кухня ↔ кладовка, ванная ↔ детская, спальня ↔ детская, чердак ↔ секретная комната.',
+  '🪜 Normale Treppe: Keller ↔ Erdgeschoss (Abstellraum), Erdgeschoss ↔ Obergeschoss (Flur), Obergeschoss ↔ Dachboden (Gang).',
+  '🐾 Katzenbretter an der Wohnzimmerwand → Loch ins Schlafzimmer (Obergeschoss).',
+  '🐾 Katzenbretter im Kinderzimmer → Loch direkt in die Geheimkammer auf dem Dachboden.',
+  '🚪 Katzenklappen: Küche ↔ Abstellraum, Bad ↔ Kinderzimmer, Schlafzimmer ↔ Kinderzimmer, Dachboden ↔ Geheimkammer.',
 ];
 document.getElementById('wege').innerHTML = wege.map(w => `<li>${w}</li>`).join('');
 
@@ -68,7 +68,7 @@ function zeichne(etage) {
   svg.innerHTML = '';
   const [W, D] = haus.groesse;
   el('rect', { x: -0.3, y: -0.3, width: W + 0.6, height: D + 0.6, fill: '#9BC77A', rx: 0.2 });
-  el('text', { x: W / 2, y: -0.45, 'text-anchor': 'middle', 'font-size': 0.35, fill: 'currentColor' }).textContent = '⬆ север (улица, вход)';
+  el('text', { x: W / 2, y: -0.45, 'text-anchor': 'middle', 'font-size': 0.35, fill: 'currentColor' }).textContent = '⬆ Norden (Straße, Eingang)';
 
   for (const r of etage.raeume) {
     el('rect', { x: r.x0, y: r.z0, width: r.x1 - r.x0, height: r.z1 - r.z0, fill: BODEN[r.boden] || '#ddd' });
@@ -86,13 +86,13 @@ function zeichne(etage) {
       const x = t.x0 + (t.x1 - t.x0) * f;
       el('rect', { x, y: t.z0, width: (t.x1 - t.x0) / n, height: t.z1 - t.z0, fill: t.hoch ? `hsl(35,30%,${70 - f * 25}%)` : '#2228', stroke: '#7a6a55', 'stroke-width': 0.015 }, g);
     }
-    el('text', { x: (t.x0 + t.x1) / 2, y: (t.z0 + t.z1) / 2 + 0.14, 'text-anchor': 'middle', 'font-size': 0.32, fill: '#fff', 'font-weight': 700 }, g).textContent = t.hoch ? 'вверх ➜' : '⬇ лестница снизу';
+    el('text', { x: (t.x0 + t.x1) / 2, y: (t.z0 + t.z1) / 2 + 0.14, 'text-anchor': 'middle', 'font-size': 0.32, fill: '#fff', 'font-weight': 700 }, g).textContent = t.hoch ? 'hoch ➜' : '⬇ Treppe von unten';
     g.style.cursor = 'pointer';
-    g.onclick = () => info.textContent = t.hoch ? '🪜 Лестница наверх' : '🪜 Сюда приходит лестница снизу';
+    g.onclick = () => info.textContent = t.hoch ? '🪜 Treppe nach oben' : '🪜 Hier kommt die Treppe von unten an';
   }
   for (const l of etage.loecher) {
     const r = el('rect', { x: l.x0, y: l.z0, width: l.x1 - l.x0, height: l.z1 - l.z0, fill: '#222', rx: 0.05 });
-    r.style.cursor = 'pointer'; r.onclick = () => info.textContent = '🕳️ ' + (l.info || 'дыра в полу');
+    r.style.cursor = 'pointer'; r.onclick = () => info.textContent = '🕳️ ' + (l.info || 'Loch im Boden');
   }
   if (unten) for (const l of (unten.loecher || [])) {}  // Löcher gehören zur Etage, in deren Boden sie sind
   const oben = haus.etagen[idx + 1];
@@ -114,8 +114,8 @@ function zeichne(etage) {
     if (o.y) t.setAttribute('font-size', 0.3);
     g.style.cursor = 'pointer';
     g.onclick = () => {
-      const was = [k.beweglich && 'можно столкнуть', k.zerbrechlich && 'разбивается 💥', k.kratzbar === 'gut' && 'можно точить когти 😺', k.kratzbar === 'schaden' && 'если поцарапать – бабуля рассердится 😾'].filter(Boolean);
-      info.textContent = `${k.emoji} ${k.name}${o.y ? ` (стоит на высоте ${o.y} м)` : ''}${was.length ? ' – ' + was.join(', ') : ''}`;
+      const was = [k.beweglich && 'kann man runterschubsen', k.zerbrechlich && 'geht kaputt 💥', k.kratzbar === 'gut' && 'Krallen schärfen erlaubt 😺', k.kratzbar === 'schaden' && 'Kratzen macht Oma wütend 😾'].filter(Boolean);
+      info.textContent = `${k.emoji} ${k.name}${o.y ? ` (steht in ${o.y} m Höhe)` : ''}${was.length ? ' – ' + was.join(', ') : ''}`;
     };
   }
 
@@ -151,14 +151,14 @@ function zeichne(etage) {
 }
 
 const tabs = document.getElementById('tabs');
-const reihenfolge = [...haus.etagen].reverse();   // чердак сверху, как в настоящем доме
+const reihenfolge = [...haus.etagen].reverse();   // Dachboden oben, wie im echten Haus
 for (const e of reihenfolge) {
   const b = document.createElement('button');
   b.textContent = e.name;
-  b.onclick = () => { for (const x of tabs.children) x.classList.toggle('an', x === b); zeichne(e); info.textContent = 'Выбери предмет на плане.'; };
+  b.onclick = () => { for (const x of tabs.children) x.classList.toggle('an', x === b); zeichne(e); info.textContent = 'Wähle etwas auf dem Plan.'; };
   tabs.appendChild(b);
 }
-tabs.children[2].click();   // 1 этаж
+tabs.children[2].click();   // Erdgeschoss
 </script>
 </body>
 </html>

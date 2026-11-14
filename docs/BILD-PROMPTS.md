@@ -230,7 +230,7 @@ A small red voxel apple sits on top of the letter "A".
 Leave a generous transparent margin around everything, nothing cut off. No other text.
 ```
 
-## Кошки-мышки – App-Icon + Logo (ein Sammel-Prompt)
+## Кошки-мышки – App-Icon + Logo (ein Sammel-Prompt)  ✅ Icon + Titelbild eingebaut (v0.3)
 Ausnahme vom Voxel-Stil: Das 3D-Spiel ist weich-cartoonig, darum hier „3D-Cartoon“.
 Links das Icon-Motiv (Claude legt den Hintergrund darunter), rechts der Schriftzug.
 
@@ -242,3 +242,16 @@ LEFT element (square, about 700x700): the head and front paws of a cute ginger t
 RIGHT element (wide): a game title logo with the Russian words "КОШКИ-МЫШКИ" (exactly: К О Ш К И - М Ы Ш К И) in chunky rounded 3D letters, warm orange with a darker orange 3D side and a thin dark brown outline. Small cat ears on top of the first letter "К", a thin mouse tail curling from the last letter "И". No other text.
 ```
 Dateien danach: `apps/koshki-myshki/icon-*.png` (Motiv links + Hintergrund) und `logo.webp` (rechts).
+Ergebnis: Katze+Maus links → Icon + `titelbild.webp`. Der russische Schriftzug wird nicht benutzt,
+weil das Spiel jetzt **deutsch** ist (Titel „Katz und Maus“) → neuer Logo-Prompt unten.
+
+## Katz und Maus – Logo (deutscher Titel)  ⏳ offen
+```
+Create ONE image, 1536x512, with a REAL transparent background (alpha channel, NOT a checkerboard pattern).
+A game title logo with the German words "KATZ UND MAUS" (exactly these letters: K A T Z   U N D   M A U S), on one line.
+Style: polished 3D cartoon render (soft clay / toy look), chunky rounded 3D letters, soft light from top left, subtle gloss, warm bright cheerful colors, kid-friendly. Own original design, not from any existing cartoon or game.
+"KATZ" in warm orange with a darker orange 3D side, "UND" smaller in cream white, "MAUS" in soft grey with a darker grey 3D side, all letters with a thin dark brown outline.
+Small orange cat ears on top of the letter "K", a thin pink mouse tail curling from the last letter "S", two small round mouse ears on top of the letter "M".
+Leave a generous transparent margin around everything, nothing cut off. No other text.
+```
+Datei danach: `apps/koshki-myshki/logo.webp` (ersetzt auf dem Titelbildschirm den Text-Titel).

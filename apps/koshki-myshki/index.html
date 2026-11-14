@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Кошки-мышки">
+<meta name="apple-mobile-web-app-title" content="Katz und Maus">
 <meta name="theme-color" content="#E8833A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Кошки-мышки</title>
+<title>Katz und Maus</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0;overflow:hidden;background:#9ED3F5}
@@ -36,10 +36,18 @@
   @media (pointer:fine){.knopf{opacity:.55}}
   #joy{position:fixed;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;background:#ffffff26;border:2px solid #fff6;display:none;pointer-events:none;z-index:3}
   #joyKnauf{position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;background:#ffffffa0;transform:translate(-50%,-50%)}
+  /* Angel-Spiel am Aquarium */
+  #angeln{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(420px,80vw);z-index:6;pointer-events:none;opacity:0;transition:opacity .2s;text-align:center;text-shadow:0 1px 3px #0009}
+  #angeln.zeig{opacity:1}
+  #angeln .text{font-weight:700;margin-bottom:8px}
+  #angeln .balken{position:relative;height:52px;border-radius:26px;background:linear-gradient(#5CC2F2,#1F78B4);border:3px solid #fff;box-shadow:0 4px 14px #0005;overflow:hidden}
+  #angeln .feld{position:absolute;top:0;bottom:0;background:#5BD45Bcc;border-left:3px solid #fff;border-right:3px solid #fff}
+  #angeln .fisch{position:absolute;top:50%;font-size:34px;transform:translate(-50%,-50%)}
   /* Titelbildschirm */
   #titel{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
          background:radial-gradient(circle at 50% 30%,#FFB46Bcc,#7A3E14ee);padding:20px;text-align:center}
   #titel h1{margin:0;font-size:clamp(40px,8vw,72px);text-shadow:0 4px 0 #7A3E14,0 8px 18px #0006}
+  #titelbild{height:min(30vh,220px);filter:drop-shadow(0 8px 14px #0006)}
   #titel p{margin:0;max-width:560px;opacity:.95}
   #start{font:inherit;font-size:24px;font-weight:700;padding:16px 44px;border:0;border-radius:18px;background:#fff;color:#C2581B;box-shadow:0 6px 0 #B9692F;cursor:pointer}
   #start:disabled{opacity:.6}
@@ -58,24 +66,24 @@
   <div class="hud" id="meldung"></div>
   <div class="hud" id="fps"></div>
   <div id="joy"><div id="joyKnauf"></div></div>
-  <button class="knopf" id="bSprung" aria-label="прыжок">⤒</button>
-  <button class="knopf" id="bPfote" aria-label="лапа">🐾</button>
-  <button class="knopf" id="bMiau" aria-label="мяу">😺</button>
-  <button class="knopf" id="bKamera" aria-label="камера">👁️</button>
+  <button class="knopf" id="bSprung" aria-label="Springen">⤒</button>
+  <button class="knopf" id="bPfote" aria-label="Pfote">🐾</button>
+  <button class="knopf" id="bMiau" aria-label="Miau">😺</button>
+  <button class="knopf" id="bKamera" aria-label="Kamera">👁️</button>
 
   <div id="titel">
-    <h1>🐱 Кошки-мышки</h1>
-    <p>Ты – кошка. Бегай по дому, прыгай на шкафы и роняй вещи. Только бабуле не попадайся!</p>
-    <button id="start" disabled>Загрузка …</button>
-    <div id="laden">Загружаю …</div>
+    <img id="titelbild" src="titelbild.webp" alt=""><h1>Katz und Maus</h1>
+    <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen!</p>
+    <button id="start" disabled>Lädt …</button>
+    <div id="laden">Lade …</div>
     <div class="reihe">
-      <button data-q="schoen">✨ Красиво</button><button data-q="mittel">Средне</button><button data-q="schnell">⚡ Быстро</button>
+      <button data-q="schoen">✨ Schön</button><button data-q="mittel">Mittel</button><button data-q="schnell">⚡ Schnell</button>
     </div>
     <div class="hilfe">
-      💻 <b>W A S D</b> бегать · <b>мышь</b> смотреть · <b>Пробел</b> прыжок · <b>E</b>/клик лапа · <b>Q</b> мяу · <b>C</b> камера · <b>Shift</b> быстро<br>
-      📱 левый палец – джойстик · правый – смотреть · кнопки справа
+      💻 <b>W A S D</b> laufen · <b>Maus</b> schauen · <b>Leertaste</b> springen · <b>E</b>/Klick Pfote · <b>Q</b> miauen · <b>C</b> Kamera · <b>Shift</b> rennen<br>
+      📱 linker Daumen – Joystick · rechter – schauen · Knöpfe rechts
     </div>
-    <div class="reihe"><a href="plan.html">🗺 План дома</a></div>
+    <div class="reihe"><a href="plan.html">🗺 Hausplan</a></div>
   </div>
 
   <a id="portal" href="../../">🕹 Alle Spiele</a>
@@ -83,7 +91,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.2';
+const APP_VERSION = '0.3';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;

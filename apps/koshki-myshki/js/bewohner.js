@@ -40,7 +40,7 @@ export class Babulya {
     if (!laut && !(gleich && d < 7)) return false;
     const faktor = gleich ? 1 : 0.6;
     this.wut = Math.min(100, this.wut + plus * faktor);
-    if (this.wut >= WUT_JAGD && this.zustand === 'ruhe') { this.zustand = 'jagd'; this.spruch = 'Ах ты, хулиганка! 🍳'; this.weg = null; }
+    if (this.wut >= WUT_JAGD && this.zustand === 'ruhe') { this.zustand = 'jagd'; this.spruch = 'Na warte, du Frechdachs! 🍳'; this.weg = null; }
     return true;
   }
 
@@ -72,7 +72,7 @@ export class Babulya {
       const sieht = this.siehtKatze(katze);
       // Wut lässt langsam nach, schneller wenn die Katze weg ist
       this.wut -= dt * (sieht ? 1.5 : 5);
-      if (this.wut < 20 && this.zustand === 'jagd') { this.zustand = 'ruhe'; this.spruch = 'Ну ладно… 😤'; this.weg = null; }
+      if (this.wut < 20 && this.zustand === 'jagd') { this.zustand = 'ruhe'; this.spruch = 'Na gut … 😤'; this.weg = null; }
       tempo = JAGD_TEMPO;
       const erreichbar = dy < 1.35 && dy > -0.6;
       if (this.zustand === 'schlag') {
@@ -80,7 +80,7 @@ export class Babulya {
         if (!this.getroffen && this.schlagZeit > 0.28) {
           this.getroffen = true;
           if (dxz < 1.0 && erreichbar && !katze.unverwundbar) ergebnis = 'treffer';
-          else this.spruch = 'Мимо! 😠';
+          else this.spruch = 'Daneben! 😠';
         }
         if (this.schlagZeit > 0.6) { this.zustand = 'jagd'; this.pause = 0.8; }
       } else if (dxz < 0.85 && erreichbar && meineE === katzeE && this.pause <= 0) {
@@ -92,10 +92,10 @@ export class Babulya {
         if (!this.weg || (this.wegZeit <= 0 && !aufTreppe)) {
           this.wegZeit = 1;
           this.weg = this.netz.pfad(meineE, f.x, f.z, katzeE, k.x, k.z);
-          if (!this.weg) { this.wut -= dt * 10; if (!this.unerreichbarGesagt) { this.spruch = 'Где эта кошка?! 🤨'; this.unerreichbarGesagt = true; } }
+          if (!this.weg) { this.wut -= dt * 10; if (!this.unerreichbarGesagt) { this.spruch = 'Wo ist diese Katze?! 🤨'; this.unerreichbarGesagt = true; } }
           else this.unerreichbarGesagt = false;
         }
-        if (!erreichbar && dxz < 1.2 && meineE === katzeE) { this.weg = null; if (Math.random() < dt * 0.4) this.spruch = 'А ну слезай! 👊'; }
+        if (!erreichbar && dxz < 1.2 && meineE === katzeE) { this.weg = null; if (Math.random() < dt * 0.4) this.spruch = 'Komm sofort da runter! 👊'; }
       }
       this.pause -= dt;
     } else {

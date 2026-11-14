@@ -46,7 +46,9 @@ export class Katze {
     let mx = fx * ein.z + rx * ein.x, mz = fz * ein.z + rz * ein.x;
     const st = Math.min(1, Math.hypot(mx, mz));
     if (st > 0.01) { const l = Math.hypot(mx, mz); mx /= l; mz /= l; }
-    const v = st * (ein.rennen || st > 0.92 ? RENNEN : GEHEN);
+    // nass (ins Aquarium gefallen) = halb so schnell
+    if (this.nass > 0) this.nass -= dt;
+    const v = st * (ein.rennen || st > 0.92 ? RENNEN : GEHEN) * (this.nass > 0 ? 0.5 : 1);
     // Gravitation und Sprung
     this.vy -= SCHWERE * dt;
     if (ein.springen && (this.amBoden || this.luftZeit < 0.12)) { this.vy = SPRUNG; this.amBoden = false; this.luftZeit = 1; this.gesprungen = true; }

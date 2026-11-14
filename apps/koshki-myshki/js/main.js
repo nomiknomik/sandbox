@@ -6,6 +6,7 @@ import { Katze } from './katze.js';
 import { Babulya } from './bewohner.js';
 import { baueWegnetz } from './wege.js';
 import { Steuerung } from './steuerung.js';
+import { Maus, Angeln, Tropfen, echteFische } from './tiere.js';
 import * as ton from './ton.js';
 
 const T = THREE, R = RAPIER;
@@ -14,9 +15,9 @@ const status = t => { $('laden').textContent = t; };
 
 // ---------- Качество графики ----------
 const QUALI = {
-  schoen:  { name: 'Красиво', pixel: 2,   schatten: 2048, weich: true,  aa: true },
-  mittel:  { name: 'Средне',  pixel: 1.5, schatten: 1024, weich: false, aa: true },
-  schnell: { name: 'Быстро',  pixel: 1,   schatten: 0,    weich: false, aa: false },
+  schoen:  { name: 'Schön', pixel: 2,   schatten: 2048, weich: true,  aa: true },
+  mittel:  { name: 'Mittel',  pixel: 1.5, schatten: 1024, weich: false, aa: true },
+  schnell: { name: 'Schnell',  pixel: 1,   schatten: 0,    weich: false, aa: false },
 };
 let qName = null;
 try { qName = localStorage.getItem('km-qualitaet'); } catch {}
@@ -27,9 +28,9 @@ for (const b of document.querySelectorAll('[data-q]')) {
   b.onclick = () => { try { localStorage.setItem('km-qualitaet', b.dataset.q); } catch {} location.reload(); };
 }
 
-status('Загружаю физику …');
+status('Lade Physik …');
 await R.init();
-status('Строю дом …');
+status('Baue das Haus …');
 
 const renderer = new T.WebGLRenderer({ antialias: Q.aa, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pixel));
@@ -71,6 +72,9 @@ const netz = baueWegnetz(haus, world, R);
 const bewohner = (haus.bewohner || []).map(d => new Babulya(scene, world, R, netz, haus, d));
 for (const b of bewohner) b.m.kamera = kamera;
 const aergern = (wo, plus, laut) => bewohner.forEach(b => b.aergern(wo, plus, laut));
+const maeuse = (haus.maeuse || []).map(d => new Maus(scene, netz, haus, d));
+const angeln = new Angeln(), tropfen = new Tropfen(scene);
+echteFische(bau.aquarien);
 const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera' });
 
 // ---------- Счёт и сообщения ----------
@@ -109,7 +113,7 @@ function zerbrechen(d) {
   while (scherben.length > 300) { const s = scherben.shift(); scene.remove(s.m); }
   ton.krach(1);
   aergern(p, 60, true);
-  schalk(d.k.punkte || 5, `💥 ${d.k.name} – вдребезги!`);
+  schalk(d.k.punkte || 5, `💥 ${d.k.name} – kaputt!`);
 }
 function scherbenSchritt(dt) {
   for (const s of scherben) {
@@ -128,6 +132,17 @@ function scherbenSchritt(dt) {
 function pfote() {
   katze.pfoteZeit = 0.35;
   const p = katze.pos, fx = Math.sin(katze.yaw), fz = Math.cos(katze.yaw);
+  // Angel-Spiel läuft? Dann zählt die Pfote dort
+  if (angeln.aktiv) { angelErgebnis(angeln.druecken()); return; }
+  // Maus erwischt?
+  for (const m of maeuse) if (m.fangen(katze)) {
+    ton.juhu(); gefangen.maeuse++;
+    schalk(20, '🐭 Maus gefangen!');
+    return;
+  }
+  // Am Aquarium? Dann angeln!
+  const aq = amAquarium();
+  if (aq && aq.warte <= 0) { angeln.start(aq); return; }
   let bester = null, bestD = 0.55;
   for (const d of bau.dyn) {
     if (d.weg) continue;
@@ -151,12 +166,56 @@ function pfote() {
     const meta = hit && bau.kratz.get(hit.collider.handle);
     if (meta && meta.kratzbar) {
       ton.kratzen();
-      if (meta.kratzbar === 'gut') { katze.zufrieden = (katze.zufrieden || 0) + 1; meldung('😺 Царап-царап! Когти острые.'); setTimeout(ton.schnurren, 450); }
-      else { schalk(3, `😾 ${meta.name} поцарапан!`); aergern(p, 45, false); }
+      if (meta.kratzbar === 'gut') { katze.zufrieden = (katze.zufrieden || 0) + 1; meldung('😺 Kratz-kratz! Krallen sind scharf.'); setTimeout(ton.schnurren, 450); }
+      else { schalk(3, `😾 ${meta.name} zerkratzt!`); aergern(p, 45, false); }
       return;
     }
   }
 }
+
+// ---------- Aquarium: Fische angeln ----------
+const gefangen = { maeuse: 0, fische: 0 };
+for (const aq of bau.aquarien) aq.warte = 0;
+function amAquarium() {
+  const k = katze.fuesse;
+  for (const aq of bau.aquarien) {
+    const d = Math.hypot(k.x - aq.x, k.z - aq.z);
+    if (d < 0.95 && k.y > aq.y - 0.2 && k.y < aq.y + 1.5) return aq;
+  }
+  return null;
+}
+let fischImMaul = null;
+function angelErgebnis(erg) {
+  const aq = angeln.aq; aq.warte = 2;
+  if (erg === 'treffer') {
+    const fische = aq.obj.userData.fische || [];
+    const f = fische[Math.floor(Math.random() * fische.length)];
+    if (f) { f.userData.weg = true; fischImMaul = { f, aq, zeit: 2 }; }
+    ton.platsch(); ton.juhu(); gefangen.fische++;
+    tropfen.spritzen(katze.pos, 10, 1.2);
+    schalk(15, '🐟 Fisch geangelt!');
+    aergern(katze.fuesse, 25, false);
+  } else if (erg === 'daneben') {
+    ton.platsch();
+    katze.nass = 10;
+    tropfen.spritzen(katze.pos, 24, 2.2);
+    meldung('💦 PLATSCH! Ins Wasser gefallen – 10 Sekunden nass und langsam.');
+    aergern(katze.fuesse, 40, true);
+  } else meldung('🐟 Der Fisch ist weggeschwommen.');
+}
+function fischSchritt(dt) {
+  if (!fischImMaul) return;
+  const { f, aq } = fischImMaul, p = katze.pos;
+  fischImMaul.zeit -= dt;
+  const w = new T.Vector3(p.x + Math.sin(katze.yaw) * 0.3, p.y + 0.08, p.z + Math.cos(katze.yaw) * 0.3);
+  f.position.copy(aq.obj.worldToLocal(w));
+  f.rotation.y = katze.yaw - aq.rot + Math.PI / 2 + Math.sin(zeit * 30) * 0.4;   // zappelt
+  if (fischImMaul.zeit <= 0) {
+    f.userData.weg = false; fischImMaul = null;
+    ton.platsch(); meldung('🐟 Platsch – der Fisch springt zurück ins Wasser!');
+  }
+}
+let aquaHinweis = false;
 
 // ---------- Сковородкой по голове ----------
 function getroffen(b) {
@@ -166,8 +225,8 @@ function getroffen(b) {
   sterne(1.6);
   herzen = Math.max(0, herzen - 1); hud();
   b.wut = Math.max(0, b.wut - 35);
-  if (herzen > 0) { meldung('🍳 БОНГ! −❤️'); return; }
-  meldung('😿 Бабуля поймала! Кошка просыпается в секретной комнате …');
+  if (herzen > 0) { meldung('🍳 BONG! −❤️'); return; }
+  meldung('😿 Oma hat dich erwischt! Die Katze wacht in der Geheimkammer auf …');
   laeuft = false;
   setTimeout(() => {
     katze.teleport(startPunkt); katze.unverwundbar = 2;
@@ -198,7 +257,7 @@ function heilen(dt) {
     n.warte -= dt;
     if (n.warte <= 0 && Math.hypot(k.x - n.x, k.z - n.z) < 0.4 && Math.abs(k.y - n.y) < 0.3) {
       n.warte = 25;
-      if (herzen < 5) { herzen++; hud(); meldung('😋 Ням-ням! +❤️'); } else meldung('😋 Ням-ням!');
+      if (herzen < 5) { herzen++; hud(); meldung('😋 Mampf-mampf! +❤️'); } else meldung('😋 Mampf-mampf!');
       ton.mampf();
     }
   }
@@ -211,7 +270,7 @@ function heilen(dt) {
     if (meta && SCHLAF.has(meta.typ)) {
       schlafWarte = 15; stillZeit = 0;
       ton.schnurren();
-      if (herzen < 5) { herzen++; hud(); meldung('😴 Мурр … отдохнула. +❤️'); } else meldung('😴 Мурр …');
+      if (herzen < 5) { herzen++; hud(); meldung('😴 Schnurr … ausgeruht. +❤️'); } else meldung('😴 Schnurr …');
     }
   }
 }
@@ -247,7 +306,7 @@ function ortZeigen() {
   const txt = `${etage.name} · ${raum ? raum.name : '…'}`;
   if (txt !== letzterRaum) {
     letzterRaum = txt; $('ort').textContent = '📍 ' + txt;
-    if (raum && raum.geheim && !katze.geheimGefunden) { katze.geheimGefunden = true; meldung('🤫 Секретная комната! Тут тебя никто не найдёт.'); }
+    if (raum && raum.geheim && !katze.geheimGefunden) { katze.geheimGefunden = true; meldung('🤫 Geheimkammer! Hier findet dich niemand.'); }
   }
 }
 
@@ -264,9 +323,15 @@ function frame() {
     const empf = steuer.touch ? 0.0045 : 0.0028;
     blickYaw -= ein.dx * empf; blickPitch -= ein.dy * empf;
     blickPitch = Math.max(ichSicht ? -1.35 : -1.2, Math.min(ichSicht ? 1.35 : 0.7, blickPitch));
-    if (ein.kamera) { ichSicht = !ichSicht; $('bKamera').textContent = ichSicht ? '🎥' : '👁️'; meldung(ichSicht ? '👁️ Глазами кошки' : '🎥 Вид сзади'); }
+    if (ein.kamera) { ichSicht = !ichSicht; $('bKamera').textContent = ichSicht ? '🎥' : '👁️'; meldung(ichSicht ? '👁️ Mit Katzenaugen' : '🎥 Von hinten'); }
     if (ein.miau) { ton.miau(); katze.miauZeit = 0.6; aergern(katze.fuesse, 4, false); }
     if (ein.pfote) pfote();
+    // beim Angeln sitzt die Katze still
+    if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
+    if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
+    if (!aquaHinweis && !angeln.aktiv && amAquarium()) { aquaHinweis = true; meldung('🐟 Am Aquarium: Pfote drücken = Fische angeln!'); }
+    for (const m of maeuse) if (m.schritt(dt, katze) === 'entwischt') meldung('🐭 Die Maus ist entwischt!');
+    fischSchritt(dt);
     rest += dt;
     let n = 0, springen = ein.springen;
     while (rest >= SCHRITT && n < 5) {
@@ -278,7 +343,7 @@ function frame() {
     }
     if (katze.gesprungen) { katze.gesprungen = false; }
     // Gefallen ins Nichts? Zurück in die Geheimkammer
-    if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Ой! Кошка снова дома.'); }
+    if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Hoppla! Die Katze ist wieder zu Hause.'); }
     ortZeigen();
     heilen(dt);
     for (const b of bewohner) if (b.spruch) { meldung('👵 ' + b.spruch); b.spruch = ''; }
@@ -294,7 +359,7 @@ function frame() {
       if (d.k.zerbrechlich) { zerbrechen(d); continue; }
       ton.plopp(d.prev / 4);
     }
-    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) { schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} упала!`); aergern(p, 15, true); } }
+    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) { schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} fällt runter!`); aergern(p, 15, true); } }
     if (p.y < -8) { world.removeRigidBody(d.body); scene.remove(d.obj); d.weg = true; }
     d.prev = sp;
   }
@@ -302,6 +367,8 @@ function frame() {
   for (const a of bau.anim) a(zeit);
   katze.zeichne(dt, zeit, !ichSicht);
   for (const b of bewohner) b.zeichne(dt, zeit);
+  for (const m of maeuse) m.zeichne(dt, zeit);
+  tropfen.schritt(dt, katze);
   sterneSchritt(dt);
   kameraSetzen(dt);
   renderer.render(scene, kamera);
@@ -320,13 +387,13 @@ kamPos.copy(katze.pos);
 frame();
 status('');
 $('start').disabled = false;
-$('start').textContent = '▶ Играть';
+$('start').textContent = '▶ Spielen';
 $('start').onclick = () => {
   ton.tonStart();
   $('titel').style.display = 'none';
   laeuft = true; steuer.aktiv = true;
   if (!matchMedia('(pointer: coarse)').matches && renderer.domElement.requestPointerLock) { try { renderer.domElement.requestPointerLock(); } catch {} }
-  meldung('🐱 Ты в секретной комнате на чердаке. Иди хулиганить!');
+  meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

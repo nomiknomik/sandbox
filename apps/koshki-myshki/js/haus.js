@@ -13,7 +13,7 @@ export function baueHaus(haus, scene, world, R) {
   const statisch = new T.Group();        // всё неподвижное – потом склеим для скорости
   const extra = new T.Group();           // прозрачное (стекло, вода) и анимированное
   scene.add(statisch, extra);
-  const anim = [], dyn = [], kratz = new Map(), lampen = [];
+  const anim = [], dyn = [], kratz = new Map(), lampen = [], aquarien = [];
   const boden = world.createRigidBody(R.RigidBodyDesc.fixed());
   const [W, D] = haus.groesse;
 
@@ -213,6 +213,7 @@ export function baueHaus(haus, scene, world, R) {
       teil.obj.rotation.y = rot;
       // Aquarium & Co. (bewegt / durchsichtig) nicht zusammenkleben
       (anim.length && o.typ === 'aquarium' ? extra : statisch).add(teil.obj);
+      if (o.typ === 'aquarium') aquarien.push({ obj: teil.obj, x: o.x, y: e.y + (o.y || 0), z: o.z, rot, etage: i });
       teil.obj.updateMatrixWorld(true);
       const q = new T.Quaternion().setFromEuler(new T.Euler(0, rot, 0));
       const meta = { typ: o.typ, name: k.name, kratzbar: k.kratzbar };
@@ -252,7 +253,7 @@ export function baueHaus(haus, scene, world, R) {
     }
     return { etage: etagen[0], raum: null };
   }
-  return { dyn, anim, kratz, raumAn, etagen, lampen, mitte: new T.Vector3(W / 2, 2, D / 2) };
+  return { dyn, anim, kratz, raumAn, aquarien, etagen, lampen, mitte: new T.Vector3(W / 2, 2, D / 2) };
 }
 
 function aussen(scene, statisch, W, D, dachY, block) {

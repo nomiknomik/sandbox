@@ -97,14 +97,17 @@ const BAU = {
     for (const [x, h] of [[-0.35, 0.3], [-0.28, 0.22], [0.36, 0.26]]) zyl(g, 0.012, 0.02, h, '#3BA55C', x, 0.75, -0.1, 6);
     // Fische, die hin und her schwimmen
     const farben = ['#FF8A1E', '#FFD23F', '#FF5D8F'];
+    g.userData.fische = [];
     farben.forEach((f, i) => {
       const fisch = new T.Group();
+      g.userData.fische.push(fisch);           // tiere.js tauscht sie gegen echte 3D-Fische (Quaternius)
       kugel(fisch, 0.035, f, 0, 0, 0, 1.4, 1, 0.6);
       const schw = mesh(new T.ConeGeometry(0.025, 0.04, 4), f, -0.06, 0, 0, fisch); schw.rotation.z = Math.PI / 2;
       kugel(fisch, 0.007, '#111', 0.035, 0.012, 0.016);
       fisch.position.set(0, 0.85 + i * 0.1, -0.05 + i * 0.06);
       g.add(fisch);
       anim.push(t => {
+        if (fisch.userData.weg) return;          // gerade von der Katze geangelt
         const p = t * (0.5 + i * 0.17) + i * 2;
         fisch.position.x = Math.sin(p) * 0.38;
         fisch.position.y = 0.88 + i * 0.09 + Math.sin(p * 2.3) * 0.02;

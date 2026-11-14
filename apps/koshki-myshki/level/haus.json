@@ -1,18 +1,19 @@
 {
-  "name": "Дом бабули",
-  "info": "Единицы: метры. x → восток, z → юг (на плане вниз). rot: 0 = передом на юг, 90 = на восток, 180 = на север, 270 = на запад. y у предмета = на какой высоте он стоит (например, ваза на столе).",
+  "name": "Omas Haus",
+  "info": "Einheiten: Meter. x → Osten, z → Süden (auf dem Plan nach unten). rot: 0 = Vorderseite nach Süden, 90 = Osten, 180 = Norden, 270 = Westen. y beim Gegenstand = in welcher Höhe er steht (z. B. Vase auf dem Tisch). maeuse: Mauseloch (x, z) an der Wand, rot = wohin das Loch schaut.",
   "groesse": [14, 10],
   "start": { "etage": "dg", "x": 12, "z": 8 },
+  "maeuse": [{ "etage": "eg", "x": 0.13, "z": 5.4, "rot": 90 }],
   "bewohner": [
-    { "typ": "babulya", "name": "Бабуля", "etage": "eg", "x": 12.6, "z": 5.0,
+    { "typ": "babulya", "name": "Oma", "etage": "eg", "x": 12.6, "z": 5.0,
       "runde": [["eg", 12.8, 5.0], ["eg", 10.0, 8.9], ["eg", 4.5, 6.4], ["eg", 7.0, 2.0], ["og", 3.0, 6.6], ["eg", 12.4, 4.7]] }
   ],
   "etagen": [
     {
-      "id": "keller", "name": "Подвал", "y": -2.8, "hoehe": 2.8, "wandfarbe": "#BDB6AA",
+      "id": "keller", "name": "Keller", "y": -2.8, "hoehe": 2.8, "wandfarbe": "#BDB6AA",
       "raeume": [
-        { "name": "Прачечная", "x0": 0, "z0": 0, "x1": 7, "z1": 10, "boden": "beton" },
-        { "name": "Мастерская", "x0": 7, "z0": 0, "x1": 14, "z1": 10, "boden": "beton" }
+        { "name": "Waschküche", "x0": 0, "z0": 0, "x1": 7, "z1": 10, "boden": "beton" },
+        { "name": "Werkstatt", "x0": 7, "z0": 0, "x1": 14, "z1": 10, "boden": "beton" }
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true },
@@ -39,12 +40,12 @@
       ]
     },
     {
-      "id": "eg", "name": "1 этаж", "y": 0, "hoehe": 2.8, "wandfarbe": "#F3E6CF",
+      "id": "eg", "name": "Erdgeschoss", "y": 0, "hoehe": 2.8, "wandfarbe": "#F3E6CF",
       "raeume": [
-        { "name": "Прихожая", "x0": 0, "z0": 0, "x1": 10, "z1": 3.5, "boden": "fliesen" },
-        { "name": "Кладовка", "x0": 10, "z0": 0, "x1": 14, "z1": 3.5, "boden": "beton" },
-        { "name": "Гостиная", "x0": 0, "z0": 3.5, "x1": 8, "z1": 10, "boden": "holz" },
-        { "name": "Кухня", "x0": 8, "z0": 3.5, "x1": 14, "z1": 10, "boden": "fliesen" }
+        { "name": "Flur", "x0": 0, "z0": 0, "x1": 10, "z1": 3.5, "boden": "fliesen" },
+        { "name": "Abstellraum", "x0": 10, "z0": 0, "x1": 14, "z1": 3.5, "boden": "beton" },
+        { "name": "Wohnzimmer", "x0": 0, "z0": 3.5, "x1": 8, "z1": 10, "boden": "holz" },
+        { "name": "Küche", "x0": 8, "z0": 3.5, "x1": 14, "z1": 10, "boden": "fliesen" }
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "haustuer", "pos": 7 }, { "typ": "fenster", "pos": 11.8, "breite": 0.8 }] },
@@ -107,12 +108,12 @@
       ]
     },
     {
-      "id": "og", "name": "2 этаж", "y": 2.8, "hoehe": 2.8, "wandfarbe": "#E4EEF2",
+      "id": "og", "name": "Obergeschoss", "y": 2.8, "hoehe": 2.8, "wandfarbe": "#E4EEF2",
       "raeume": [
-        { "name": "Коридор", "x0": 0, "z0": 0, "x1": 9, "z1": 3.5, "boden": "holz" },
-        { "name": "Ванная", "x0": 9, "z0": 0, "x1": 14, "z1": 3.5, "boden": "fliesen" },
-        { "name": "Спальня", "x0": 0, "z0": 3.5, "x1": 7, "z1": 10, "boden": "teppich" },
-        { "name": "Детская", "x0": 7, "z0": 3.5, "x1": 14, "z1": 10, "boden": "holz" }
+        { "name": "Gang", "x0": 0, "z0": 0, "x1": 9, "z1": 3.5, "boden": "holz" },
+        { "name": "Bad", "x0": 9, "z0": 0, "x1": 14, "z1": 3.5, "boden": "fliesen" },
+        { "name": "Schlafzimmer", "x0": 0, "z0": 3.5, "x1": 7, "z1": 10, "boden": "teppich" },
+        { "name": "Kinderzimmer", "x0": 7, "z0": 3.5, "x1": 14, "z1": 10, "boden": "holz" }
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7 }, { "typ": "fenster", "pos": 11.5, "breite": 0.8 }] },
@@ -123,7 +124,7 @@
         { "a": [7, 3.5], "b": [7, 10], "oeffnungen": [{ "typ": "klappe", "pos": 4.5 }] },
         { "a": [9, 0], "b": [9, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] }
       ],
-      "loecher": [{ "x0": 0.12, "z0": 9.15, "x1": 0.82, "z1": 9.85, "info": "кошачий лаз из гостиной" }],
+      "loecher": [{ "x0": 0.12, "z0": 9.15, "x1": 0.82, "z1": 9.85, "info": "Katzenloch vom Wohnzimmer" }],
       "lampen": [],
       "objekte": [
         { "typ": "treppe", "x0": 1, "z0": 2.4, "x1": 5, "z1": 3.4, "richtung": "+x" },
@@ -164,11 +165,11 @@
       ]
     },
     {
-      "id": "dg", "name": "Чердак", "y": 5.6, "hoehe": 2.4, "wandfarbe": "#D9C2A0",
+      "id": "dg", "name": "Dachboden", "y": 5.6, "hoehe": 2.4, "wandfarbe": "#D9C2A0",
       "raeume": [
-        { "name": "Чердак", "x0": 0, "z0": 0, "x1": 14, "z1": 6.5, "boden": "dielen" },
-        { "name": "Чердак", "x0": 0, "z0": 6.5, "x1": 10, "z1": 10, "boden": "dielen" },
-        { "name": "Секретная комната", "x0": 10, "z0": 6.5, "x1": 14, "z1": 10, "boden": "teppich", "geheim": true }
+        { "name": "Dachboden", "x0": 0, "z0": 0, "x1": 14, "z1": 6.5, "boden": "dielen" },
+        { "name": "Dachboden", "x0": 0, "z0": 6.5, "x1": 10, "z1": 10, "boden": "dielen" },
+        { "name": "Geheimkammer", "x0": 10, "z0": 6.5, "x1": 14, "z1": 10, "boden": "teppich", "geheim": true }
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 4, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }, { "typ": "fenster", "pos": 9, "breite": 0.8, "hoehe": 0.8, "unten": 1.0 }] },
@@ -178,7 +179,7 @@
         { "a": [10, 6.5], "b": [10, 10] },
         { "a": [10, 6.5], "b": [14, 6.5], "oeffnungen": [{ "typ": "klappe", "pos": 2.0 }] }
       ],
-      "loecher": [{ "x0": 13.2, "z0": 9.2, "x1": 13.8, "z1": 9.8, "info": "кошачий лаз из детской" }],
+      "loecher": [{ "x0": 13.2, "z0": 9.2, "x1": 13.8, "z1": 9.8, "info": "Katzenloch vom Kinderzimmer" }],
       "lampen": [{ "x": 6, "z": 5, "y": 2.1 }],
       "objekte": [
         { "typ": "kiste", "x": 8.0, "z": 0.6 },

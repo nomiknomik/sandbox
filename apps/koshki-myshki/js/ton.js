@@ -112,3 +112,31 @@ export function mampf() {
   for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 500 + i * 120;
     huelle(g, t + i * 0.12, 0.005, 0.02, 0.06, 0.15); o.connect(g); g.connect(laut); o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.12); }
 }
+
+// Piep-piep: die Maus
+export function piep() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 2; i++) {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(2600, t + i * 0.13); o.frequency.exponentialRampToValueAtTime(3600, t + i * 0.13 + 0.07);
+    huelle(g, t + i * 0.13, 0.005, 0.03, 0.05, 0.12); o.connect(g); g.connect(laut); o.start(t + i * 0.13); o.stop(t + i * 0.13 + 0.12);
+  }
+}
+// Platsch! Ins Wasser
+export function platsch() {
+  if (!ctx) return;
+  const t = ctx.currentTime, r = rauschen(0.7), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type = 'lowpass'; f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.6);
+  huelle(g, t, 0.01, 0.05, 0.6, 0.6); r.connect(f); f.connect(g); g.connect(laut); r.start(t);
+  for (let i = 0; i < 4; i++) { const o = ctx.createOscillator(), h = ctx.createGain(), z = t + 0.15 + i * 0.09;
+    o.frequency.setValueAtTime(500 + Math.random() * 400, z); o.frequency.exponentialRampToValueAtTime(1400, z + 0.06);
+    huelle(h, z, 0.005, 0, 0.06, 0.1); o.connect(h); h.connect(laut); o.start(z); o.stop(z + 0.08); }
+}
+// Ta-daa: geschafft
+export function juhu() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [523, 659, 784, 1046].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = f;
+    huelle(g, t + i * 0.09, 0.005, 0.05, 0.25, 0.18); o.connect(g); g.connect(laut); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.4); });
+}

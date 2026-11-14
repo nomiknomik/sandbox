@@ -1,6 +1,6 @@
 {
-  "name": "Кошки-мышки",
-  "short_name": "Кошки-мышки",
+  "name": "Katz und Maus",
+  "short_name": "Katz und Maus",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
