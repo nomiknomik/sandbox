@@ -54,8 +54,8 @@
         { "name": "Küche", "x0": 8, "z0": 3.5, "x1": 14, "z1": 10, "boden": "fliesen" }
       ],
       "waende": [
-        { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "haustuer", "pos": 7 }, { "typ": "fenster", "pos": 11.8, "breite": 0.8 }] },
-        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2 }, { "typ": "fenster", "pos": 5.5 }, { "typ": "fenster", "pos": 9.8 }, { "typ": "fenster", "pos": 12.5 }] },
+        { "a": [0, 0], "b": [14, 0], "aussen": true, "oeffnungen": [{ "typ": "klappe", "pos": 6.0 }, { "typ": "haustuer", "pos": 7 }, { "typ": "fenster", "pos": 11.8, "breite": 0.8 }] },
+        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2 }, { "typ": "tuer", "pos": 5.5 }, { "typ": "fenster", "pos": 9.8 }, { "typ": "fenster", "pos": 12.5 }] },
         { "a": [0, 0], "b": [0, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 2.2 }] },
         { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7, "unten": 1.05 }] },
         { "a": [0, 3.5], "b": [14, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 7.2 }, { "typ": "tuer", "pos": 9.0 }, { "typ": "klappe", "pos": 12.0 }] },

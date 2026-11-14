@@ -82,8 +82,17 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    Hindernissen, saugt Scherben, erschreckt die Katze, Katze kann oben mitfahren), **Kind** als Freund
    (`js/kind.js`: Kinderzimmer; Miau in der Nähe = Leckerli +❤️; gejagt beim Kind = es lenkt ab).
    Aufgaben jetzt 14.
-6. ⏳ Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
-7. ⏳ Editor, Garten/Pool, zu zweit spielen
+6. ✅ v0.8 – **Draußen** (`js/draussen.js`, Plan oben in der Datei): Katzenklappe neben der Haustür,
+   Terrassentür hinten. Straße mit 2 Spuren, **Autos** (`js/verkehr.js`): halten an der roten Ampel und am
+   Zebrastreifen, sonst nur hupen + zu spät bremsen → „PLATT“ = −2 ❤️. **Fußgänger** (`js/leute.js`):
+   Miau bei netten → streicheln (+5) / füttern (+❤️); Grummel-Leute (dunkle Kleidung, böse Augenbrauen)
+   hauen mit der Tasche (−❤️). **Nachbarhaus** und **Restaurant** gegenüber (Tür offen): Reste vom Teller
+   futtern (+10, +❤️), Kellner jagt mit dem Tablett. **Terrasse, Pool, Rutsche**; schwimmen/tauchen mit
+   Luft-Leiste; Unterwasser-Tunnel → **geheimes Spielzimmer** (Gartenhaus ohne Tür) mit Konsole und
+   **Klötzchen** (`js/kloetzchen.js`, eigenes Fallende-Klötzchen-Spiel, Rekord bleibt auf dem Gerät).
+   7 neue Aufgaben (jetzt 21).
+7. ⏳ Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
+8. ⏳ Editor, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,

@@ -78,7 +78,8 @@ export class Steuerung {
     let x = (t.has('KeyD') || t.has('ArrowRight') ? 1 : 0) - (t.has('KeyA') || t.has('ArrowLeft') ? 1 : 0);
     let z = (t.has('KeyW') || t.has('ArrowUp') ? 1 : 0) - (t.has('KeyS') || t.has('ArrowDown') ? 1 : 0);
     if (!x && !z) { x = this.joy.x; z = this.joy.z; }
-    const aus = { x, z, rennen: t.has('ShiftLeft') || t.has('ShiftRight'), dx: this.dx, dy: this.dy, ...this.einmal };
+    const aus = { x, z, rennen: t.has('ShiftLeft') || t.has('ShiftRight'), dx: this.dx, dy: this.dy,
+      hoch: t.has('Space') || !!this.halten.springen, tauchen: t.has('KeyX') || t.has('ControlLeft') || !!this.halten.tauchen, ...this.einmal };
     this.dx = this.dy = 0; this.einmal = {};
     return aus;
   }

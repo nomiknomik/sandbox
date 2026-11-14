@@ -159,3 +159,29 @@ export function wuff() {
     huelle(g, z, 0.008, 0.03, 0.1, 0.35); o.connect(f); f.connect(g); g.connect(laut); o.start(z); o.stop(z + 0.18);
   }
 }
+
+// Huuup! Ein Auto hupt
+export function hupe() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (const f of [392, 494]) {
+    const o = ctx.createOscillator(), fi = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.value = f; fi.type = 'lowpass'; fi.frequency.value = 1800;
+    huelle(g, t, 0.01, 0.35, 0.08, 0.12); o.connect(fi); fi.connect(g); g.connect(laut); o.start(t); o.stop(t + 0.5);
+  }
+}
+// Wiiiee! Die Rutsche runter
+export function wiii() {
+  if (!ctx) return;
+  const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'triangle'; o.frequency.setValueAtTime(500, t); o.frequency.exponentialRampToValueAtTime(1300, t + 0.5); o.frequency.exponentialRampToValueAtTime(700, t + 1.4);
+  huelle(g, t, 0.05, 1.1, 0.3, 0.15); o.connect(g); g.connect(laut); o.start(t); o.stop(t + 1.6);
+}
+// Blubb – Luftblasen unter Wasser
+export function blubb() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 3; i++) { const z = t + i * 0.08, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(300 + Math.random() * 200, z); o.frequency.exponentialRampToValueAtTime(900, z + 0.06);
+    huelle(g, z, 0.005, 0, 0.06, 0.12); o.connect(g); g.connect(laut); o.start(z); o.stop(z + 0.08); }
+}

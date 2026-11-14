@@ -19,6 +19,13 @@ export const AUFGABEN = [
   { id: 'leckerli', text: 'Miau beim Kind – hol dir ein Leckerli', emoji: '🧒', ziel: 1 },
   { id: 'retten',   text: 'Lass dich vom Kind retten, wenn dich jemand jagt', emoji: '🦸', ziel: 1 },
   { id: 'versteck', text: 'Versteck dich hinter dem Sofa, wenn Oma dich jagt', emoji: '🙈', ziel: 1 },
+  { id: 'zebra',    text: 'Geh über den Zebrastreifen',          emoji: '🦓', ziel: 1 },
+  { id: 'ampel',    text: 'Geh bei Grün über die Ampel',         emoji: '🚦', ziel: 1 },
+  { id: 'streicheln', text: 'Lass dich draußen 3-mal streicheln (Miau!)', emoji: '💕', ziel: 3 },
+  { id: 'reste',    text: 'Futter 3 Teller Reste im Restaurant', emoji: '🍗', ziel: 3 },
+  { id: 'rutsche',  text: 'Rutsch in den Pool',                  emoji: '🛝', ziel: 1 },
+  { id: 'spielzimmer', text: 'Finde das geheime Spielzimmer',    emoji: '🎮', ziel: 1 },
+  { id: 'kloetzchen', text: 'Schaffe 10 Reihen bei Klötzchen',   emoji: '🧱', ziel: 10 },
 ];
 const SPEICHER = 'km-aufgaben';
 

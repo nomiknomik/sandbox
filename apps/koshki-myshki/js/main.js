@@ -13,6 +13,10 @@ import { Sauger } from './sauger.js';
 import { Kind } from './kind.js';
 import { Aufgaben, AUFGABEN, krone } from './aufgaben.js';
 import * as ton from './ton.js';
+import { baueDraussen, PLAN } from './draussen.js';
+import { Verkehr } from './verkehr.js';
+import { Mensch, Kellner } from './leute.js';
+import { Kloetzchen } from './kloetzchen.js';
 
 const T = THREE, R = RAPIER;
 const $ = id => document.getElementById(id);
@@ -61,6 +65,9 @@ world.timestep = 1 / 60;
 const haus = await (await fetch('level/haus.json')).json();
 try { setzeMoebel(await (await fetch('modelle/moebel.json')).json()); } catch {}   // echte 3D-Möbel (sonst die einfachen)
 const bau = baueHaus(haus, scene, world, R);
+status('Baue die Straße …');
+const drauss = baueDraussen(scene, world, R, bau);
+bau.anim.push(...drauss.anim);
 sonne.position.copy(bau.mitte).add(new T.Vector3(-11, 13, 15));
 sonne.target.position.copy(bau.mitte);
 if (Q.schatten) {
@@ -94,7 +101,19 @@ aufgaben.knopf.style.display = 'none';
 function kroneAufsetzen() { if (katze.krone) return; katze.krone = krone(); katze.krone.position.set(0, 0.085, -0.01); katze.modell.kopf.add(katze.krone); }
 if (aufgaben.anzahl === AUFGABEN.length) kroneAufsetzen();
 echteFische(bau.aquarien);
-const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera', bMaul: 'tragen' });
+const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera', bMaul: 'tragen', bTauchen: 'tauchen' });
+// Draußen: Autos, Fußgänger, Nachbarin, Kellner, Klötzchen-Spiel
+const verkehr = new Verkehr(scene);
+const menschen = [];
+for (let i = 0; i < 9; i++) {
+  const nord = i % 2 === 0, gw = nord ? PLAN.gehwegN : PLAN.gehwegS;
+  menschen.push(new Mensch(scene, { strasse: true, grummel: i === 3 || i === 6, x: -30 + i * 9.5, z: (gw.z0 + gw.z1) / 2 }));
+}
+const N = PLAN.nachbar;
+menschen.push(new Mensch(scene, { innen: { x0: N.x0 + 0.3, x1: N.x1 - 0.3, z0: -27.5, z1: N.z1 - 0.3 }, x: 3, z: -24 },
+  { haut: '#F5D0B0', oben: '#F48FB1', unten: '#7E57C2', haar: '#D7D7D7', rock: true, lang: true }));
+const kellner = new Kellner(scene, PLAN.restaurant, drauss.tische);
+const klotz = new Kloetzchen();
 
 // ---------- Счёт и сообщения ----------
 let punkte = 0, herzen = 5;
@@ -155,6 +174,8 @@ function pfote() {
   const p = katze.pos, fx = Math.sin(katze.yaw), fz = Math.cos(katze.yaw);
   // Angel-Spiel läuft? Dann zählt die Pfote dort
   if (angeln.aktiv) { angelErgebnis(angeln.druecken()); return; }
+  // An der Konsole im Spielzimmer? Dann Klötzchen spielen!
+  if (amKonsole()) { kloetzchenStart(); return; }
   // Maus erwischt?
   for (const m of maeuse) if (m.fangen(katze)) {
     ton.juhu(); gefangen.maeuse++;
@@ -335,14 +356,19 @@ function ablegen() {
 
 // ---------- Сковородкой по голове ----------
 function getroffen(b) {
-  const f = b.fuesse, k = katze.fuesse;
-  katze.stoss(k.x - f.x, k.z - f.z);
-  if (b.opa) ton.klatsch(); else ton.bong();
-  sterne(1.6);
-  herzen = Math.max(0, herzen - 1); hud();
   b.wut = Math.max(0, b.wut - 35);
-  if (herzen > 0) { meldung(b.opa ? '📰 KLATSCH! −❤️' : '🍳 BONG! −❤️'); return; }
-  meldung(`😿 ${b.def.name} hat dich erwischt! Die Katze wacht in der Geheimkammer auf …`);
+  if (b.opa) ton.klatsch(); else ton.bong();
+  schaden(1, b.opa ? '📰 KLATSCH! −❤️' : '🍳 BONG! −❤️', b.fuesse, `😿 ${b.def.name} hat dich erwischt!`);
+}
+// Aua: n Herzen weg, die Katze fliegt von «von» weg.  Keine Herzen mehr → Geheimkammer
+function schaden(n, text, von, endeText = '😿 Keine Herzen mehr!') {
+  const k = katze.fuesse;
+  if (katze.unverwundbar > 0) return;
+  if (von) katze.stoss(k.x - von.x, k.z - von.z); else katze.unverwundbar = 2.5;
+  sterne(1.6);
+  herzen = Math.max(0, herzen - n); hud();
+  if (herzen > 0) { meldung(text); return; }
+  meldung(`${endeText} Die Katze wacht in der Geheimkammer auf …`);
   laeuft = false;
   setTimeout(() => {
     katze.teleport(startPunkt); katze.unverwundbar = 2;
@@ -434,11 +460,133 @@ function versteckPruefen() {
 let letzterRaum = '';
 function ortZeigen() {
   const { etage, raum } = bau.raumAn(katze.fuesse);
-  const txt = `${etage.name} · ${raum ? raum.name : '…'}`;
+  const draussen = drauss.ort(katze.fuesse);
+  const txt = draussen ? `Draußen · ${draussen}` : `${etage.name} · ${raum ? raum.name : '…'}`;
   if (txt !== letzterRaum) {
     letzterRaum = txt; $('ort').textContent = '📍 ' + txt;
     if (raum && raum.geheim && !katze.geheimGefunden) { katze.geheimGefunden = true; meldung('🤫 Geheimkammer! Hier findet dich niemand.'); }
   }
+}
+
+// ---------- Draußen ----------
+let luft = 1, hupGesagt = 0, rutsch = null, ueber = null, spielzimmerGesagt = false;
+const startPunktPool = { x: (PLAN.pool.x0 + PLAN.pool.x1) / 2, y: PLAN.pool.wasser - 0.25, z: PLAN.pool.z0 + 1 };
+function draussenSchritt(dt, ein) {
+  const k = katze.fuesse;
+  // --- Wasser: schwimmen, tauchen, Luft ---
+  if (katze.rausSprung > 0) { katze.rausSprung -= dt; katze.wasser = null; }
+  else {
+    const war = katze.wasser;
+    katze.wasser = drauss.imWasser(katze.pos);
+    if (katze.wasser && !war && !rutsch) { ton.platsch(); tropfen.spritzen(katze.pos, 14, 1.6); if (!katze.schwimmGesagt) { katze.schwimmGesagt = true; meldung('🏊 Schwimmen! Nach unten schauen + vorwärts (oder 🤿) = tauchen. ⤒ = hoch.'); } }
+    if (!katze.wasser && war) katze.nass = 6;
+    if (katze.wasser && katze.wasser !== war && katze.wasser.name === 'Tunnel' && !katze.tunnelGesagt) { katze.tunnelGesagt = true; meldung('🫧 Ein geheimer Tunnel! Schnell durch – die Luft wird knapp!'); }
+    if (katze.wasser && katze.wasser !== war && katze.wasser.name === 'Schacht' && war && war.name === 'Tunnel') meldung('⬆️ Jetzt nach oben! (⤒ gedrückt halten)');
+  }
+  if (!katze.wasser) katze.unterWasser = false;
+  $('bTauchen').style.display = katze.wasser ? '' : 'none';
+  if (katze.wasser && katze.unterWasser) {
+    luft -= dt / 9;
+    if (Math.random() < dt * 2) ton.blubb();
+    if (luft <= 0) {
+      luft = 1; katze.teleport(startPunktPool); katze.wasser = null;
+      schaden(1, '🫧 Keine Luft mehr! Schnell auftauchen! −❤️');
+    }
+  } else luft = Math.min(1, luft + dt / 1.2);
+  $('luft').classList.toggle('zeig', luft < 0.999);
+  $('luftBalken').style.width = (luft * 100) + '%';
+  $('luftBalken').style.background = luft < 0.3 ? '#FF5252' : '#4FC3F7';
+  // --- Rutsche: oben am Turm an die Kante laufen ---
+  const rs = drauss.rutscheStart;
+  if (!rutsch && k.x > rs.x0 - 0.1 && k.x < rs.x1 && k.z > rs.z0 && k.z < rs.z1 && Math.abs(k.y - rs.y) < 0.3) {
+    rutsch = { t: 0 }; ton.wiii(); meldung('🛝 Wiiiiieeeee!');
+  }
+  // --- Straße: Autos ---
+  const leute = menschen.filter(m => m.aufStrasse).map(m => m.pos);
+  const v = verkehr.schritt(dt, k, leute);
+  hupGesagt -= dt;
+  if (v.hupe) { ton.hupe(); if (hupGesagt <= 0) { hupGesagt = 6; meldung('🚗 HUUUP! Vorsicht, ein Auto! Hier gibt es keinen Zebrastreifen!'); } }
+  if (v.ueberfahren && katze.unverwundbar <= 0) {
+    katze.platt = 1.6; ton.bong(); setTimeout(ton.hupe, 150);
+    schaden(2, '🚗 PLATT wie ein Pfannkuchen! −❤️❤️  Geh lieber am Zebrastreifen oder bei Grün!', { x: k.x, z: v.ueberfahren.sp.z }, '🚗 Vom Auto erwischt!');
+  }
+  // Über die Straße gegangen? (Zebrastreifen / Ampel bei Grün)
+  const S = PLAN.strasse, aufS = k.z > S.z0 && k.z < S.z1 && k.y < 0.8;
+  if (aufS && !ueber) {
+    const amZ = k.x > PLAN.zebra.x0 - 0.3 && k.x < PLAN.zebra.x1 + 0.3, amA = k.x > PLAN.ampel.x0 - 0.3 && k.x < PLAN.ampel.x1 + 0.3;
+    ueber = { von: k.z > (S.z0 + S.z1) / 2 ? 'N' : 'S', zebra: amZ, ampel: amA && verkehr.fussGruen };
+    if (amA && !verkehr.fussGruen) meldung('🚦 Rot! Die Autos halten nicht für dich – schnell rüber oder zurück!');
+  }
+  if (ueber && !aufS) {
+    const nach = k.z > S.z1 ? 'N' : 'S', drueben = nach !== ueber.von && k.z > S.z0 - 3 && k.z < S.z1 + 3;
+    const amZ = k.x > PLAN.zebra.x0 - 0.8 && k.x < PLAN.zebra.x1 + 0.8, amA = k.x > PLAN.ampel.x0 - 0.8 && k.x < PLAN.ampel.x1 + 0.8;
+    if (drueben && ueber.zebra && amZ) { meldung('🦓 Sicher über den Zebrastreifen! Die Autos haben gewartet.'); aufgaben.melde('zebra'); }
+    if (drueben && ueber.ampel && amA) { meldung('🚦 Brav bei Grün über die Ampel!'); aufgaben.melde('ampel'); }
+    ueber = null;
+  }
+  // --- Leute ---
+  for (const m of menschen) {
+    const e = m.schritt(dt, katze, ein.miau, verkehr);
+    if (e.gestreichelt) { setTimeout(ton.schnurren, 200); schalk(5, e.spruch); aufgaben.melde('streicheln'); }
+    if (e.futter) setTimeout(() => { ton.mampf(); if (herzen < 5) { herzen++; hud(); } meldung(e.futter + ' 😋 +❤️'); }, 1600);
+    if (e.gehauen) { ton.klatsch(); schaden(1, e.spruch + ' −❤️', m.pos); }
+  }
+  const kel = kellner.schritt(dt, katze);
+  if (kel.spruch && !kel.treffer) meldung(kel.spruch);
+  if (kel.treffer) { ton.krach(0.5); schaden(1, kel.spruch, kellner.pos); }
+  // --- Restaurant: Reste vom Teller futtern ---
+  for (const t of drauss.tische) {
+    if (!t.voll) { t.warte -= dt; if (t.warte <= 0) { t.voll = true; t.rest.visible = true; } continue; }
+    if (Math.hypot(k.x - t.x - 0.1, k.z - t.z) < 0.45 && Math.abs(k.y - t.top) < 0.2) {
+      t.voll = false; t.rest.visible = false; t.warte = 40;
+      ton.mampf(); if (herzen < 5) { herzen++; hud(); }
+      schalk(10, `😋 Mampf! Reste: ${t.name}! +❤️`); aufgaben.melde('reste');
+    }
+  }
+  // --- Spielzimmer ---
+  if (drauss.drin(k, drauss.konsole.raum) && k.y > -0.3 && !spielzimmerGesagt) {
+    spielzimmerGesagt = true; ton.juhu(); aufgaben.melde('spielzimmer');
+    meldung('🎮 Das geheime Spielzimmer! Geh zum Fernseher oder aufs Sofa und drück 🐾 – dann spielst du Klötzchen!');
+  }
+}
+function amKonsole() {
+  const k = katze.fuesse, ko = drauss.konsole;
+  if (!drauss.drin(k, ko.raum) || k.y < -0.3) return false;
+  return Math.hypot(k.x - ko.x, k.z - ko.z) < 1.6 || Math.hypot(k.x - ko.sofa.x, k.z - ko.sofa.z) < 1.3;
+}
+function kloetzchenStart() {
+  laeuft = false; steuer.aktiv = false;
+  if (document.exitPointerLock) document.exitPointerLock();
+  meldung('');
+  klotz.onReihe = n => aufgaben.melde('kloetzchen', n);
+  klotz.start((p, reihen) => {
+    steuer.holen(); laeuft = true; steuer.aktiv = true;
+    const bonus = Math.round(p / 20);
+    if (bonus) schalk(bonus, `🧱 Klötzchen: ${reihen} Reihen, ${p} Punkte!`); else meldung('🛋️ Zurück auf dem Sofa.');
+    ton.schnurren();
+  });
+}
+// Rutschen: die Katze wird die Kurve entlang geschoben, am Ende fliegt sie ins Wasser
+function rutschen(dt) {
+  rutsch.t = Math.min(1, rutsch.t + dt * (0.35 + rutsch.t * 1.1));
+  const p = drauss.kurve.getPointAt(rutsch.t), r = drauss.kurve.getTangentAt(rutsch.t);
+  katze.teleport({ x: p.x, y: p.y - 0.04, z: p.z });
+  katze.yaw = Math.atan2(r.x, r.z); katze.tempo = 3;
+  if (rutsch.t >= 1) {
+    rutsch = null;
+    katze.vy = 2; katze.schub = { x: r.x * 4, z: r.z * 4 };
+    ton.platsch(); tropfen.spritzen(katze.pos, 30, 2.5);
+    schalk(15, '💦 PLATSCH! Mitten in den Pool!'); aufgaben.melde('rutsche');
+  }
+}
+// Unter Wasser: alles wird blau
+const nebelNormal = { farbe: scene.fog.color.clone(), nah: scene.fog.near, fern: scene.fog.far };
+function unterwasserBild() {
+  const w = drauss.imWasser(kamera.position);
+  const unter = !!w && kamera.position.y < w.flaeche;
+  $('unterwasser').classList.toggle('zeig', unter);
+  if (unter) { scene.fog.color.set('#1B6F9A'); scene.fog.near = 0.5; scene.fog.far = 9; }
+  else { scene.fog.color.copy(nebelNormal.farbe); scene.fog.near = nebelNormal.nah; scene.fog.far = nebelNormal.fern; }
 }
 
 // ---------- Игровой цикл ----------
@@ -491,6 +639,7 @@ function frame() {
       } else fahrZeit = 0;
       if (e.gesaugt && !s.gesaugtGesagt) { s.gesaugtGesagt = true; meldung('🤖 Der Staubsauger saugt die Scherben weg.'); }
     }
+    draussenSchritt(dt, ein);
     // beim Angeln sitzt die Katze still
     if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
     if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
@@ -505,7 +654,7 @@ function frame() {
     rest += dt;
     let n = 0, springen = ein.springen;
     while (rest >= SCHRITT && n < 5) {
-      katze.schritt(SCHRITT, { ...ein, springen }, blickYaw, ichSicht);
+      if (rutsch) rutschen(SCHRITT); else katze.schritt(SCHRITT, { ...ein, springen, pitch: blickPitch }, blickYaw, ichSicht);
       tragenSchritt();
       springen = false;
       for (const b of bewohner) if (b.schritt(SCHRITT, katze) === 'treffer') getroffen(b);
@@ -544,6 +693,13 @@ function frame() {
   for (const h of hunde) h.zeichne(dt);
   for (const s of sauger) s.zeichne(dt, zeit);
   for (const kd of kinder) kd.zeichne(dt, zeit);
+  verkehr.zeichne(dt);
+  for (const m of menschen) m.zeichne(dt, zeit);
+  kellner.zeichne(dt);
+  // Die Sonne wandert mit der Katze (damit es überall Schatten gibt)
+  const kp = katze.pos;
+  sonne.position.set(kp.x - 11, kp.y + 13, kp.z + 15); sonne.target.position.set(kp.x, kp.y, kp.z);
+  unterwasserBild();
   tropfen.schritt(dt, katze);
   sterneSchritt(dt);
   kameraSetzen(dt);
@@ -573,4 +729,4 @@ $('start').onclick = () => {
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { drauss, verkehr, menschen, kellner, klotz, luft: () => luft, rutsch: () => rutsch, kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

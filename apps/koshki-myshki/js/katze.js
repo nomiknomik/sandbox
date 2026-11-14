@@ -41,6 +41,7 @@ export class Katze {
 
   // ein = { x: вправо, z: вперёд (−1..1), rennen, springen }   blick = куда смотрит камера
   schritt(dt, ein, blick, ichSicht) {
+    if (this.wasser) return this.schwimmen(dt, ein, blick, ichSicht);
     const fx = Math.sin(blick), fz = Math.cos(blick);
     const rx = -fz, rz = fx;
     let mx = fx * ein.z + rx * ein.x, mz = fz * ein.z + rz * ein.x;
@@ -75,6 +76,42 @@ export class Katze {
     }
   }
 
+  // Im Wasser: in Blickrichtung schwimmen. Nach unten schauen + vorwärts (oder 🤿) = tauchen, ⤒ = hoch.
+  schwimmen(dt, ein, blick, ichSicht) {
+    const w = this.wasser, p = this.body.translation();
+    const fx = Math.sin(blick), fz = Math.cos(blick), rx = -fz, rz = fx;
+    let mx = fx * ein.z + rx * ein.x, mz = fz * ein.z + rz * ein.x;
+    const st = Math.min(1, Math.hypot(mx, mz));
+    if (st > 0.01) { const l = Math.hypot(mx, mz); mx /= l; mz /= l; }
+    const v = st * (ein.rennen ? 2.9 : 2.2);
+    const oben = w.flaeche - 0.07;                 // so hoch schwimmt der Körper an der Oberfläche
+    const unter = p.y < oben - 0.12;
+    let soll;
+    if (ein.hoch) soll = 2.4;                                                  // nach oben
+    else if (ein.tauchen) soll = -2.2;                                         // runter
+    else if (ein.z > 0.2 && (ein.pitch || 0) < -0.3) soll = Math.sin(ein.pitch) * v * 1.2;   // schräg runter schwimmen
+    else if (w.luft === false) soll = 0;                                       // im Tunnel: schweben
+    else soll = unter ? 1.2 : (oben - p.y) * 8;                               // Auftrieb
+    if (w.luft === false && ein.z > 0.2 && (ein.pitch || 0) > 0.3) soll = Math.sin(ein.pitch) * v;
+    this.vy += (soll - this.vy) * Math.min(1, dt * 5);
+    // an der Oberfläche: ⤒ springt raus (an den Rand)
+    if (ein.springen && !unter && w.luft !== false) { this.vy = SPRUNG * 0.9; this.wasser = null; this.rausSprung = 0.5; this.gesprungen = true; this.luftZeit = 1; }
+    const want = { x: (mx * v + this.schub.x) * dt, y: this.vy * dt, z: (mz * v + this.schub.z) * dt };
+    const abkl = Math.exp(-3 * dt); this.schub.x *= abkl; this.schub.z *= abkl;
+    if (this.unverwundbar > 0) this.unverwundbar -= dt;
+    this.ctrl.computeColliderMovement(this.col, want, this.R.QueryFilterFlags.EXCLUDE_SENSORS);
+    const m = this.ctrl.computedMovement();
+    this.body.setNextKinematicTranslation({ x: p.x + m.x, y: p.y + m.y, z: p.z + m.z });
+    this.amBoden = false; this.luftZeit = 0;
+    this.tempo = Math.hypot(m.x, m.z) / Math.max(dt, 1e-4);
+    this.unterWasser = unter || w.luft === false;
+    if (ichSicht) this.yaw = blick;
+    else if (st > 0.05) {
+      let d = Math.atan2(mx, mz) - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.yaw += d * Math.min(1, dt * 8);
+    }
+  }
+
   // Weggeschleudert (von der Pfanne)
   stoss(dx, dz) { const l = Math.hypot(dx, dz) || 1; this.schub = { x: dx / l * 5, z: dz / l * 5 }; this.vy = 5; this.unverwundbar = 2.5; }
 
@@ -84,6 +121,12 @@ export class Katze {
     md.wurzel.visible = sichtbar && !(this.unverwundbar > 0 && Math.floor(zeit * 10) % 2);
     md.wurzel.position.set(p.x, p.y - MITTE, p.z);
     md.wurzel.rotation.y = this.yaw;
+    // platt wie ein Pfannkuchen (vom Auto) – zum Glück nur kurz, wie im Zeichentrick
+    if (this.platt > 0) { this.platt -= dt; md.wurzel.scale.set(1.5, 0.18, 1.3); }
+    else md.wurzel.scale.set(1, 1, 1);
+    // beim Schwimmen: Körper etwas nach vorn geneigt, Beine paddeln
+    md.koerper.rotation.x = this.wasser ? (this.unterWasser ? 0.35 : 0.15) : 0;
+    if (this.wasser) { md.beine.forEach((b, i) => b.rotation.x = Math.sin(zeit * 9 + i * 1.6) * 0.8); md.schwanz.forEach((s, i) => { s.rotation.y = Math.sin(zeit * 4 - i * 0.6) * 0.25; }); return; }
     const lauf = Math.min(1, this.tempo / RENNEN);
     this.phase += dt * (4 + this.tempo * 4.2);
     const sw = this.amBoden ? Math.sin(this.phase) * 0.75 * Math.min(1, this.tempo / 1.2) : 0;

@@ -190,15 +190,14 @@ export function baueHaus(haus, scene, world, R) {
 
   // ---------- Мебель и вещи ----------
   const tmp = new T.Vector3();
-  etagen.forEach((e, i) => {
-    for (const o of e.objekte) {
-      if (o.typ === 'treppe') { treppe(o, e, etagen[i + 1]); continue; }
+  // Einen Gegenstand aufstellen (auch für draußen: Nachbarhaus, Restaurant …).  basisY = Fußboden
+  function stelle(o, basisY, etageNr = -1, ziel = statisch) {
       const k = KATALOG[o.typ] || {};
       const teil = baueObjekt(o, anim);
       const rot = (o.rot || 0) * Math.PI / 180;
       if (teil.dynamisch) {
         const h = teil.form === 'ball' ? teil.r * 2 : teil.h;
-        const y = e.y + (o.y || 0) + h / 2 + 0.005;
+        const y = basisY + (o.y || 0) + h / 2 + 0.005;
         const body = world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(o.x, y, o.z).setRotation(new T.Quaternion().setFromEuler(new T.Euler(0, rot, 0))).setLinearDamping(0.1).setAngularDamping(teil.form === 'ball' ? 0.3 : 0.6).setCcdEnabled(true));
         const cd = teil.form === 'ball' ? R.ColliderDesc.ball(teil.r) : teil.form === 'zylinder' ? R.ColliderDesc.cylinder(teil.h / 2, teil.r) : R.ColliderDesc.cuboid(teil.w / 2, teil.h / 2, teil.d / 2);
         cd.setMass(k.masse || 0.5).setFriction(teil.form === 'ball' ? 0.9 : 0.6).setRestitution(teil.form === 'ball' ? 0.55 : 0.1);
@@ -206,14 +205,15 @@ export function baueHaus(haus, scene, world, R) {
         teil.obj.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
         teil.obj.position.set(o.x, y, o.z);
         scene.add(teil.obj);
-        dyn.push({ body, col, obj: teil.obj, typ: o.typ, k, prev: 0, ruhig: 0 });
-        continue;
+        const d = { body, col, obj: teil.obj, typ: o.typ, k, prev: 0, ruhig: 0 };
+        dyn.push(d);
+        return d;
       }
-      teil.obj.position.set(o.x, e.y + (o.y || 0), o.z);
+      teil.obj.position.set(o.x, basisY + (o.y || 0), o.z);
       teil.obj.rotation.y = rot;
       // Aquarium & Co. (bewegt / durchsichtig) nicht zusammenkleben
-      (anim.length && o.typ === 'aquarium' ? extra : statisch).add(teil.obj);
-      const aq = o.typ === 'aquarium' ? { obj: teil.obj, x: o.x, y: e.y + (o.y || 0), z: o.z, rot, etage: i, cols: [] } : null;
+      (anim.length && o.typ === 'aquarium' ? extra : ziel).add(teil.obj);
+      const aq = o.typ === 'aquarium' ? { obj: teil.obj, x: o.x, y: basisY + (o.y || 0), z: o.z, rot, etage: etageNr, cols: [] } : null;
       if (aq) aquarien.push(aq);
       teil.obj.updateMatrixWorld(true);
       const q = new T.Quaternion().setFromEuler(new T.Euler(0, rot, 0));
@@ -223,6 +223,12 @@ export function baueHaus(haus, scene, world, R) {
         const c = kollider(tmp.x, tmp.y, tmp.z, w, h, d, q, meta);
         if (aq) aq.cols.push(c);          // zum Umkippen abschaltbar
       }
+      return teil;
+  }
+  etagen.forEach((e, i) => {
+    for (const o of e.objekte) {
+      if (o.typ === 'treppe') { treppe(o, e, etagen[i + 1]); continue; }
+      stelle(o, e.y, i);
     }
     // Lampen
     for (const l of e.lampen || []) {
@@ -236,11 +242,8 @@ export function baueHaus(haus, scene, world, R) {
     }
   });
 
-  // ---------- Улица: трава, деревья, крыша ----------
+  // ---------- Крыша (Garten, Straße & Co. baut draussen.js) ----------
   aussen(scene, statisch, W, D, dachY, block);
-  // Fester Boden draußen (rund ums Haus)
-  for (const [x0, x1, z0, z1] of [[-30, 0, -30, 40], [W, W + 30, -30, 40], [0, W, -30, 0], [0, W, D, 40]])
-    kollider((x0 + x1) / 2, -0.25, (z0 + z1) / 2, x1 - x0, 0.5, z1 - z0);
 
   // ---------- Склеить неподвижное (меньше работы для видеокарты) ----------
   verkleben(statisch);
@@ -255,18 +258,10 @@ export function baueHaus(haus, scene, world, R) {
     }
     return { etage: etagen[0], raum: null };
   }
-  return { dyn, anim, kratz, raumAn, aquarien, etagen, lampen, mitte: new T.Vector3(W / 2, 2, D / 2) };
+  return { dyn, anim, kratz, raumAn, aquarien, etagen, lampen, mitte: new T.Vector3(W / 2, 2, D / 2), block, kollider, stelle, extra, minus };
 }
 
 function aussen(scene, statisch, W, D, dachY, block) {
-  const gras = new T.MeshStandardMaterial({ map: textur('gras', 60, 60), roughness: 1 });
-  const g = new T.Mesh(new T.PlaneGeometry(60, 60), gras);
-  g.rotation.x = -Math.PI / 2; g.position.set(W / 2, -0.01, D / 2); g.receiveShadow = true;
-  // Loch unter dem Haus ist egal – der Keller hat eigene Wände
-  scene.add(g);
-  // Weg zur Haustür
-  const weg = new T.Mesh(new T.BoxGeometry(1.4, 0.02, 4), mat('#CBBFA8'));
-  weg.position.set(W / 2, 0.0, -2.1); weg.receiveShadow = true; statisch.add(weg);
   // Satteldach (nur Deko)
   const dachMat = mat('#B5523B', { r: 0.8 });
   const hoch = 2.2, ueber = 0.5;
@@ -283,27 +278,9 @@ function aussen(scene, statisch, W, D, dachY, block) {
     m.rotation.y = Math.PI / 2; m.position.set(x - 0.125, dachY, D / 2);
     m.castShadow = m.receiveShadow = true; statisch.add(m);
   }
-  // Bäume und Büsche
-  const baum = (x, z, s = 1) => {
-    const st = new T.Mesh(new T.CylinderGeometry(0.15 * s, 0.22 * s, 2 * s, 8), mat('#7A5230'));
-    st.position.set(x, s, z); st.castShadow = true; statisch.add(st);
-    for (let i = 0; i < 4; i++) {
-      const k = new T.Mesh(new T.SphereGeometry((1.1 - i * 0.12) * s, 12, 10), mat(i % 2 ? '#4FA34A' : '#3E8E3E'));
-      k.position.set(x + Math.cos(i * 1.7) * 0.5 * s, (2.2 + i * 0.35) * s, z + Math.sin(i * 1.7) * 0.5 * s);
-      k.castShadow = true; statisch.add(k);
-    }
-  };
-  baum(-4, 13, 1.3); baum(19, 12, 1.1); baum(-5, -3, 1.0); baum(18, -4, 1.4); baum(7, 17, 1.2);
-  for (const [x, z] of [[2, 11.2], [4, 11.3], [10, 11.2], [12.5, 11.4], [-1.2, 6]]) {
-    const b = new T.Mesh(new T.SphereGeometry(0.5, 12, 10), mat('#5DB04F')); b.scale.y = 0.7;
-    b.position.set(x, 0.3, z); b.castShadow = true; statisch.add(b);
-  }
-  // Zaun
-  const zaun = mat('#F4F1EA');
-  for (let x = -6; x <= 20; x += 0.5) for (const z of [-7, 17]) { const p = new T.Mesh(new T.BoxGeometry(0.08, 0.8, 0.04), zaun); p.position.set(x, 0.4, z); p.castShadow = true; statisch.add(p); }
 }
 
-function verkleben(gruppe) {
+export function verkleben(gruppe) {
   gruppe.updateMatrixWorld(true);
   const proMat = new Map();
   const weg = [];

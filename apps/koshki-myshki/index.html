@@ -44,6 +44,32 @@
   #aufgaben .aufgabe.ok{color:#FFD86B}
   #aufgaben p{font-size:13px;opacity:.85;margin:10px 0}
   #aufgaben button{font:inherit;font-size:13px;padding:6px 12px;border-radius:10px;border:1px solid #fff6;background:transparent;color:#fff;cursor:pointer}
+  #bTauchen{width:64px;height:64px;right:calc(40px + env(safe-area-inset-right));bottom:calc(224px + env(safe-area-inset-bottom));font-size:28px}
+  /* Luft unter Wasser */
+  #luft{position:fixed;left:50%;top:calc(46px + env(safe-area-inset-top));transform:translateX(-50%);width:min(260px,60vw);padding:4px 8px;border-radius:14px;background:#0005;z-index:5;display:none;text-align:center;font-size:13px}
+  #luft.zeig{display:block}
+  #luft .bahn{height:12px;border-radius:6px;background:#fff3;overflow:hidden;margin-top:3px}
+  #luftBalken{height:100%;width:100%;background:#4FC3F7;transition:width .1s}
+  #unterwasser{position:fixed;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle at 50% 40%,#2a9fd833,#0b4f7a99);opacity:0;transition:opacity .25s}
+  #unterwasser.zeig{opacity:1}
+  /* Klötzchen-Spiel */
+  #kloetzchen{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:radial-gradient(circle at 50% 30%,#3a2a6a,#120d24);padding:10px}
+  #kloetzchen.zeig{display:flex}
+  .kl-rahmen{display:flex;gap:14px;align-items:flex-start;padding:12px;border-radius:18px;background:#0006;box-shadow:0 0 0 4px #ffffff22,0 10px 40px #0008}
+  .kl-feld{height:min(72vh,600px);width:auto;border-radius:8px;image-rendering:pixelated}
+  .kl-seite{display:flex;flex-direction:column;gap:6px;min-width:130px;font-size:15px}
+  .kl-seite h2{margin:0 0 4px;font-size:20px}
+  .kl-next{width:120px;height:80px;border-radius:8px}
+  .kl-zahl b{float:right;color:#FFD93D}
+  .kl-hilfe{font-size:12px;opacity:.75;margin-top:6px}
+  .kl-ende{font:inherit;font-size:14px;margin-top:8px;padding:8px 10px;border-radius:10px;border:2px solid #fff8;background:transparent;color:#fff;cursor:pointer}
+  .kl-meldung{position:fixed;top:12%;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;text-shadow:0 2px 6px #000;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap}
+  .kl-meldung.zeig{opacity:1}
+  .kl-knoepfe{display:flex;gap:10px}
+  .kl-knoepfe button{width:64px;height:64px;border-radius:50%;border:0;background:#ffffff38;color:#fff;font-size:28px;touch-action:none}
+  .kl-knoepfe button:active{background:#ffffff80}
+  @media (pointer:fine){.kl-knoepfe{display:none}}
+  @media (max-height:560px){.kl-feld{height:80vh}.kl-knoepfe{position:fixed;bottom:10px;right:10px;flex-wrap:wrap;width:150px}}
   @media (pointer:fine){.knopf{opacity:.55}}
   #joy{position:fixed;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;background:#ffffff26;border:2px solid #fff6;display:none;pointer-events:none;z-index:3}
   #joyKnauf{position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;background:#ffffffa0;transform:translate(-50%,-50%)}
@@ -83,17 +109,20 @@
   <button class="knopf" id="bMiau" aria-label="Miau">😺</button>
   <button class="knopf" id="bKamera" aria-label="Kamera">👁️</button>
   <button class="knopf" id="bMaul" aria-label="Tragen">👄</button>
+  <button class="knopf" id="bTauchen" aria-label="Tauchen" style="display:none">🤿</button>
+  <div id="unterwasser"></div>
+  <div class="hud" id="luft">🫧 Luft<div class="bahn"><div id="luftBalken"></div></div></div>
 
   <div id="titel">
     <img id="titelbild" src="titelbild.webp" alt=""><h1><img id="logo" src="logo.webp" alt="Katz und Maus"></h1>
-    <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen!</p>
+    <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen! Draußen: Straße mit Autos, Restaurant, Pool mit Rutsche – und ein Geheimnis unter Wasser …</p>
     <button id="start" disabled>Lädt …</button>
     <div id="laden">Lade …</div>
     <div class="reihe">
       <button data-q="schoen">✨ Schön</button><button data-q="mittel">Mittel</button><button data-q="schnell">⚡ Schnell</button>
     </div>
     <div class="hilfe">
-      💻 <b>W A S D</b> laufen · <b>Maus</b> schauen · <b>Leertaste</b> springen · <b>E</b>/Klick Pfote · <b>Q</b> miauen · <b>R</b> tragen · <b>T</b> Aufgaben · <b>C</b> Kamera · <b>Shift</b> rennen<br>
+      💻 <b>W A S D</b> laufen · <b>Maus</b> schauen · <b>Leertaste</b> springen · <b>E</b>/Klick Pfote · <b>Q</b> miauen · <b>R</b> tragen · <b>T</b> Aufgaben · <b>C</b> Kamera · <b>Shift</b> rennen · im Wasser <b>X</b> tauchen<br>
       📱 linker Daumen – Joystick · rechter – schauen · Knöpfe rechts
     </div>
     <div class="reihe"><a href="plan.html">🗺 Hausplan</a></div>
@@ -104,7 +133,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.7';
+const APP_VERSION = '0.8';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
