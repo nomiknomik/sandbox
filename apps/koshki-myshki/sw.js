@@ -1,6 +1,6 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'koshki-myshki-v6';
+const CACHE = 'koshki-myshki-v7';
 const SHELL = ['./', './index.html', './plan.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './js/main.js', './js/haus.js', './js/katalog.js', './js/modelle.js', './js/katze.js', './js/steuerung.js', './js/ton.js', './js/texturen.js', './js/bewohner.js', './js/wege.js', './js/tiere.js', './js/hund.js', './js/aufgaben.js', './modelle/moebel.json', './modelle/hund.glb', './modelle/fische.json', './titelbild.webp', './logo.webp',
   './vendor/three.js', './vendor/rapier.js', './level/haus.json'];

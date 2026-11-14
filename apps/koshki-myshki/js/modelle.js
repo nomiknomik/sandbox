@@ -281,6 +281,11 @@ const BAU = {
     zyl(g, 0.36, 0.34, 0.12, '#9B59B6', 0, 0, 0, 20); b.push([0, 0.06, 0, 0.66, 0.12, 0.66]);
     zyl(g, 0.27, 0.27, 0.03, '#C39BD3', 0, 0.11, 0, 20);
   },
+  // schmale Decke im Versteck hinter dem Sofa (mit Streifen)
+  kuscheldecke(g, b) {
+    kasten(g, 1.0, 0.04, 0.34, '#F2A65A', 0, 0, 0, { boxen: b, rund: 0.015 });
+    for (const x of [-0.35, 0, 0.35]) kasten(g, 0.08, 0.005, 0.34, '#FFF3E0', x, 0.04, 0, { kollider: false, rund: 0 });
+  },
   katzenbrett(g, b) {
     kasten(g, 0.45, 0.05, 0.45, '#E8A85C', 0, -0.05, 0, { boxen: b, rund: 0.015 });
     kasten(g, 0.4, 0.04, 0.4, '#F4E1C1', 0, -0.005, 0, { kollider: false, rund: 0.015 });

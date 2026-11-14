@@ -360,7 +360,7 @@ function sterneSchritt(dt) {
 // Миска и сон: +❤️
 const naepfe = [];
 haus.etagen.forEach(e => e.objekte.filter(o => o.typ === 'napf').forEach(o => naepfe.push({ x: o.x, y: e.y, z: o.z, warte: 0 })));
-const SCHLAF = new Set(['sofa', 'sessel', 'bett', 'kinderbett', 'katzenkissen']);
+const SCHLAF = new Set(['sofa', 'sessel', 'bett', 'kinderbett', 'katzenkissen', 'kuscheldecke']);
 let stillZeit = 0, schlafWarte = 0;
 function heilen(dt) {
   const k = katze.fuesse;
@@ -409,6 +409,20 @@ function kameraSetzen(dt) {
   if (hit) kamPos.copy(soll);
   kamera.position.copy(kamPos);
   kamera.lookAt(ziel);
+}
+
+// ---------- Versteck: dort sieht die Katze keiner ----------
+const verstecke = (haus.verstecke || []).map(v => ({ ...v, y: haus.etagen.find(e => e.id === v.etage).y }));
+function versteckPruefen() {
+  const k = katze.fuesse;
+  const v = verstecke.find(v => k.x > v.x0 && k.x < v.x1 && k.z > v.z0 && k.z < v.z1 && Math.abs(k.y - v.y) < 0.4);
+  const war = katze.versteckt; katze.versteckt = !!v;
+  if (v && !war) {
+    const gejagt = bewohner.some(b => b.zustand === 'jagd' || b.zustand === 'schlag');
+    meldung(gejagt ? `🙈 Versteckt ${v.name}! Hier findet dich keiner – warte, bis sie sich beruhigt.` : `🙈 Versteckt ${v.name}. Hier sieht dich keiner.`);
+    if (gejagt) aufgaben.melde('versteck');
+  }
+  $('ort').classList.toggle('versteckt', !!v);
 }
 
 // ---------- Где кошка ----------
@@ -471,6 +485,7 @@ function frame() {
     // Gefallen ins Nichts? Zurück in die Geheimkammer
     if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Hoppla! Die Katze ist wieder zu Hause.'); }
     ortZeigen();
+    versteckPruefen();
     heilen(dt);
     for (const b of bewohner) if (b.spruch) { meldung(b.emoji + ' ' + b.spruch); b.spruch = ''; }
   }

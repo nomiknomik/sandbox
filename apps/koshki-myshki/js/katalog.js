@@ -42,6 +42,7 @@ export const KATALOG = {
   teppich:       { name: 'Teppich',            emoji: '🟥', groesse: [2.0, 0.02, 1.5], flach: true },
   napf:          { name: 'Katzennapf',      emoji: '🥣', groesse: [0.3, 0.08, 0.3], flach: true },
   katzenkissen:  { name: 'Katzenkissen',    emoji: '💤', groesse: [0.7, 0.15, 0.7] },
+  kuscheldecke:  { name: 'Kuscheldecke',    emoji: '🧣', groesse: [1.0, 0.05, 0.34] },
   katzenbrett:   { name: 'Katzenbrett', emoji: '🪜', groesse: [0.45, 0.05, 0.45] },
   treppe:        { name: 'Treppe',         emoji: '🪜' },
 

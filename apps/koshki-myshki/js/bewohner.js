@@ -56,6 +56,7 @@ export class Babulya {
   }
 
   siehtKatze(katze) {
+    if (katze.versteckt) return false;           // im Versteck sieht sie keiner
     const p = this.body.translation(), k = katze.pos;
     const kopf = { x: p.x, y: p.y + 0.6, z: p.z };
     const dx = k.x - kopf.x, dy = k.y - kopf.y, dz = k.z - kopf.z, l = Math.hypot(dx, dy, dz);
@@ -82,7 +83,7 @@ export class Babulya {
     if (this.zustand === 'jagd' || this.zustand === 'schlag') {
       const sieht = this.siehtKatze(katze);
       // Wut lässt langsam nach, schneller wenn die Katze weg ist
-      this.wut -= dt * (sieht ? 1.5 : 5);
+      this.wut -= dt * (sieht ? 1.5 : 5) + (katze.versteckt ? dt * 6 : 0);   // im Versteck beruhigt man sich schnell
       if (this.wut < 20 && this.zustand === 'jagd') { this.zustand = 'ruhe'; this.spruch = this.S.ruhig; this.weg = null; }
       tempo = this.jagdTempo;
       // Opa: nach 4,5 Sekunden Rennen außer Puste
@@ -99,13 +100,17 @@ export class Babulya {
           else this.spruch = this.S.mimo;
         }
         if (this.schlagZeit > 0.6) { this.zustand = 'jagd'; this.pause = 0.8; }
-      } else if (dxz < 0.85 && erreichbar && meineE === katzeE && this.pause <= 0) {
+      } else if (dxz < 0.85 && erreichbar && meineE === katzeE && this.pause <= 0 && !katze.versteckt) {
         this.zustand = 'schlag'; this.schlagZeit = 0; this.getroffen = false;
       } else {
         // Weg zur Katze (neu planen jede Sekunde)
         this.wegZeit -= dt;
         const aufTreppe = this.weg && this.weg[0] && this.weg[0].treppe;
-        if (!this.weg || (this.wegZeit <= 0 && !aufTreppe)) {
+        if (katze.versteckt && !aufTreppe) {
+          // Katze ist weg! Oma bleibt stehen und schaut sich um
+          this.weg = null;
+          if (!this.unerreichbarGesagt) { this.spruch = this.S.wo; this.unerreichbarGesagt = true; }
+        } else if (!this.weg || (this.wegZeit <= 0 && !aufTreppe)) {
           this.wegZeit = 1;
           this.weg = this.netz.pfad(meineE, f.x, f.z, katzeE, k.x, k.z);
           if (!this.weg) { this.wut -= dt * 10; if (!this.unerreichbarGesagt) { this.spruch = this.S.wo; this.unerreichbarGesagt = true; } }
@@ -139,7 +144,7 @@ export class Babulya {
       }
       if (p) ziel = p;
     }
-    if (this.zustand === 'jagd' && !this.weg && dxz > 0.6 && meineE === katzeE) ziel = { x: k.x, z: k.z };
+    if (this.zustand === 'jagd' && !this.weg && dxz > 0.6 && meineE === katzeE && !katze.versteckt) ziel = { x: k.x, z: k.z };
 
     let mx = 0, mz = 0;
     if (ziel) {

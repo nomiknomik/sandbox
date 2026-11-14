@@ -44,6 +44,7 @@ export class Hund {
   wegZu(x, z) { const p = this.netz.pfad(this.e, this.pos.x, this.pos.z, this.e, x, z); return p ? p.map(q => ({ x: q.x, z: q.z })) : null; }
 
   siehtKatze(katze) {
+    if (katze.versteckt) return false;
     const k = katze.pos, a = { x: this.pos.x, y: this.pos.y + 0.35, z: this.pos.z };
     const dx = k.x - a.x, dy = k.y - a.y, dz = k.z - a.z, l = Math.hypot(dx, dy, dz);
     if (l > 7 || Math.abs(katze.fuesse.y - this.y) > 1.6) return false;

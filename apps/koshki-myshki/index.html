@@ -24,6 +24,7 @@
   #ort{top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:15px;background:#0003;padding:4px 12px;border-radius:20px;white-space:nowrap}
   #meldung{top:22%;left:50%;transform:translate(-50%,-8px);font-size:22px;font-weight:700;opacity:0;transition:.25s;text-align:center;padding:0 16px;width:100%}
   #meldung.zeig{opacity:1;transform:translate(-50%,0)}
+  #ort.versteckt::after{content:' · 🙈 versteckt'}
   #fps{bottom:calc(4px + env(safe-area-inset-bottom));left:8px;font-size:11px;opacity:.6}
   #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffb;cursor:pointer;z-index:5;text-shadow:0 1px 2px #0008}
   /* Knöpfe */
@@ -103,7 +104,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.5';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
