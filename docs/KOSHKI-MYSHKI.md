@@ -91,8 +91,15 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    Luft-Leiste; Unterwasser-Tunnel → **geheimes Spielzimmer** (Gartenhaus ohne Tür) mit Konsole und
    **Klötzchen** (`js/kloetzchen.js`, eigenes Fallende-Klötzchen-Spiel, Rekord bleibt auf dem Gerät).
    7 neue Aufgaben (jetzt 21).
-7. ⏳ Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
-8. ⏳ Editor, zu zweit spielen
+7. ✅ v0.9 – **Verstecke & Geheimgänge** (Wunsch: ganz viele Verstecke). Verstecke: hinter dem Vorhang
+   (Küche, „dein Schwanz guckt raus“), unter dem Bett und unter dem Kinderbett (Betten jetzt auf hohen Beinen,
+   Modell-Beine per `knick` gestreckt), im Kleiderschrank (Tür offen, Kleider hängen, Menschen passen nicht rein),
+   im Wäschekorb (Bad), in der **Baumhöhle** (Kletterbaum im Garten, Baumpilze als Stufen bis zum Ast oben),
+   im Gebüsch. Geheimgänge (`haus.json → geheimgaenge`, draußen in `draussen.js`): Loch im Kleiderschrank-Boden
+   ↔ Wohnzimmer (Katzenbretter an der Wand), Kellerschacht (Katzenklappe im Keller ↔ Garten), Loch hinter den
+   Büschen ins geheime Spielzimmer. 2 neue Aufgaben (jetzt 23), zählen nur *verschiedene* Verstecke/Gänge.
+8. ⏳ Dach begehbar (Versteck am Schornstein), Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
+9. ⏳ Editor, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,

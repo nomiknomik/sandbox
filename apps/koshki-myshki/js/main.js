@@ -443,17 +443,33 @@ function kameraSetzen(dt) {
 }
 
 // ---------- Versteck: dort sieht die Katze keiner ----------
-const verstecke = (haus.verstecke || []).map(v => ({ ...v, y: haus.etagen.find(e => e.id === v.etage).y }));
+// Aus haus.json (im Haus) und draussen.js (Baumhöhle, Gebüsch). y = Boden des Verstecks.
+const etY = id => haus.etagen.find(e => e.id === id).y;
+const verstecke = [...(haus.verstecke || []).map(v => ({ ...v, y: etY(v.etage) + (v.h || 0) })), ...(drauss.verstecke || [])];
 function versteckPruefen() {
   const k = katze.fuesse;
   const v = verstecke.find(v => k.x > v.x0 && k.x < v.x1 && k.z > v.z0 && k.z < v.z1 && Math.abs(k.y - v.y) < 0.4);
   const war = katze.versteckt; katze.versteckt = !!v;
   if (v && !war) {
     const gejagt = bewohner.some(b => b.zustand === 'jagd' || b.zustand === 'schlag');
-    meldung(gejagt ? `🙈 Versteckt ${v.name}! Hier findet dich keiner – warte, bis sie sich beruhigt.` : `🙈 Versteckt ${v.name}. Hier sieht dich keiner.`);
+    const schwanz = v.info === 'Schwanz guckt raus' ? ' (Psst … dein Schwanz guckt raus!)' : '';
+    meldung(gejagt ? `🙈 Versteckt ${v.name}! Hier findet dich keiner – warte, bis sie sich beruhigt.` : `🙈 Versteckt ${v.name}.${schwanz || ' Hier sieht dich keiner.'}`);
     if (gejagt) aufgaben.melde('versteck');
+    aufgaben.einmal('verstecke', v.name);
   }
   $('ort').classList.toggle('versteckt', !!v);
+}
+
+// ---------- Geheimgänge: einmal durchkriechen = entdeckt ----------
+const gaenge = [...(haus.geheimgaenge || []).map(g => ({ ...g, y0: etY(g.etage) + g.y0, y1: etY(g.etage) + g.y1 })), ...(drauss.geheimgaenge || [])];
+const gefundenJetzt = new Set();
+function gangPruefen() {
+  const k = katze.fuesse;
+  const g = gaenge.find(g => k.x > g.x0 && k.x < g.x1 && k.z > g.z0 && k.z < g.z1 && k.y > g.y0 && k.y < g.y1);
+  if (!g || gefundenJetzt.has(g.name)) return;
+  gefundenJetzt.add(g.name);
+  meldung(`🕳️ Geheimgang entdeckt: ${g.name}!`);
+  aufgaben.einmal('geheimgang', g.name);
 }
 
 // ---------- Где кошка ----------
@@ -665,7 +681,7 @@ function frame() {
     // Gefallen ins Nichts? Zurück in die Geheimkammer
     if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Hoppla! Die Katze ist wieder zu Hause.'); }
     ortZeigen();
-    versteckPruefen();
+    versteckPruefen(); gangPruefen();
     heilen(dt);
     for (const b of bewohner) if (b.spruch) { meldung(b.emoji + ' ' + b.spruch); b.spruch = ''; }
   }

@@ -27,6 +27,9 @@ export const PLAN = {
   turm:      { x0: 10, x1: 11.2, z0: 14, z1: 15.2, h: 2.4 },  // Rutschen-Turm
   restaurant: { x0: 16, x1: 30, z0: -31, z1: -20, h: 3.2, tuer: 23 },
   nachbar:   { x0: -2, x1: 10, z0: -31, z1: -21, h: 3.0, tuer: 4 },
+  kletterbaum: { x: -4.5, z: 19.5 },                         // dicker Baum mit Höhle (Versteck)
+  kellerschacht: { x0: 12, x1: 13, z0: 10.125, z1: 11.1, tief: -2.8 },   // Geheimgang: Keller ↔ Garten
+  buschloch: { z0: 25.3, z1: 25.7 },                         // Loch in der Wand vom Spielzimmer, hinter Büschen
 };
 // Kurve der Rutsche: oben am Turm → im Bogen in den Pool
 const RUTSCHE = [[10.0, 2.45, 14.6], [9.2, 2.05, 14.75], [8.5, 1.5, 15.5], [8.1, 0.95, 16.5], [7.4, 0.5, 17.2], [6.4, 0.2, 17.1]];
@@ -91,7 +94,9 @@ export function baueDraussen(scene, world, R, bau) {
   // ---------- Boden: Wiese mit Löchern (Haus, Pool, Schacht) ----------
   const W = P.welt, pool = P.pool, sch = P.schacht;
   let rects = [{ x0: W.x0, x1: W.x1, z0: W.z0, z1: W.z1 }];
-  for (const l of [{ x0: 0, x1: 14, z0: 0, z1: 10 }, pool, { x0: sch.x0 - 0.2, x1: sch.x1 + 0.2, z0: sch.z0 - 0.2, z1: sch.z1 + 0.2 }]) rects = minus(rects, l);
+  const KS = P.kellerschacht, ksW = 0.2;
+  for (const l of [{ x0: 0, x1: 14, z0: 0, z1: 10 }, pool, { x0: sch.x0 - 0.2, x1: sch.x1 + 0.2, z0: sch.z0 - 0.2, z1: sch.z1 + 0.2 },
+    { x0: KS.x0 - ksW, x1: KS.x1 + ksW, z0: 10, z1: KS.z1 + ksW }]) rects = minus(rects, l);
   const gras = texMat('gras', 1);
   for (const r of rects) {
     flaeche(r.x0, r.x1, r.z0, r.z1, -0.005, gras, 4);
@@ -150,6 +155,60 @@ export function baueDraussen(scene, world, R, bau) {
   for (const [x, z] of [[1.5, -5.2], [3.5, -5.2], [10.5, -5.2], [12.5, -5.3], [-1.2, 6], [15.5, 6], [20.5, 20], [-6.5, 18]]) {
     const b = new T.Mesh(new T.SphereGeometry(0.5, 12, 10), busch); b.scale.y = 0.7; b.position.set(x, 0.3, z); b.castShadow = true; g.add(b);
   }
+  // Büsche vor dem geheimen Loch ins Spielzimmer (man kann durchlaufen)
+  for (const [x, z, s] of [[0.45, 25.05, 0.9], [0.4, 25.95, 0.95], [-0.1, 25.5, 0.8]]) {
+    const b = new T.Mesh(new T.SphereGeometry(0.55 * s, 12, 10), busch); b.scale.y = 0.75; b.position.set(x, 0.32 * s, z); b.castShadow = true; g.add(b);
+  }
+
+  // ---------- Kellerschacht: Geheimgang vom Keller in den Garten ----------
+  // Ein tiefes Loch neben dem Haus. Unten die Katzenklappe in den Keller, an den Wänden Bretter zum Hochhüpfen.
+  const beton = mat('#A8A39A', { r: 0.95 }), brett = mat('#E8A85C');
+  kiste(KS.x0 - ksW, KS.x0, KS.tief, 0, 10.125, KS.z1 + ksW, beton);
+  kiste(KS.x1, KS.x1 + ksW, KS.tief, 0, 10.125, KS.z1 + ksW, beton);
+  kiste(KS.x0, KS.x1, KS.tief, 0, KS.z1, KS.z1 + ksW, beton);
+  kiste(KS.x0, KS.x1, KS.tief - 0.1, KS.tief, 10.125, KS.z1, beton);
+  for (const [x0, x1, y] of [[KS.x0, KS.x0 + 0.45, -2.2], [KS.x1 - 0.45, KS.x1, -1.55], [KS.x0, KS.x0 + 0.45, -0.9]])
+    kiste(x0, x1, y - 0.05, y, KS.z1 - 0.5, KS.z1, brett);
+
+  // ---------- Kletterbaum mit Höhle ----------
+  // Dicker Stamm, Höhle nach Osten (dort ist ein Versteck), Baumpilze als Stufen bis hoch in die Krone.
+  const KB = P.kletterbaum, bx = KB.x, bz = KB.z, rr = 0.45, hoehleU = 1.3, hoehleO = 1.85;
+  {
+    const rinde = mat('#7A5230', { r: 0.95 }), dunkel = mat('#2E1E10', { r: 1 });
+    const zylT = (r1, r2, y0, y1, m, opts) => { const me = new T.Mesh(new T.CylinderGeometry(r1, r2, y1 - y0, 16, 1, ...(opts || [])), m); me.position.set(bx, (y0 + y1) / 2, bz); me.castShadow = me.receiveShadow = true; g.add(me); return me; };
+    zylT(rr, rr * 1.3, 0, hoehleU, rinde);
+    zylT(rr * 0.8, rr, hoehleO, 3.6, rinde);
+    // Ring um die Höhle – vorne (Osten = +x) offen. In three.js zeigt Winkel π/2 nach +x.
+    const auf = 1.0, rest = [true, Math.PI / 2 + auf, Math.PI * 2 - 2 * auf];
+    zylT(rr, rr, hoehleU, hoehleO, rinde, rest);
+    const innen = new T.MeshStandardMaterial({ color: '#2E1E10', roughness: 1, side: T.BackSide });
+    zylT(rr * 0.92, rr * 0.92, hoehleU, hoehleO, innen, rest);
+    const moos = new T.Mesh(new T.CylinderGeometry(rr * 0.9, rr * 0.9, 0.03, 16), mat('#6B8E3A', { r: 1 })); moos.position.set(bx, hoehleU + 0.015, bz); g.add(moos);
+    const deckel = new T.Mesh(new T.CylinderGeometry(rr * 0.9, rr * 0.9, 0.02, 16), dunkel); deckel.position.set(bx, hoehleO - 0.01, bz); g.add(deckel);
+    // Krone
+    for (let i = 0; i < 5; i++) {
+      const k = new T.Mesh(new T.SphereGeometry(1.5 - i * 0.12, 14, 10), mat(i % 2 ? '#4FA34A' : '#3E8E3E'));
+      k.position.set(bx + Math.cos(i * 1.3) * 0.7, 4.1 + i * 0.3, bz + Math.sin(i * 1.3) * 0.7); k.castShadow = true; g.add(k);
+    }
+    // Ast nach Osten (Ausguck)
+    const ast = new T.Mesh(new T.CylinderGeometry(0.09, 0.13, 1.6, 8), rinde); ast.rotation.z = Math.PI / 2; ast.position.set(bx + 1.1, 3.35, bz); ast.castShadow = true; g.add(ast);
+  }
+  // Physik: Stamm unten, Stamm oben, drei Wände der Höhle
+  bau.kollider(bx, hoehleU / 2, bz, rr * 2, hoehleU, rr * 2);
+  bau.kollider(bx, (hoehleO + 3.6) / 2, bz, rr * 1.7, 3.6 - hoehleO, rr * 1.7);
+  const hm = (hoehleU + hoehleO) / 2, hh = hoehleO - hoehleU;
+  bau.kollider(bx - 0.29, hm, bz, 0.3, hh, rr * 2);
+  bau.kollider(bx + 0.14, hm, bz - 0.34, 0.56, hh, 0.16);
+  bau.kollider(bx + 0.14, hm, bz + 0.34, 0.56, hh, 0.16);
+  bau.kollider(bx + 1.1, 3.35, bz, 1.6, 0.18, 0.2);
+  // Baumpilze als Treppe: Osten (unter der Höhle), Süden, Westen, Norden
+  const pilz = mat('#E8C07A', { r: 0.7 });
+  for (const [dx, dz, y] of [[0.62, 0, 0.7], [0, 0.62, 1.45], [-0.62, 0, 2.15], [0, -0.62, 2.8]]) {
+    const p = new T.Mesh(new T.CylinderGeometry(0.24, 0.2, 0.08, 14, 1, false, 0, Math.PI * 2), pilz);
+    p.position.set(bx + dx, y - 0.04, bz + dz); p.scale.set(dx ? 0.8 : 1, 1, dz ? 0.8 : 1); p.castShadow = true; g.add(p);
+    bau.kollider(bx + dx, y - 0.04, bz + dz, dx ? 0.38 : 0.44, 0.08, dz ? 0.38 : 0.44);
+  }
+
   const zaun = mat('#F4F1EA'), Gt = P.garten;
   const zaunStueck = (ax, az, bx, bz) => {          // Latten + Querbalken + unsichtbare Wand (die Katze kann drüberspringen)
     const l = Math.hypot(bx - ax, bz - az), n = Math.round(l / 0.5);
@@ -337,9 +396,14 @@ export function baueDraussen(scene, world, R, bau) {
   const Sz = P.spielzimmer, gw = 0.2, sh = Sz.h;
   const huette = mat('#8DB36B', { r: 0.9 }), innenW = mat('#5B4A8C', { r: 0.9 });
   kiste(Sz.x0, Sz.x1, 0, sh, Sz.z0, Sz.z0 + gw, huette); kiste(Sz.x0, Sz.x1, 0, sh, Sz.z1 - gw, Sz.z1, huette);
-  kiste(Sz.x0, Sz.x0 + gw, 0, sh, Sz.z0, Sz.z1, huette); kiste(Sz.x1 - gw, Sz.x1, 0, sh, Sz.z0, Sz.z1, huette);
-  for (const [x0, x1, z0, z1] of [[Sz.x0 + gw, Sz.x1 - gw, Sz.z0 + gw, Sz.z0 + gw + 0.01], [Sz.x0 + gw, Sz.x1 - gw, Sz.z1 - gw - 0.01, Sz.z1 - gw], [Sz.x0 + gw, Sz.x0 + gw + 0.01, Sz.z0 + gw, Sz.z1 - gw], [Sz.x1 - gw - 0.01, Sz.x1 - gw, Sz.z0 + gw, Sz.z1 - gw]])
+  // Westwand mit kleinem Loch (42 cm hoch) – von draußen hinter den Büschen versteckt
+  const BL = P.buschloch, lochH = 0.42;
+  kiste(Sz.x0, Sz.x0 + gw, 0, sh, Sz.z0, BL.z0, huette); kiste(Sz.x0, Sz.x0 + gw, 0, sh, BL.z1, Sz.z1, huette);
+  kiste(Sz.x0, Sz.x0 + gw, lochH, sh, BL.z0, BL.z1, huette);
+  kiste(Sz.x1 - gw, Sz.x1, 0, sh, Sz.z0, Sz.z1, huette);
+  for (const [x0, x1, z0, z1] of [[Sz.x0 + gw, Sz.x1 - gw, Sz.z0 + gw, Sz.z0 + gw + 0.01], [Sz.x0 + gw, Sz.x1 - gw, Sz.z1 - gw - 0.01, Sz.z1 - gw], [Sz.x1 - gw - 0.01, Sz.x1 - gw, Sz.z0 + gw, Sz.z1 - gw]])
     kiste(x0, x1, 0, sh, z0, z1, innenW, false);
+  for (const [z0, z1, y0] of [[Sz.z0 + gw, BL.z0, 0], [BL.z1, Sz.z1 - gw, 0], [BL.z0, BL.z1, lochH]]) kiste(Sz.x0 + gw, Sz.x0 + gw + 0.01, y0, sh, z0, z1, innenW, false);
   kiste(Sz.x0 - 0.3, Sz.x1 + 0.3, sh, sh + 0.2, Sz.z0 - 0.3, Sz.z1 + 0.3, mat('#6B4A2E', { r: 0.9 }));
   // Holzboden (mit Loch für den Schacht)
   let br = [{ x0: Sz.x0 + gw, x1: Sz.x1 - gw, z0: Sz.z0 + gw, z1: Sz.z1 - gw }];
@@ -403,6 +467,8 @@ export function baueDraussen(scene, world, R, bau) {
     ['Zebrastreifen', { x0: P.zebra.x0, x1: P.zebra.x1, z0: S.z0, z1: S.z1 }, -1],
     ['Ampel', { x0: P.ampel.x0, x1: P.ampel.x1, z0: S.z0, z1: S.z1 }, -1],
     ['Straße', S, -1], ['Gehweg', { x0: S.x0, x1: S.x1, z0: P.gehwegN.z0, z1: P.gehwegN.z1 }, -1], ['Gehweg', { x0: S.x0, x1: S.x1, z0: P.gehwegS.z0, z1: P.gehwegS.z1 }, -1],
+    ['Kellerschacht', { x0: KS.x0, x1: KS.x1, z0: 10, z1: KS.z1 }, -3],
+    ['Kletterbaum', { x0: bx - 1, x1: bx + 2, z0: bz - 1, z1: bz + 1 }, -1],
     ['Vorgarten', { x0: Gt.x0, x1: Gt.x1, z0: Gt.z0, z1: 0 }, -1], ['Garten', Gt, -1],
   ];
   function ort(p) {
@@ -418,6 +484,12 @@ export function baueDraussen(scene, world, R, bau) {
 
   return {
     anim, lampen, wasser, imWasser, ort, drin, kurve, tische,
+    // Verstecke und Geheimgänge draußen (y = Boden in Metern)
+    verstecke: [
+      { name: 'in der Baumhöhle', x0: bx - 0.15, x1: bx + 0.42, z0: bz - 0.27, z1: bz + 0.27, y: hoehleU },
+      { name: 'im Gebüsch', x0: -0.6, x1: 0.95, z0: 24.7, z1: 26.3, y: 0 },
+    ],
+    geheimgaenge: [{ name: 'Loch hinter den Büschen', x0: Sz.x0 - 0.05, x1: Sz.x0 + gw + 0.05, z0: BL.z0, z1: BL.z1, y0: -0.1, y1: 0.4 }],
     rutscheStart: { x0: Tm.x0, x1: Tm.x0 + 0.35, z0: Tm.z0 + 0.2, z1: Tm.z1 - 0.2, y: Tm.h },
     konsole: { x: tvX, z: tvZ + 0.3, y: 0, raum: P.spielzimmer, sofa: { x: tvX, z: Sz.z1 - gw - 0.5 } },
   };

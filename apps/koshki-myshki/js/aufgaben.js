@@ -26,6 +26,8 @@ export const AUFGABEN = [
   { id: 'rutsche',  text: 'Rutsch in den Pool',                  emoji: '🛝', ziel: 1 },
   { id: 'spielzimmer', text: 'Finde das geheime Spielzimmer',    emoji: '🎮', ziel: 1 },
   { id: 'kloetzchen', text: 'Schaffe 10 Reihen bei Klötzchen',   emoji: '🧱', ziel: 10 },
+  { id: 'verstecke', text: 'Finde 6 verschiedene Verstecke',     emoji: '🫣', ziel: 6 },
+  { id: 'geheimgang', text: 'Kriech durch alle 3 Geheimgänge',   emoji: '🕳️', ziel: 3 },
 ];
 const SPEICHER = 'km-aufgaben';
 
@@ -49,6 +51,13 @@ export class Aufgaben {
   get anzahl() { return AUFGABEN.filter(a => this.fertig(a)).length; }
   zeig(an) { this.liste.classList.toggle('zeig', an); }
   speichern() { try { localStorage.setItem(SPEICHER, JSON.stringify(this.stand)); } catch {} }
+
+  // Zählt nur, wenn es etwas Neues ist (z. B. ein Versteck, das man noch nicht kannte)
+  einmal(id, was) {
+    const schon = this.stand['_' + id] || (this.stand['_' + id] = []);
+    if (schon.includes(was)) return;
+    schon.push(was); this.melde(id); this.speichern();
+  }
 
   // Etwas ist passiert (z. B. melde('vase'))
   melde(id, n = 1) {

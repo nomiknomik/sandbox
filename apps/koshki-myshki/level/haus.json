@@ -3,7 +3,18 @@
   "info": "Einheiten: Meter. x → Osten, z → Süden (auf dem Plan nach unten). rot: 0 = Vorderseite nach Süden, 90 = Osten, 180 = Norden, 270 = Westen. y beim Gegenstand = in welcher Höhe er steht (z. B. Vase auf dem Tisch). maeuse: Mauseloch (x, z) an der Wand, rot = wohin das Loch schaut.",
   "groesse": [14, 10],
   "start": { "etage": "dg", "x": 12, "z": 8 },
-  "verstecke": [{ "etage": "eg", "name": "hinter dem Sofa", "x0": 2.35, "x1": 4.65, "z0": 9.42, "z1": 9.95 }],
+  "verstecke": [
+    { "etage": "eg", "name": "hinter dem Sofa", "x0": 2.35, "x1": 4.65, "z0": 9.42, "z1": 9.95 },
+    { "etage": "eg", "name": "hinter dem Vorhang", "x0": 9.05, "x1": 10.55, "z0": 9.5, "z1": 9.9, "info": "Schwanz guckt raus" },
+    { "etage": "og", "name": "unter dem Bett", "x0": 2.75, "x1": 4.25, "z0": 8.05, "z1": 9.75 },
+    { "etage": "og", "name": "unter dem Kinderbett", "x0": 8.2, "x1": 9.8, "z0": 9.15, "z1": 9.8 },
+    { "etage": "og", "name": "im Kleiderschrank", "x0": 0.15, "x1": 0.7, "z0": 4.65, "z1": 6.35 },
+    { "etage": "og", "name": "im Wäschekorb", "x0": 10.72, "x1": 11.28, "z0": 2.97, "z1": 3.37 }
+  ],
+  "geheimgaenge": [
+    { "etage": "og", "name": "Loch im Kleiderschrank", "x0": 0.2, "x1": 0.62, "z0": 4.75, "z1": 5.2, "y0": -0.6, "y1": 0.1 },
+    { "etage": "keller", "name": "Kellerschacht", "x0": 12.25, "x1": 12.75, "z0": 9.85, "z1": 10.3, "y0": -0.1, "y1": 0.4 }
+  ],
   "sauger": [{ "etage": "eg", "x": 11.5, "z": 5.0 }],
   "kinder": [{ "etage": "og", "x": 10.5, "z": 7.5, "runde": [[10.5, 7.5], [12.5, 5.5], [9.0, 8.8], [11.5, 9.0]] }],
   "maeuse": [{ "etage": "eg", "x": 0.13, "z": 5.4, "rot": 90 }],
@@ -23,7 +34,7 @@
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true },
-        { "a": [0, 10], "b": [14, 10], "aussen": true },
+        { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "klappe", "pos": 12.5, "info": "Geheimgang in den Kellerschacht" }] },
         { "a": [0, 0], "b": [0, 10], "aussen": true },
         { "a": [14, 0], "b": [14, 10], "aussen": true },
         { "a": [7, 0], "b": [7, 10], "oeffnungen": [{ "typ": "tuer", "pos": 5 }] }
@@ -111,7 +122,10 @@
         { "typ": "vase", "x": 10.8, "z": 7.0, "y": 0.75 },
         { "typ": "tasse", "x": 10.3, "z": 6.8, "y": 0.75 },
         { "typ": "teller", "x": 11.3, "z": 7.2, "y": 0.75 },
-        { "typ": "napf", "x": 8.5, "z": 9.5 }
+        { "typ": "napf", "x": 8.5, "z": 9.5 },
+        { "typ": "vorhang", "x": 9.8, "z": 9.45, "rot": 0 },
+        { "typ": "katzenbrett", "x": 0.33, "z": 4.45, "y": 1.7 },
+        { "typ": "katzenbrett", "x": 0.4, "z": 4.97, "y": 2.35 }
       ]
     },
     {
@@ -131,7 +145,8 @@
         { "a": [7, 3.5], "b": [7, 10], "oeffnungen": [{ "typ": "klappe", "pos": 4.5 }] },
         { "a": [9, 0], "b": [9, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] }
       ],
-      "loecher": [{ "x0": 0.12, "z0": 9.15, "x1": 0.82, "z1": 9.85, "info": "Katzenloch vom Wohnzimmer" }],
+      "loecher": [{ "x0": 0.12, "z0": 9.15, "x1": 0.82, "z1": 9.85, "info": "Katzenloch vom Wohnzimmer" },
+                  { "x0": 0.2, "z0": 4.75, "x1": 0.62, "z1": 5.2, "info": "Geheimes Loch im Kleiderschrank (runter ins Wohnzimmer)" }],
       "lampen": [],
       "objekte": [
         { "typ": "treppe", "x0": 1, "z0": 2.4, "x1": 5, "z1": 3.4, "richtung": "+x" },
@@ -143,6 +158,7 @@
         { "typ": "waschbecken", "x": 10.0, "z": 0.32, "rot": 0 },
         { "typ": "tasse", "x": 10.25, "z": 0.3, "y": 0.86 },
         { "typ": "toilette", "x": 13.6, "z": 2.8, "rot": 270 },
+        { "typ": "waeschekorb", "x": 11.0, "z": 3.17, "rot": 0 },
 
         { "typ": "teppich", "x": 3.5, "z": 6.6, "breite": 2.6, "tiefe": 1.6, "farbe": "#C9A15B" },
         { "typ": "bett", "x": 3.5, "z": 8.9, "rot": 180 },

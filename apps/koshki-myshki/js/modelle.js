@@ -184,25 +184,57 @@ const BAU = {
       zyl(g, 0.02, 0.02, 0.03, '#7A5A3A', 0, y + 0.1, 0.24, 8).rotation.x = Math.PI / 2;
     }
   },
+  // Bett auf hohen Beinen: darunter ist Platz für eine Katze (42 cm), aber nicht für Oma
   bett(g, b, o) {
-    const W = o.w || 1.6, L = o.l || 2.0, decke = o.decke || '#E8A0A8';
-    kasten(g, W, 0.3, L, HOLZ, 0, 0, 0, { kollider: false });
-    kasten(g, W - 0.08, 0.2, L - 0.08, WEISS, 0, 0.3, 0.02, { kollider: false, rund: 0.06 });
-    b.push([0, 0.25, 0, W, 0.5, L]);
-    kasten(g, W - 0.04, 0.07, L * 0.62, decke, 0, 0.49, L * 0.18, { kollider: false, rund: 0.03 });
-    const n = W > 1.2 ? [-W / 4, W / 4] : [0];
-    for (const x of n) kasten(g, W / n.length - 0.15, 0.12, 0.35, '#FFFFFF', x, 0.5, -L / 2 + 0.3, { kollider: false, rund: 0.05 });
-    kasten(g, W, 0.95, 0.08, HOLZ_DUNKEL, 0, 0, -L / 2 + 0.04, { boxen: b });
+    const W = o.w || 1.6, L = o.l || 2.0, H = 1.05, decke = o.decke || '#E8A0A8';
+    kasten(g, W, 0.3, L, HOLZ, 0, 0.42, 0, { kollider: false });
+    kasten(g, W - 0.08, 0.2, L - 0.08, WEISS, 0, 0.55, 0.02, { kollider: false, rund: 0.06 });
+    b.push([0, 0.595, 0, W, 0.35, L]);                       // Matratze (oben drauf kann man schlafen)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.push([sx * (W / 2 - 0.05), 0.21, sz * (L / 2 - 0.05), 0.08, 0.42, 0.08]);   // Beine
+    kasten(g, W, H, 0.08, HOLZ_DUNKEL, 0, 0, -L / 2 + 0.04, { boxen: b });
   },
   kinderbett(g, b, o) { BAU.bett(g, b, { w: 0.9, l: 1.9, decke: '#5B8DEF' }); },
   nachttisch(g, b) {
     kasten(g, 0.45, 0.5, 0.4, '#D9B98C', 0, 0, 0, { boxen: b });
     zyl(g, 0.015, 0.015, 0.03, '#7A5A3A', 0, 0.32, 0.2, 8).rotation.x = Math.PI / 2;
   },
+  // Kleiderschrank: rechte Tür steht offen, drinnen hängen Kleider.
+  // Unten drunter ist Platz für die Katze – und ein geheimes Loch im Boden!
   kleiderschrank(g, b) {
-    kasten(g, 1.8, 2.1, 0.6, '#C99A6B', 0, 0, 0, { boxen: b });
-    kasten(g, 0.01, 2.0, 0.01, '#8E6A47', 0, 0.05, 0.3, { kollider: false, rund: 0 });
-    for (const x of [-0.08, 0.08]) kasten(g, 0.03, 0.3, 0.03, '#6E4F33', x, 1.0, 0.31, { kollider: false, rund: 0.01 });
+    const H = 2.1, W = 1.8, D = 0.6, t = 0.03, holz = '#C99A6B';
+    kasten(g, W, H, t, holz, 0, 0, -D / 2 + t / 2, { boxen: b, rund: 0.01 });              // Rückwand
+    for (const x of [-W / 2 + t / 2, W / 2 - t / 2]) kasten(g, t, H, D, holz, x, 0, 0, { boxen: b, rund: 0.01 });   // Seiten
+    kasten(g, W, t, D, holz, 0, H - t, 0, { boxen: b, rund: 0.01 });                         // Deckel
+    kasten(g, W / 2, H - 0.05, t, holz, -W / 4, 0.03, D / 2 - t / 2, { boxen: b, rund: 0.01 });   // linke Tür (zu)
+    kasten(g, 0.03, 0.3, 0.03, '#6E4F33', -0.08, 1.0, D / 2 + 0.01, { kollider: false, rund: 0.01 });
+    kasten(g, t, H - 0.05, W / 2, holz, W / 2 + t / 2, 0.03, D / 2 + W / 4, { boxen: b, rund: 0.01 });  // rechte Tür (offen)
+    kasten(g, 0.03, 0.3, 0.03, '#6E4F33', W / 2 + 0.035, 1.0, D / 2 + W / 2 - 0.08, { kollider: false, rund: 0.01 });
+    zyl(g, 0.012, 0.012, W - 0.1, '#9AA0A6', 0, 1.85, 0, 8).rotation.z = Math.PI / 2;      // Kleiderstange
+    const farben = ['#E74C3C', '#3498DB', '#F1C40F', '#9B59B6', '#2ECC71', '#E67E22', '#1ABC9C', '#EC87C0'];
+    for (let i = 0; i < 8; i++) {
+      const x = -W / 2 + 0.16 + i * 0.205, lang = i % 3 === 1 ? 1.05 : 0.95;
+      kasten(g, 0.16, lang, 0.42, farben[i], x, 1.82 - lang, 0.02, { kollider: false, rund: 0.03 });
+    }
+    b.push([0, 1.25, 0, W - 0.06, 1.2, D - 0.06]);   // Kleider: Menschen kommen nicht rein, die Katze läuft drunter
+  },
+  // Wäschekorb (oben offen, weiche Wäsche drin)
+  waeschekorb(g, b) {
+    const W = 0.62, H = 0.45, D = 0.46, t = 0.03, korb = '#D8B47A';
+    kasten(g, W, t, D, korb, 0, 0, 0, { boxen: b, rund: 0.01 });
+    for (const z of [-D / 2 + t / 2, D / 2 - t / 2]) kasten(g, W, H, t, korb, 0, 0, z, { boxen: b, rund: 0.012 });
+    for (const x of [-W / 2 + t / 2, W / 2 - t / 2]) kasten(g, t, H, D, korb, x, 0, 0, { boxen: b, rund: 0.012 });
+    for (const y of [0.12, 0.26, 0.4]) kasten(g, W + 0.01, 0.025, D + 0.01, '#B88F55', 0, y, 0, { kollider: false, rund: 0.01 });
+    for (const [x, z, f, s] of [[-0.13, -0.08, '#FFFFFF', 1], [0.12, 0.06, '#8EC5FF', 0.9], [0.0, -0.1, '#FFB3C7', 0.8], [0.15, -0.1, '#FFE08A', 0.7]])
+      kugel(g, 0.13 * s, f, x, 0.36, z, 1.3, 0.45, 1);
+  },
+  // Lange Vorhänge vor dem Fenster – dahinter guckt nur der Schwanz raus
+  vorhang(g) {
+    const B = 1.6, H = 2.55, farben = ['#C0504D', '#D9665F'];
+    zyl(g, 0.018, 0.018, B + 0.2, '#7A4E2D', 0, H, 0, 8).rotation.z = Math.PI / 2;
+    for (const seite of [-1, 1]) for (let i = 0; i < 5; i++) {
+      const x = seite * (B / 2 - 0.36) + (i - 2) * 0.13;
+      kasten(g, 0.14, H - 0.04, 0.03, farben[i % 2], x, 0.02, (i % 2) * 0.05, { kollider: false, rund: 0.012 });
+    }
   },
   schreibtisch(g, b) {
     kasten(g, 1.2, 0.05, 0.6, '#F2F2F2', 0, 0.7, 0, { boxen: b });
@@ -368,14 +400,15 @@ const ECHT = {
   sofa: ['Couch_Medium1', o => ({ 0: o.farbe || '#3E8E9E' })],
   sessel: ['Couch_Small1', o => ({ 0: o.farbe || '#C4573F' })],
   stuhl: ['Chair_2'], kuehlschrank: ['Kitchen_Fridge'], kommode: ['Drawer_4'], nachttisch: ['NightStand_1'],
-  bett: ['Bed_King', o => ({ 0: '#F4F1EA', 1: o.decke || '#E8A0A8', 4: o.decke || '#E8A0A8' })],
-  kinderbett: ['Bed_Single', () => ({ 0: '#F4F1EA', 1: '#5B8DEF', 4: '#5B8DEF' })],
+  // [0.2, 0.4]: die Beine (unterste 20 % des Modells) werden auf 40 % der Höhe gestreckt → Platz drunter
+  bett: ['Bed_King', o => ({ 0: '#F4F1EA', 1: o.decke || '#E8A0A8', 4: o.decke || '#E8A0A8' }), [0.2, 0.4]],
+  kinderbett: ['Bed_Single', () => ({ 0: '#F4F1EA', 1: '#5B8DEF', 4: '#5B8DEF' }), [0.2, 0.4]],
   badewanne: ['Bathroom_Bathtub'], waschbecken: ['Bathroom_Sink'], toilette: ['Bathroom_Toilet'], waschmaschine: ['Bathroom_WashingMachine'],
 };
 let MOEBEL = null;
 export function setzeMoebel(daten) { MOEBEL = daten; }
 const echtGeo = new Map();
-function echtesModell(g, [name, farbFn], boxen, o) {
+function echtesModell(g, [name, farbFn, knick], boxen, o) {
   const farben = farbFn ? farbFn(o) : {};
   const m = MOEBEL && MOEBEL[name];
   if (!m || !boxen.length) return false;
@@ -391,7 +424,11 @@ function echtesModell(g, [name, farbFn], boxen, o) {
     const key = name + n + gr.join() + lo.join();
     if (!echtGeo.has(key)) {
       const e = t.ecken, p = new Float32Array(e.length);
-      for (let k = 0; k < e.length; k += 3) for (let i = 0; i < 3; i++) p[k + i] = lo[i] + e[k + i] / 1000 * gr[i];
+      for (let k = 0; k < e.length; k += 3) for (let i = 0; i < 3; i++) {
+        let v = e[k + i] / 1000;
+        if (i === 1 && knick) v = v < knick[0] ? v * knick[1] / knick[0] : knick[1] + (v - knick[0]) * (1 - knick[1]) / (1 - knick[0]);
+        p[k + i] = lo[i] + v * gr[i];
+      }
       const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(p, 3)); geo.computeVertexNormals();
       echtGeo.set(key, geo);
     }
