@@ -1,10 +1,12 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
 const CACHE = 'koshki-myshki-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './plan.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
+  './js/main.js', './js/haus.js', './js/katalog.js', './js/modelle.js', './js/katze.js', './js/steuerung.js', './js/ton.js', './js/texturen.js',
+  './vendor/three.js', './vendor/rapier.js', './level/haus.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => null)))).then(() => self.skipWaiting()));
 });
 // Nur die eigenen alten Caches löschen – die anderen Spiele (gleiche Adresse) brauchen ihre noch!
 self.addEventListener('activate', e => {

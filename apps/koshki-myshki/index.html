@@ -1,37 +1,83 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Кошки-мышки">
 <meta name="theme-color" content="#E8833A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Кошки-мышки</title>
 <style>
-  /* Farben an einer Stelle – so kann man sie leicht gemeinsam ändern */
-  :root{--bg:#F4F7FB;--text:#1B2A3A;--muted:#5B6B7C;--accent:#E8833A}
-  @media (prefers-color-scheme:dark){:root{--bg:#0F1722;--text:#E8EEF5;--muted:#9AAABB}}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--text);font:18px/1.4 -apple-system,system-ui,sans-serif;
-       padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
-       display:flex;flex-direction:column;align-items:center;justify-content:center;
-       -webkit-user-select:none;user-select:none;touch-action:manipulation}
-  h1{margin:0 0 8px}
-  button{font:inherit;padding:14px 28px;border:0;border-radius:14px;background:var(--accent);color:#fff}
-  #portal{position:fixed;top:calc(8px + env(safe-area-inset-top));left:10px;padding:8px 12px;border-radius:12px;background:#0002;color:inherit;text-decoration:none;font-size:15px}
-  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:var(--muted);cursor:pointer}
+  html,body{height:100%;margin:0;overflow:hidden;background:#9ED3F5}
+  body{font:16px/1.35 -apple-system,system-ui,sans-serif;color:#fff;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
+  #spiel{position:fixed;inset:0}
+  #spiel canvas{display:block;width:100%;height:100%;touch-action:none}
+  .hud{position:fixed;text-shadow:0 1px 3px #0009;pointer-events:none}
+  #portal{position:fixed;top:calc(8px + env(safe-area-inset-top));left:10px;padding:8px 12px;border-radius:12px;background:#0004;color:#fff;text-decoration:none;font-size:15px;z-index:5}
+  #oben{top:calc(10px + env(safe-area-inset-top));right:12px;display:flex;gap:14px;font-size:22px;align-items:center}
+  #ort{top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:15px;background:#0003;padding:4px 12px;border-radius:20px;white-space:nowrap}
+  #meldung{top:22%;left:50%;transform:translate(-50%,-8px);font-size:22px;font-weight:700;opacity:0;transition:.25s;text-align:center;padding:0 16px;width:100%}
+  #meldung.zeig{opacity:1;transform:translate(-50%,0)}
+  #fps{bottom:calc(4px + env(safe-area-inset-bottom));left:8px;font-size:11px;opacity:.6}
+  #version{position:fixed;bottom:calc(2px + env(safe-area-inset-bottom));right:4px;padding:8px;font-size:12px;color:#fffb;cursor:pointer;z-index:5;text-shadow:0 1px 2px #0008}
+  /* Knöpfe */
+  .knopf{position:fixed;border:0;border-radius:50%;background:#ffffff38;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;touch-action:none;z-index:4;box-shadow:0 2px 8px #0003}
+  .knopf.an{background:#ffffff80;transform:scale(.93)}
+  #bSprung{width:96px;height:96px;right:calc(26px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));font-size:40px}
+  #bPfote{width:74px;height:74px;right:calc(136px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
+  #bMiau{width:64px;height:64px;right:calc(40px + env(safe-area-inset-right));bottom:calc(144px + env(safe-area-inset-bottom))}
+  #bKamera{width:52px;height:52px;right:calc(120px + env(safe-area-inset-right));bottom:calc(126px + env(safe-area-inset-bottom));font-size:24px}
+  @media (pointer:fine){.knopf{opacity:.55}}
+  #joy{position:fixed;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;background:#ffffff26;border:2px solid #fff6;display:none;pointer-events:none;z-index:3}
+  #joyKnauf{position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;background:#ffffffa0;transform:translate(-50%,-50%)}
+  /* Titelbildschirm */
+  #titel{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+         background:radial-gradient(circle at 50% 30%,#FFB46Bcc,#7A3E14ee);padding:20px;text-align:center}
+  #titel h1{margin:0;font-size:clamp(40px,8vw,72px);text-shadow:0 4px 0 #7A3E14,0 8px 18px #0006}
+  #titel p{margin:0;max-width:560px;opacity:.95}
+  #start{font:inherit;font-size:24px;font-weight:700;padding:16px 44px;border:0;border-radius:18px;background:#fff;color:#C2581B;box-shadow:0 6px 0 #B9692F;cursor:pointer}
+  #start:disabled{opacity:.6}
+  #laden{min-height:1.4em;font-size:14px;opacity:.85}
+  .reihe{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .reihe button,.reihe a{font:inherit;font-size:15px;padding:8px 14px;border-radius:12px;border:2px solid #fff8;background:transparent;color:#fff;text-decoration:none;cursor:pointer}
+  .reihe button.an{background:#fff;color:#C2581B}
+  .hilfe{font-size:14px;opacity:.9;line-height:1.6}
+  .hilfe b{display:inline-block;min-width:1.6em;padding:0 5px;border-radius:5px;background:#0003}
 </style>
 </head>
 <body>
-  <h1>Кошки-мышки</h1>
-  <p id="text">Hier entsteht etwas Neues.</p>
-  <button id="knopf">Drück mich</button>
+  <div id="spiel"></div>
+  <div class="hud" id="oben"><span id="punkte">😼 0</span><span id="herzen"></span></div>
+  <div class="hud" id="ort"></div>
+  <div class="hud" id="meldung"></div>
+  <div class="hud" id="fps"></div>
+  <div id="joy"><div id="joyKnauf"></div></div>
+  <button class="knopf" id="bSprung" aria-label="прыжок">⤒</button>
+  <button class="knopf" id="bPfote" aria-label="лапа">🐾</button>
+  <button class="knopf" id="bMiau" aria-label="мяу">😺</button>
+  <button class="knopf" id="bKamera" aria-label="камера">👁️</button>
+
+  <div id="titel">
+    <h1>🐱 Кошки-мышки</h1>
+    <p>Ты – кошка. Бегай по дому, прыгай на шкафы и роняй вещи. Только бабуле не попадайся!</p>
+    <button id="start" disabled>Загрузка …</button>
+    <div id="laden">Загружаю …</div>
+    <div class="reihe">
+      <button data-q="schoen">✨ Красиво</button><button data-q="mittel">Средне</button><button data-q="schnell">⚡ Быстро</button>
+    </div>
+    <div class="hilfe">
+      💻 <b>W A S D</b> бегать · <b>мышь</b> смотреть · <b>Пробел</b> прыжок · <b>E</b>/клик лапа · <b>Q</b> мяу · <b>C</b> камера · <b>Shift</b> быстро<br>
+      📱 левый палец – джойстик · правый – смотреть · кнопки справа
+    </div>
+    <div class="reihe"><a href="plan.html">🗺 План дома</a></div>
+  </div>
+
   <a id="portal" href="../../">🕹 Alle Spiele</a>
   <div id="version"></div>
 
@@ -39,34 +85,27 @@
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
 const APP_VERSION = '0.1';
 // Version unten rechts antippen = nach Update suchen.
-// (iPhone/iPad holen Updates für Home-Bildschirm-Apps sonst nur selten von selbst.)
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
 versionEl.onclick = async () => {
   const zeig = (text, ms) => { versionEl.textContent = text; if (ms) setTimeout(() => versionEl.textContent = 'v' + APP_VERSION, ms); };
   zeig('suche Update …');
   try {
-    // ?u=… umgeht auch den Zwischenspeicher von GitHub Pages
     const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
     const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
     if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
     zeig('lade v' + neu + ' …');
     const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
-    if (reg) await reg.update().catch(() => {});             // neuen Service Worker (neuer CACHE) holen
+    if (reg) await reg.update().catch(() => {});
     await new Promise(r => setTimeout(r, 1200));
     location.replace(location.pathname + '?v=' + encodeURIComponent(neu));
   } catch { zeig('offline – v' + APP_VERSION, 2500); }
 };
-
-// --- Ab hier bauen wir gemeinsam ---
-let zaehler = 0;
-document.getElementById('knopf').onclick = () => {
-  zaehler++;
-  document.getElementById('text').textContent = 'Gedrückt: ' + zaehler + '×';
-};
-
-// Offline-Fähigkeit (funktioniert nur über https oder localhost)
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// Fehler sichtbar machen (hilft beim Testen auf dem iPad)
+addEventListener('error', e => { const l = document.getElementById('laden'); if (l) l.textContent = '⚠️ ' + e.message; });
+addEventListener('unhandledrejection', e => { const l = document.getElementById('laden'); if (l) l.textContent = '⚠️ ' + (e.reason && e.reason.message || e.reason); });
 </script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
