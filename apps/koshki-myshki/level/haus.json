@@ -29,15 +29,23 @@
     {
       "id": "keller", "name": "Keller", "y": -2.8, "hoehe": 2.8, "wandfarbe": "#BDB6AA",
       "raeume": [
-        { "name": "Waschküche", "x0": 0, "z0": 0, "x1": 7, "z1": 10, "boden": "beton" },
-        { "name": "Werkstatt", "x0": 7, "z0": 0, "x1": 14, "z1": 10, "boden": "beton" }
+        { "name": "Waschküche", "x0": 0, "z0": 0, "x1": 7, "z1": 6.5, "boden": "beton" },
+        { "name": "Waschküche", "x0": 3.5, "z0": 6.5, "x1": 7, "z1": 10, "boden": "beton" },
+        { "name": "Schatzkeller", "x0": 0, "z0": 6.5, "x1": 3.5, "z1": 10, "boden": "dielen", "geheim": true },
+        { "name": "Werkstatt", "x0": 7, "z0": 0, "x1": 14, "z1": 6.5, "boden": "beton" },
+        { "name": "Werkstatt", "x0": 7, "z0": 6.5, "x1": 11, "z1": 10, "boden": "beton" },
+        { "name": "Maulwurfbau", "x0": 11, "z0": 6.5, "x1": 14, "z1": 10, "boden": "dielen", "geheim": true }
       ],
       "waende": [
         { "a": [0, 0], "b": [14, 0], "aussen": true },
         { "a": [0, 10], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "klappe", "pos": 12.5, "info": "Geheimgang in den Kellerschacht" }] },
         { "a": [0, 0], "b": [0, 10], "aussen": true },
-        { "a": [14, 0], "b": [14, 10], "aussen": true },
-        { "a": [7, 0], "b": [7, 10], "oeffnungen": [{ "typ": "tuer", "pos": 5 }] }
+        { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "klappe", "pos": 8.5, "info": "Maulwurfgang zur Villa" }] },
+        { "a": [7, 0], "b": [7, 10], "oeffnungen": [{ "typ": "tuer", "pos": 5 }] },
+        { "a": [0, 6.5], "b": [3.5, 6.5], "oeffnungen": [{ "typ": "klappe", "pos": 2.8 }] },
+        { "a": [3.5, 6.5], "b": [3.5, 10] },
+        { "a": [11, 6.5], "b": [14, 6.5], "oeffnungen": [{ "typ": "klappe", "pos": 1.5 }] },
+        { "a": [11, 6.5], "b": [11, 10] }
       ],
       "loecher": [],
       "lampen": [{ "x": 3.5, "z": 5, "y": 2.4 }, { "x": 10.5, "z": 5, "y": 2.4 }],
@@ -53,14 +61,19 @@
         { "typ": "werkbank", "x": 13.6, "z": 5.0, "rot": 270 },
         { "typ": "kiste", "x": 8.0, "z": 9.4 },
         { "typ": "kiste", "x": 8.6, "z": 9.4 },
-        { "typ": "kiste", "x": 8.3, "z": 9.4, "y": 0.5 }
+        { "typ": "kiste", "x": 8.3, "z": 9.4, "y": 0.5 },
+        { "typ": "truhe", "x": 1.7, "z": 9.6, "rot": 180 },
+        { "typ": "katzenkissen", "x": 1.0, "z": 7.5 },
+        { "typ": "katzenkissen", "x": 12.8, "z": 9.2 },
+        { "typ": "wollknaeuel", "x": 12.0, "z": 7.4 }
       ]
     },
     {
       "id": "eg", "name": "Erdgeschoss", "y": 0, "hoehe": 2.8, "wandfarbe": "#F3E6CF",
       "raeume": [
         { "name": "Flur", "x0": 0, "z0": 0, "x1": 10, "z1": 3.5, "boden": "fliesen" },
-        { "name": "Abstellraum", "x0": 10, "z0": 0, "x1": 14, "z1": 3.5, "boden": "beton" },
+        { "name": "Abstellraum", "x0": 10, "z0": 0, "x1": 12.5, "z1": 3.5, "boden": "beton" },
+        { "name": "Kuschelhöhle", "x0": 12.5, "z0": 0, "x1": 14, "z1": 3.5, "boden": "teppich", "geheim": true },
         { "name": "Wohnzimmer", "x0": 0, "z0": 3.5, "x1": 8, "z1": 10, "boden": "holz" },
         { "name": "Küche", "x0": 8, "z0": 3.5, "x1": 14, "z1": 10, "boden": "fliesen" }
       ],
@@ -71,7 +84,8 @@
         { "a": [14, 0], "b": [14, 10], "aussen": true, "oeffnungen": [{ "typ": "fenster", "pos": 7, "unten": 1.05 }] },
         { "a": [0, 3.5], "b": [14, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 7.2 }, { "typ": "tuer", "pos": 9.0 }, { "typ": "klappe", "pos": 12.0 }] },
         { "a": [8, 3.5], "b": [8, 10], "oeffnungen": [{ "typ": "tuer", "pos": 1.5, "breite": 1.2 }] },
-        { "a": [10, 0], "b": [10, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] }
+        { "a": [10, 0], "b": [10, 3.5], "oeffnungen": [{ "typ": "tuer", "pos": 2.5 }] },
+        { "a": [12.5, 0], "b": [12.5, 3.5], "oeffnungen": [{ "typ": "klappe", "pos": 1.0 }] }
       ],
       "loecher": [],
       "lampen": [],
@@ -87,6 +101,8 @@
         { "typ": "glas", "x": 13.8, "z": 2.7, "y": 1.8 },
         { "typ": "kiste", "x": 10.8, "z": 3.0 },
         { "typ": "kiste", "x": 11.4, "z": 3.0 },
+        { "typ": "katzenkissen", "x": 13.25, "z": 1.0 },
+        { "typ": "napf", "x": 13.3, "z": 3.1 },
 
         { "typ": "teppich", "x": 3.5, "z": 7.4, "breite": 3.2, "tiefe": 2.2, "farbe": "#3F6E8C" },
         { "typ": "sofa", "x": 3.5, "z": 9.0, "rot": 180 },

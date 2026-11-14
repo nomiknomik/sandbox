@@ -74,7 +74,8 @@ function schild(text, breite, hoehe, farbe, schrift) {
   return new T.Mesh(new T.PlaneGeometry(breite, hoehe), new T.MeshStandardMaterial({ map: t, roughness: 0.7 }));
 }
 
-export function baueDraussen(scene, world, R, bau) {
+export function baueDraussen(scene, world, R, bau, extra = {}) {
+  const fremd = extra.loecher || [];          // weitere Häuser (siedlung.js): dort kein Gras und keine Bäume
   const g = new T.Group(); scene.add(g);                    // alles Feste – wird am Ende zusammengeklebt
   const lose = new T.Group(); scene.add(lose);              // Durchsichtiges / Bewegtes
   const P = PLAN, anim = [];
@@ -96,7 +97,7 @@ export function baueDraussen(scene, world, R, bau) {
   let rects = [{ x0: W.x0, x1: W.x1, z0: W.z0, z1: W.z1 }];
   const KS = P.kellerschacht, ksW = 0.2;
   for (const l of [{ x0: 0, x1: 14, z0: 0, z1: 10 }, pool, { x0: sch.x0 - 0.2, x1: sch.x1 + 0.2, z0: sch.z0 - 0.2, z1: sch.z1 + 0.2 },
-    { x0: KS.x0 - ksW, x1: KS.x1 + ksW, z0: 10, z1: KS.z1 + ksW }]) rects = minus(rects, l);
+    { x0: KS.x0 - ksW, x1: KS.x1 + ksW, z0: 10, z1: KS.z1 + ksW }, ...fremd]) rects = minus(rects, l);
   const gras = texMat('gras', 1);
   for (const r of rects) {
     flaeche(r.x0, r.x1, r.z0, r.z1, -0.005, gras, 4);
@@ -150,7 +151,8 @@ export function baueDraussen(scene, world, R, bau) {
     }
   };
   for (const [x, z, s] of [[-4, 13, 1.3], [19, 12, 1.1], [-5, -3, 1.0], [18, -3.5, 1.4], [16, 25, 1.2], [-5, 26, 1.1], [-12, -12.5 + 20, 1.2],
-    [-20, 5, 1.4], [35, 4, 1.2], [44, -2, 1.0], [-28, -2, 1.3], [32, -26, 1.2], [-8, -27, 1.1], [13, -27, 1.0], [-30, -27, 1.3], [45, -27, 1.4], [30, 18, 1.3], [-20, 22, 1.2]]) baum(x, z, s);
+    [-20, 5, 1.4], [35, 4, 1.2], [44, -2, 1.0], [-28, -2, 1.3], [32, -26, 1.2], [-8, -27, 1.1], [13, -27, 1.0], [-30, -27, 1.3], [45, -27, 1.4], [30, 18, 1.3], [-20, 22, 1.2]])
+    if (!fremd.some(l => x > l.x0 - 2 && x < l.x1 + 2 && z > l.z0 - 2 && z < l.z1 + 2)) baum(x, z, s);
   const busch = mat('#5DB04F');
   for (const [x, z] of [[1.5, -5.2], [3.5, -5.2], [10.5, -5.2], [12.5, -5.3], [-1.2, 6], [15.5, 6], [20.5, 20], [-6.5, 18]]) {
     const b = new T.Mesh(new T.SphereGeometry(0.5, 12, 10), busch); b.scale.y = 0.7; b.position.set(x, 0.3, z); b.castShadow = true; g.add(b);

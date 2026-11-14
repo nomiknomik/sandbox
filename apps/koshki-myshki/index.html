@@ -38,6 +38,16 @@
   #bAufgaben{position:fixed;top:calc(8px + env(safe-area-inset-top));left:140px;padding:8px 12px;border-radius:12px;border:0;background:#0004;color:#fff;font:inherit;font-size:15px;z-index:5;cursor:pointer}
   #aufgaben{position:fixed;top:calc(52px + env(safe-area-inset-top));left:10px;width:min(380px,calc(100vw - 20px));max-height:calc(100vh - 70px);overflow:auto;padding:12px 14px;border-radius:16px;background:#2a1a10e6;z-index:7;display:none;font-size:15px}
   #aufgaben.zeig{display:block}
+  #bGarderobe{position:fixed;top:calc(8px + env(safe-area-inset-top));left:236px;padding:8px 12px;border-radius:12px;border:0;background:#0004;color:#fff;font:inherit;font-size:15px;z-index:5;cursor:pointer}
+  #garderobe{position:fixed;top:calc(52px + env(safe-area-inset-top));left:10px;width:min(380px,calc(100vw - 20px));padding:12px 14px;border-radius:16px;background:#2a1a10e6;color:#fff;z-index:7;display:none;font-size:15px}
+  #garderobe.zeig{display:block}
+  #garderobe h3{margin:0 0 6px} #garderobe p{margin:8px 0 4px} #garderobe .klein{font-size:12px;opacity:.75}
+  #garderobe .reihe{display:flex;flex-wrap:wrap;gap:8px}
+  #garderobe .reihe button{width:44px;height:44px;border-radius:50%;border:3px solid #fff3;cursor:pointer;font:inherit;color:#fff}
+  #garderobe .reihe button.an{border-color:#FFD93D}
+  #garderobe .reihe button.sache{width:64px;height:58px;border-radius:12px;background:#ffffff1a;font-size:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px}
+  #garderobe .reihe button.sache small{font-size:10px;line-height:1.1}
+  #garderobe .reihe button.zu{opacity:.55}
   #aufgaben h3{margin:0 0 8px}
   #aufgaben .aufgabe{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #fff2}
   #aufgaben .aufgabe span:nth-child(2){flex:1}
@@ -115,7 +125,7 @@
 
   <div id="titel">
     <img id="titelbild" src="titelbild.webp" alt=""><h1><img id="logo" src="logo.webp" alt="Katz und Maus"></h1>
-    <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen! Draußen: Straße mit Autos, Restaurant, Pool mit Rutsche – und ein Geheimnis unter Wasser …</p>
+    <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen! Draußen: Straße mit Autos, Restaurant, Pool mit Rutsche, eine riesige Villa mit drei Pools – und überall Geheimräume …</p>
     <button id="start" disabled>Lädt …</button>
     <div id="laden">Lade …</div>
     <div class="reihe">
@@ -133,7 +143,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.9.0';
+const APP_VERSION = '0.10.0';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;

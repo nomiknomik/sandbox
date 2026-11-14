@@ -149,7 +149,8 @@ export class Katze {
 }
 
 function baueKatze() {
-  const fell = mat('#E8913A', { r: 0.85 }), hell = mat('#FBE3C4', { r: 0.9 }), dunkel = mat('#B8641F', { r: 0.85 });
+  // eigene Materialien (nicht aus dem Cache), damit man das Fell umfärben kann (garderobe.js)
+  const fell = new T.MeshStandardMaterial({ color: '#E8913A', roughness: 0.85 }), hell = new T.MeshStandardMaterial({ color: '#FBE3C4', roughness: 0.9 }), dunkel = new T.MeshStandardMaterial({ color: '#B8641F', roughness: 0.85 });
   const rosa = mat('#F59AB0', { r: 0.6 });
   const wurzel = new T.Group();
   const koerper = new T.Group(); wurzel.add(koerper);
@@ -201,5 +202,5 @@ function baueKatze() {
     g.rotation.x = -0.2;
     schwanz.push(g); eltern = g;
   }
-  return { wurzel, koerper, kopf, beine, schwanz, augen, maul };
+  return { wurzel, koerper, kopf, beine, schwanz, augen, maul, stoff: { fell, hell, dunkel } };
 }

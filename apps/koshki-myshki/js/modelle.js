@@ -326,6 +326,60 @@ const BAU = {
 
 // ---------- Подвижные вещи ----------
 const DYN = {
+  // ---------- Souvenirs (aus den anderen Häusern holen und daheim im Geheimraum verstecken) ----------
+  schneekugel(g) {
+    zyl(g, 0.06, 0.07, 0.04, '#7A4E2D', 0, -0.07, 0, 14);
+    mesh(new T.SphereGeometry(0.065, 16, 12), mat('#DFF3FF', { op: 0.45, r: 0.05 }), 0, 0.02, 0, g);
+    kugel(g, 0.025, '#FFFFFF', 0, -0.01, 0); kugel(g, 0.015, '#FFFFFF', 0, 0.025, 0);
+    return { form: 'box', w: 0.14, h: 0.17, d: 0.14 };
+  },
+  muschel(g) {
+    for (let i = -3; i <= 3; i++) { const r = kasten(g, 0.025, 0.02, 0.11 - Math.abs(i) * 0.012, i % 2 ? '#F7C6B5' : '#F9DCCF', i * 0.022, -0.02, 0, { kollider: false, rund: 0.008 }); r.rotation.y = i * 0.18; }
+    return { form: 'box', w: 0.16, h: 0.05, d: 0.12 };
+  },
+  goldfisch(g) {
+    const gold = mat('#F5C431', { r: 0.25, m: 0.8 });
+    const k = mesh(new T.SphereGeometry(0.06, 14, 10), gold, 0, 0.01, 0, g); k.scale.set(1.5, 1, 0.6);
+    const s = mesh(new T.ConeGeometry(0.045, 0.06, 6), gold, -0.11, 0.01, 0, g); s.rotation.z = Math.PI / 2;
+    zyl(g, 0.04, 0.05, 0.03, '#2C2C34', 0, -0.07, 0, 12);
+    return { form: 'box', w: 0.22, h: 0.15, d: 0.1 };
+  },
+  spielzeugauto(g) {
+    kasten(g, 0.16, 0.05, 0.08, '#E74C3C', 0, -0.025, 0, { kollider: false, rund: 0.015 });
+    kasten(g, 0.08, 0.04, 0.07, '#F2F2F2', -0.01, 0.02, 0, { kollider: false, rund: 0.012 });
+    for (const x of [-0.05, 0.05]) for (const z of [-0.042, 0.042]) { const r = zyl(g, 0.02, 0.02, 0.012, '#222', x, 0, z, 10); r.rotation.x = Math.PI / 2; r.position.y = -0.03; }
+    return { form: 'box', w: 0.17, h: 0.1, d: 0.1 };
+  },
+  teddy(g) {
+    const b = '#A86B3C';
+    kugel(g, 0.06, b, 0, -0.03, 0, 1, 1.1, 0.9); kugel(g, 0.045, b, 0, 0.06, 0);
+    for (const s of [-1, 1]) { kugel(g, 0.017, b, s * 0.035, 0.1, 0); kugel(g, 0.022, b, s * 0.06, -0.01, 0.01); kugel(g, 0.024, b, s * 0.035, -0.08, 0.02); }
+    kugel(g, 0.018, '#E8C9A0', 0, 0.055, 0.04); kugel(g, 0.008, '#222', 0, 0.065, 0.055);
+    return { form: 'box', w: 0.15, h: 0.2, d: 0.12 };
+  },
+  diamant(g) {
+    const d = mesh(new T.OctahedronGeometry(0.07, 0), mat('#7FE7FF', { r: 0.05, m: 0.3, e: 0x2AB8E0, ei: 0.5 }), 0, 0, 0, g); d.scale.y = 1.2;
+    return { form: 'box', w: 0.1, h: 0.16, d: 0.1 };
+  },
+  medaille(g) {
+    const m = zyl(g, 0.05, 0.05, 0.012, '#F5C431', 0, -0.006, 0, 18); m.material = mat('#F5C431', { r: 0.25, m: 0.8 });
+    kasten(g, 0.04, 0.003, 0.09, '#3A7BD5', 0, 0.006, -0.07, { kollider: false, rund: 0 });
+    return { form: 'box', w: 0.1, h: 0.03, d: 0.16 };
+  },
+  rakete(g) {
+    zyl(g, 0.035, 0.035, 0.14, '#ECF0F1', 0, -0.08, 0, 12);
+    mesh(new T.ConeGeometry(0.035, 0.06, 12), mat('#E74C3C'), 0, 0.09, 0, g);
+    for (let i = 0; i < 3; i++) { const f = kasten(g, 0.04, 0.05, 0.008, '#E74C3C', 0, -0.09, 0, { kollider: false, rund: 0 }); f.rotation.y = i * 2.1; f.translateX(0.035); }
+    kugel(g, 0.014, '#5DADE2', 0, 0.02, 0.032);
+    return { form: 'box', w: 0.1, h: 0.2, d: 0.1 };
+  },
+  gluecksstern(g) {
+    const sh = new T.Shape();
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.035 : 0.08; i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    const geo = new T.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: false }); geo.center();
+    mesh(geo, mat('#FFD93D', { r: 0.3, m: 0.5, e: 0xFFB800, ei: 0.4 }), 0, 0, 0, g);
+    return { form: 'box', w: 0.16, h: 0.16, d: 0.04 };
+  },
   vase(g) {
     const pts = [[0, 0], [0.06, 0], [0.085, 0.05], [0.09, 0.12], [0.07, 0.22], [0.045, 0.28], [0.05, 0.32], [0.06, 0.34]].map(([r, y]) => new T.Vector2(r, y - 0.17));
     const farbe = ['#3A7BD5', '#D5573A', '#2BAE9A', '#B03AD5'][Math.floor(Math.random() * 4)];

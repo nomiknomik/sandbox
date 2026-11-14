@@ -1,0 +1,278 @@
+{
+  "info": "Weitere Häuser. x/z = Ecke des Hauses in der Welt, alles darin ist lokal (0..w, 0..d). aussen: Öffnungen in den Außenwänden je Seite (n = zur kleinen z-Seite, s = große z-Seite, w = kleine x-Seite, o = große x-Seite), pos ab der Ecke. Fenster kommen automatisch dazu. treppe: geht immer Richtung +x zur nächsten Etage. geheim: true = Geheimraum (nur mit Katzenklappe). kopie: übernimmt die Etagen eines anderen Hauses.",
+  "maulwurfgang": { "x0": 14.12, "x1": 29.88, "z": 8.5, "y": -2.8, "breite": 0.6 },
+  "haeuser": [
+    {
+      "id": "villa", "name": "Villa", "x": 30, "z": 5.5, "w": 18, "d": 14, "farbe": "#F4F0E6", "dach": "flach",
+      "gartenpools": [{ "name": "Gartenpool", "x0": 4, "z0": 16.5, "x1": 12, "z1": 21, "tiefe": 1.4 }],
+      "etagen": [
+        {
+          "id": "k", "name": "Keller", "y": -2.8, "h": 2.8, "boden": "fliesen", "wand": "#D8D2C6", "fenster": false,
+          "raeume": [
+            { "name": "Maulwurfhöhle", "x0": 0, "z0": 0, "x1": 5, "z1": 5, "geheim": true, "boden": "beton" },
+            { "name": "Vorratskeller", "x0": 5, "z0": 0, "x1": 10, "z1": 5, "boden": "beton" },
+            { "name": "Geheime Spielhalle", "x0": 10, "z0": 0, "x1": 18, "z1": 5, "geheim": true, "boden": "teppich" },
+            { "name": "Kellerflur", "x0": 0, "z0": 5, "x1": 6, "z1": 14 },
+            { "name": "Hallenbad", "x0": 6, "z0": 5, "x1": 18, "z1": 14 }
+          ],
+          "aussen": { "w": [{ "typ": "klappe", "pos": 3, "info": "hier kommt der Maulwurfgang an" }] },
+          "waende": [
+            { "a": [0, 5], "b": [18, 5], "o": [{ "typ": "klappe", "pos": 2.5 }, { "typ": "tuer", "pos": 7.5 }] },
+            { "a": [5, 0], "b": [5, 5] },
+            { "a": [10, 0], "b": [10, 5], "o": [{ "typ": "klappe", "pos": 2.5 }] },
+            { "a": [6, 5], "b": [6, 14], "o": [{ "typ": "tuer", "pos": 2 }] }
+          ],
+          "pools": [{ "name": "Hallenbad", "x0": 8, "z0": 7, "x1": 16, "z1": 12.5, "tiefe": 1.5 }],
+          "treppe": { "x0": 1, "x1": 5.5, "z0": 12.6, "z1": 13.6 },
+          "objekte": [
+            { "typ": "katzenkissen", "x": 1.5, "z": 1.5 }, { "typ": "wollknaeuel", "x": 3, "z": 3.5 }, { "typ": "diamant", "x": 4.2, "z": 0.8 },
+            { "typ": "regal", "x": 7.5, "z": 0.3, "rot": 0 }, { "typ": "glas", "x": 7.2, "z": 0.3, "y": 1.8 }, { "typ": "glas", "x": 7.8, "z": 0.3, "y": 1.8 },
+            { "typ": "kiste", "x": 9.3, "z": 4.4 }, { "typ": "kiste", "x": 8.7, "z": 4.4 }, { "typ": "kiste", "x": 9.0, "z": 4.4, "y": 0.5 },
+            { "typ": "gluecksrad", "x": 14, "z": 0.6, "rot": 0 },
+            { "typ": "teppich", "x": 14, "z": 2.8, "breite": 3.0, "tiefe": 1.6, "farbe": "#7A2E8C" },
+            { "typ": "sofa", "x": 14, "z": 4.4, "rot": 180, "farbe": "#C0392B" }, { "typ": "medaille", "x": 17.3, "z": 0.6 },
+            { "typ": "pflanze", "x": 17.4, "z": 5.6 }, { "typ": "pflanze", "x": 17.4, "z": 13.4 }, { "typ": "katzenkissen", "x": 7, "z": 13.3 }
+          ]
+        },
+        {
+          "id": "eg", "name": "Erdgeschoss", "y": 0, "h": 3.2, "boden": "fliesen", "wand": "#F6EFE2",
+          "raeume": [
+            { "name": "Eingangshalle", "x0": 0, "z0": 0, "x1": 9, "z1": 8 },
+            { "name": "Salon", "x0": 9, "z0": 0, "x1": 18, "z1": 8, "boden": "holz" },
+            { "name": "Küche", "x0": 0, "z0": 8, "x1": 6, "z1": 10.5 },
+            { "name": "Treppenhaus", "x0": 0, "z0": 10.5, "x1": 6, "z1": 14 },
+            { "name": "Esszimmer", "x0": 6, "z0": 8, "x1": 12, "z1": 14, "boden": "holz" },
+            { "name": "Geheime Bibliothek", "x0": 12, "z0": 8, "x1": 18, "z1": 14, "geheim": true, "boden": "teppich" }
+          ],
+          "aussen": { "n": [{ "typ": "tor", "pos": 4.5 }], "s": [{ "typ": "tor", "pos": 9, "breite": 2.2 }] },
+          "waende": [
+            { "a": [0, 8], "b": [18, 8], "o": [{ "typ": "tuer", "pos": 3 }, { "typ": "tuer", "pos": 7.5 }, { "typ": "tuer", "pos": 10.5 }, { "typ": "klappe", "pos": 16 }] },
+            { "a": [9, 0], "b": [9, 8], "o": [{ "typ": "tor", "pos": 4, "breite": 2.4 }] },
+            { "a": [6, 8], "b": [6, 14], "o": [{ "typ": "tuer", "pos": 1.25 }, { "typ": "tuer", "pos": 4.5 }] },
+            { "a": [0, 10.5], "b": [6, 10.5], "o": [{ "typ": "tuer", "pos": 0.6, "breite": 0.8 }] },
+            { "a": [12, 8], "b": [12, 14] }
+          ],
+          "treppe": { "x0": 1, "x1": 5.5, "z0": 11.4, "z1": 12.4 },
+          "objekte": [
+            { "typ": "teppich", "x": 4.5, "z": 4, "breite": 3.2, "tiefe": 2.2, "farbe": "#B03A2E" },
+            { "typ": "pflanze", "x": 0.6, "z": 0.6 }, { "typ": "pflanze", "x": 8.4, "z": 0.6 },
+            { "typ": "kommode", "x": 5.3, "z": 7.65, "rot": 180 }, { "typ": "vase", "x": 5.3, "z": 7.65, "y": 0.85 },
+            { "typ": "sofa", "x": 13.5, "z": 6.6, "rot": 180, "farbe": "#2E86AB" }, { "typ": "couchtisch", "x": 13.5, "z": 5.2 },
+            { "typ": "vase", "x": 13.3, "z": 5.2, "y": 0.45 }, { "typ": "tasse", "x": 13.8, "z": 5.1, "y": 0.45 },
+            { "typ": "sessel", "x": 10.5, "z": 4.5, "rot": 90 }, { "typ": "tvschrank", "x": 13.5, "z": 0.4, "rot": 0 },
+            { "typ": "regal", "x": 17.75, "z": 3, "rot": 270 }, { "typ": "buch", "x": 17.75, "z": 3.2, "y": 1.8 }, { "typ": "vase", "x": 17.75, "z": 2.7, "y": 1.8 },
+            { "typ": "kuechenzeile", "x": 0.43, "z": 9.25, "rot": 90, "laenge": 2.2 }, { "typ": "topf", "x": 0.4, "z": 8.8, "y": 0.9 },
+            { "typ": "napf", "x": 3, "z": 10.1 },
+            { "typ": "esstisch", "x": 9, "z": 11 }, { "typ": "stuhl", "x": 8.6, "z": 10.25, "rot": 0 }, { "typ": "stuhl", "x": 9.4, "z": 10.25, "rot": 0 },
+            { "typ": "stuhl", "x": 8.6, "z": 11.75, "rot": 180 }, { "typ": "stuhl", "x": 9.4, "z": 11.75, "rot": 180 },
+            { "typ": "vase", "x": 9, "z": 11, "y": 0.75 }, { "typ": "teller", "x": 8.6, "z": 11, "y": 0.75 },
+            { "typ": "regal", "x": 15, "z": 13.75, "rot": 180 }, { "typ": "buch", "x": 14.7, "z": 13.75, "y": 1.8 }, { "typ": "buch", "x": 15.3, "z": 13.75, "y": 1.8 },
+            { "typ": "regal", "x": 17.75, "z": 11, "rot": 270 }, { "typ": "sessel", "x": 14, "z": 10.5, "rot": 0, "farbe": "#6C3483" },
+            { "typ": "katzenkissen", "x": 16.8, "z": 9 }, { "typ": "teddy", "x": 16, "z": 12.5 }
+          ]
+        },
+        {
+          "id": "og1", "name": "1. Stock", "y": 3.2, "h": 3.2, "boden": "holz", "wand": "#EAF2F6",
+          "raeume": [
+            { "name": "Galerie", "x0": 0, "z0": 0, "x1": 9, "z1": 8 },
+            { "name": "Schlafzimmer", "x0": 9, "z0": 0, "x1": 18, "z1": 8, "boden": "teppich" },
+            { "name": "Bad", "x0": 0, "z0": 8, "x1": 6, "z1": 10.5, "boden": "fliesen" },
+            { "name": "Treppenhaus", "x0": 0, "z0": 10.5, "x1": 6, "z1": 14 },
+            { "name": "Kinderzimmer", "x0": 6, "z0": 8, "x1": 12, "z1": 14 },
+            { "name": "Geheimes Kuschelzimmer", "x0": 12, "z0": 8, "x1": 18, "z1": 14, "geheim": true, "boden": "teppich" }
+          ],
+          "aussen": { "n": [{ "typ": "glastuer", "pos": 13.5 }], "s": [{ "typ": "glastuer", "pos": 10 }] },
+          "balkone": [{ "seite": "n", "von": 10, "bis": 17, "tiefe": 1.8 }, { "seite": "s", "von": 7.5, "bis": 11.5, "tiefe": 1.6 }],
+          "waende": [
+            { "a": [0, 8], "b": [18, 8], "o": [{ "typ": "tuer", "pos": 3 }, { "typ": "tuer", "pos": 7.5 }, { "typ": "tuer", "pos": 10.5 }, { "typ": "klappe", "pos": 16 }] },
+            { "a": [9, 0], "b": [9, 8], "o": [{ "typ": "tuer", "pos": 4 }] },
+            { "a": [6, 8], "b": [6, 14], "o": [{ "typ": "tuer", "pos": 1.25 }, { "typ": "tuer", "pos": 4.5 }] },
+            { "a": [0, 10.5], "b": [6, 10.5], "o": [{ "typ": "tuer", "pos": 0.6, "breite": 0.8 }] },
+            { "a": [12, 8], "b": [12, 14] }
+          ],
+          "treppe": { "x0": 1, "x1": 5.5, "z0": 12.6, "z1": 13.6 },
+          "objekte": [
+            { "typ": "teppich", "x": 4.5, "z": 4, "breite": 2.6, "tiefe": 1.8, "farbe": "#C9A15B" }, { "typ": "sessel", "x": 2, "z": 2, "rot": 0 },
+            { "typ": "pflanze", "x": 8.4, "z": 0.6 }, { "typ": "kratzbaum", "x": 6.5, "z": 6.5 },
+            { "typ": "bett", "x": 13.5, "z": 6.95, "rot": 180, "decke": "#F5B7B1" }, { "typ": "nachttisch", "x": 12.25, "z": 7.6, "rot": 180 },
+            { "typ": "wecker", "x": 12.25, "z": 7.6, "y": 0.5 }, { "typ": "kommode", "x": 17.6, "z": 4, "rot": 270 }, { "typ": "vase", "x": 17.6, "z": 4, "y": 0.85 },
+            { "typ": "waschbecken", "x": 1.5, "z": 8.35, "rot": 0 }, { "typ": "toilette", "x": 5.6, "z": 9.7, "rot": 270 }, { "typ": "waeschekorb", "x": 4.2, "z": 10.1 },
+            { "typ": "kinderbett", "x": 7.5, "z": 13.5, "rot": 90 }, { "typ": "spielzeugkiste", "x": 11.3, "z": 8.4 }, { "typ": "ball", "x": 9, "z": 10 },
+            { "typ": "katzenkissen", "x": 15, "z": 11 }, { "typ": "kuscheldecke", "x": 15, "z": 13.6 }, { "typ": "napf", "x": 13, "z": 13.3 }
+          ]
+        },
+        {
+          "id": "og2", "name": "2. Stock", "y": 6.4, "h": 3.2, "boden": "holz", "wand": "#F3E9F2",
+          "raeume": [
+            { "name": "Kino", "x0": 0, "z0": 0, "x1": 9, "z1": 8, "boden": "teppich" },
+            { "name": "Spielesalon", "x0": 9, "z0": 0, "x1": 18, "z1": 8 },
+            { "name": "Bad", "x0": 0, "z0": 8, "x1": 6, "z1": 10.5, "boden": "fliesen" },
+            { "name": "Treppenhaus", "x0": 0, "z0": 10.5, "x1": 6, "z1": 14 },
+            { "name": "Spielzimmer", "x0": 6, "z0": 8, "x1": 12, "z1": 14 },
+            { "name": "Geheimes Labor", "x0": 12, "z0": 8, "x1": 18, "z1": 14, "geheim": true, "boden": "beton" }
+          ],
+          "aussen": { "n": [{ "typ": "glastuer", "pos": 13.5 }], "s": [{ "typ": "glastuer", "pos": 9 }] },
+          "balkone": [{ "seite": "n", "von": 10, "bis": 17, "tiefe": 1.8 }, { "seite": "s", "von": 7, "bis": 11, "tiefe": 1.6 }],
+          "waende": [
+            { "a": [0, 8], "b": [18, 8], "o": [{ "typ": "tuer", "pos": 3 }, { "typ": "tuer", "pos": 7.5 }, { "typ": "tuer", "pos": 10.5 }, { "typ": "klappe", "pos": 16 }] },
+            { "a": [9, 0], "b": [9, 8], "o": [{ "typ": "tuer", "pos": 4 }] },
+            { "a": [6, 8], "b": [6, 14], "o": [{ "typ": "tuer", "pos": 1.25 }, { "typ": "tuer", "pos": 4.5 }] },
+            { "a": [0, 10.5], "b": [6, 10.5], "o": [{ "typ": "tuer", "pos": 0.6, "breite": 0.8 }] },
+            { "a": [12, 8], "b": [12, 14] }
+          ],
+          "treppe": { "x0": 1, "x1": 5.5, "z0": 11.4, "z1": 12.4 },
+          "objekte": [
+            { "typ": "tvschrank", "x": 4.5, "z": 0.4, "rot": 0 }, { "typ": "sofa", "x": 4.5, "z": 4.5, "rot": 180, "farbe": "#922B21" },
+            { "typ": "teppich", "x": 4.5, "z": 3, "breite": 3, "tiefe": 1.6, "farbe": "#1F3A5F" }, { "typ": "tasse", "x": 3.8, "z": 0.4, "y": 0.5 },
+            { "typ": "esstisch", "x": 13.5, "z": 4 }, { "typ": "stuhl", "x": 13.1, "z": 3.25, "rot": 0 }, { "typ": "stuhl", "x": 13.9, "z": 4.75, "rot": 180 },
+            { "typ": "tasse", "x": 13.3, "z": 4, "y": 0.75 }, { "typ": "bauklotz", "x": 13.8, "z": 4.1, "y": 0.75 }, { "typ": "pflanze", "x": 17.4, "z": 7.4 },
+            { "typ": "waschbecken", "x": 1.5, "z": 8.35, "rot": 0 }, { "typ": "toilette", "x": 5.6, "z": 9.7, "rot": 270 },
+            { "typ": "spielzeugkiste", "x": 7, "z": 8.4 }, { "typ": "bauklotz", "x": 8, "z": 10 }, { "typ": "bauklotz", "x": 8.3, "z": 10.1 },
+            { "typ": "ball", "x": 10, "z": 11 }, { "typ": "kratzbaum", "x": 11.2, "z": 13.2 },
+            { "typ": "werkbank", "x": 15, "z": 13.6, "rot": 180 }, { "typ": "glas", "x": 14.4, "z": 13.6, "y": 0.9 }, { "typ": "glas", "x": 15.6, "z": 13.6, "y": 0.9 },
+            { "typ": "rakete", "x": 14, "z": 10 }, { "typ": "kiste", "x": 17.4, "z": 8.6 }
+          ]
+        },
+        {
+          "id": "og3", "name": "3. Stock", "y": 9.6, "h": 3.2, "boden": "holz", "wand": "#EEF4E6",
+          "raeume": [
+            { "name": "Dachsalon", "x0": 0, "z0": 0, "x1": 9, "z1": 8 },
+            { "name": "Gästezimmer", "x0": 9, "z0": 0, "x1": 18, "z1": 8, "boden": "teppich" },
+            { "name": "Bad", "x0": 0, "z0": 8, "x1": 6, "z1": 10.5, "boden": "fliesen" },
+            { "name": "Treppenhaus", "x0": 0, "z0": 10.5, "x1": 6, "z1": 14 },
+            { "name": "Fitnessraum", "x0": 6, "z0": 8, "x1": 12, "z1": 14 },
+            { "name": "Geheime Schatzkammer", "x0": 12, "z0": 8, "x1": 18, "z1": 14, "geheim": true, "boden": "teppich" }
+          ],
+          "aussen": { "n": [{ "typ": "glastuer", "pos": 13.5 }] },
+          "balkone": [{ "seite": "n", "von": 10, "bis": 17, "tiefe": 1.8 }],
+          "waende": [
+            { "a": [0, 8], "b": [18, 8], "o": [{ "typ": "tuer", "pos": 3 }, { "typ": "tuer", "pos": 7.5 }, { "typ": "tuer", "pos": 10.5 }, { "typ": "klappe", "pos": 16 }] },
+            { "a": [9, 0], "b": [9, 8], "o": [{ "typ": "tuer", "pos": 4 }] },
+            { "a": [6, 8], "b": [6, 14], "o": [{ "typ": "tuer", "pos": 1.25 }, { "typ": "tuer", "pos": 4.5 }] },
+            { "a": [0, 10.5], "b": [6, 10.5], "o": [{ "typ": "tuer", "pos": 0.6, "breite": 0.8 }] },
+            { "a": [12, 8], "b": [12, 14] }
+          ],
+          "treppe": { "x0": 1, "x1": 5.5, "z0": 12.6, "z1": 13.6 },
+          "objekte": [
+            { "typ": "sessel", "x": 3, "z": 3, "rot": 0 }, { "typ": "sessel", "x": 5.5, "z": 3, "rot": 0 }, { "typ": "couchtisch", "x": 4.2, "z": 4.6 },
+            { "typ": "vase", "x": 4.2, "z": 4.6, "y": 0.45 }, { "typ": "pflanze", "x": 0.6, "z": 7.4 },
+            { "typ": "bett", "x": 13.5, "z": 6.95, "rot": 180, "decke": "#8EC5FF" }, { "typ": "nachttisch", "x": 14.75, "z": 7.6, "rot": 180 }, { "typ": "tasse", "x": 14.75, "z": 7.6, "y": 0.5 },
+            { "typ": "waschbecken", "x": 1.5, "z": 8.35, "rot": 0 }, { "typ": "toilette", "x": 5.6, "z": 9.7, "rot": 270 },
+            { "typ": "kratzbaum", "x": 7, "z": 9 }, { "typ": "kratzbaum", "x": 11.2, "z": 13.2 }, { "typ": "ball", "x": 9, "z": 11 },
+            { "typ": "teppich", "x": 9, "z": 11, "breite": 2.4, "tiefe": 2, "farbe": "#5BAA6A" },
+            { "typ": "truhe", "x": 15, "z": 13.5, "rot": 180 }, { "typ": "goldfisch", "x": 14, "z": 10 }, { "typ": "kiste", "x": 17.4, "z": 8.6 }
+          ]
+        },
+        {
+          "id": "dach", "name": "Dachterrasse", "y": 12.8, "h": 3, "boden": "holz", "offen": true,
+          "raeume": [{ "name": "Sonnendeck", "x0": 0, "z0": 0, "x1": 18, "z1": 14 }],
+          "pools": [{ "name": "Dachpool", "x0": 8, "z0": 2.5, "x1": 16, "z1": 9.5, "erhoeht": true }],
+          "objekte": [
+            { "typ": "katzenkissen", "x": 3, "z": 3 }, { "typ": "katzenkissen", "x": 5, "z": 3 },
+            { "typ": "pflanze", "x": 0.6, "z": 0.6 }, { "typ": "pflanze", "x": 17.4, "z": 0.6 }, { "typ": "pflanze", "x": 17.4, "z": 13.4 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blau", "name": "Blaues Haus", "x": -17, "z": -31, "w": 10, "d": 9, "farbe": "#AFCBE6", "dach": "sattel", "dachfarbe": "#3F5A86",
+      "etagen": [
+        {
+          "id": "k", "name": "Keller", "y": -2.6, "h": 2.6, "boden": "beton", "wand": "#CFC8BC", "fenster": false,
+          "raeume": [
+            { "name": "Kellerflur", "x0": 4, "z0": 0, "x1": 10, "z1": 9 },
+            { "name": "Geheimer Kellerraum", "x0": 0, "z0": 0, "x1": 4, "z1": 4.5, "geheim": true },
+            { "name": "Schatzloch", "x0": 0, "z0": 4.5, "x1": 4, "z1": 9, "geheim": true, "boden": "dielen" }
+          ],
+          "waende": [
+            { "a": [4, 0], "b": [4, 9], "o": [{ "typ": "klappe", "pos": 2 }, { "typ": "klappe", "pos": 6.75 }] },
+            { "a": [0, 4.5], "b": [4, 4.5] }
+          ],
+          "treppe": { "x0": 5, "x1": 9, "z0": 0.2, "z1": 1.2 },
+          "objekte": [
+            { "typ": "kiste", "x": 1, "z": 1 }, { "typ": "kiste", "x": 1.6, "z": 1 }, { "typ": "katzenkissen", "x": 2.5, "z": 3.5 },
+            { "typ": "truhe", "x": 2, "z": 8.5, "rot": 180 }, { "typ": "schneekugel", "x": 2, "z": 6.5 },
+            { "typ": "waschmaschine", "x": 9.6, "z": 8, "rot": 270 }, { "typ": "regal", "x": 7, "z": 8.8, "rot": 180 }, { "typ": "glas", "x": 7, "z": 8.8, "y": 1.8 }
+          ]
+        },
+        {
+          "id": "eg", "name": "Erdgeschoss", "y": 0, "h": 2.8, "boden": "holz", "wand": "#F2EAD8",
+          "raeume": [
+            { "name": "Flur", "x0": 4, "z0": 0, "x1": 10, "z1": 3 },
+            { "name": "Geheime Kammer", "x0": 0, "z0": 0, "x1": 4, "z1": 3, "geheim": true },
+            { "name": "Wohnzimmer", "x0": 0, "z0": 3, "x1": 10, "z1": 9 }
+          ],
+          "aussen": { "s": [{ "typ": "tor", "pos": 5, "breite": 1.4 }] },
+          "waende": [
+            { "a": [0, 3], "b": [10, 3], "o": [{ "typ": "tuer", "pos": 7 }] },
+            { "a": [4, 0], "b": [4, 3], "o": [{ "typ": "klappe", "pos": 1.5 }] }
+          ],
+          "treppe": { "x0": 5, "x1": 9, "z0": 1.4, "z1": 2.4 },
+          "objekte": [
+            { "typ": "sofa", "x": 2.5, "z": 3.6, "rot": 0, "farbe": "#5D6D7E" }, { "typ": "couchtisch", "x": 2.5, "z": 5 }, { "typ": "vase", "x": 2.5, "z": 5, "y": 0.45 },
+            { "typ": "esstisch", "x": 7.5, "z": 6 }, { "typ": "stuhl", "x": 7.1, "z": 5.25, "rot": 0 }, { "typ": "stuhl", "x": 7.9, "z": 6.75, "rot": 180 },
+            { "typ": "teller", "x": 7.5, "z": 6, "y": 0.75 }, { "typ": "pflanze", "x": 0.6, "z": 8.4 }, { "typ": "napf", "x": 9.4, "z": 8.4 },
+            { "typ": "katzenkissen", "x": 1.5, "z": 1.5 }, { "typ": "muschel", "x": 3, "z": 0.6 }
+          ]
+        },
+        {
+          "id": "og", "name": "Obergeschoss", "y": 2.8, "h": 2.8, "boden": "teppich", "wand": "#E8F0F7",
+          "raeume": [
+            { "name": "Gang", "x0": 4, "z0": 0, "x1": 10, "z1": 3, "boden": "holz" },
+            { "name": "Geheimes Zimmer", "x0": 0, "z0": 0, "x1": 4, "z1": 3, "geheim": true },
+            { "name": "Schlafzimmer", "x0": 0, "z0": 3, "x1": 5, "z1": 9 },
+            { "name": "Kinderzimmer", "x0": 5, "z0": 3, "x1": 10, "z1": 9, "boden": "holz" }
+          ],
+          "waende": [
+            { "a": [0, 3], "b": [10, 3], "o": [{ "typ": "tuer", "pos": 4.55 }, { "typ": "tuer", "pos": 7.5 }] },
+            { "a": [5, 3], "b": [5, 9] },
+            { "a": [4, 0], "b": [4, 3], "o": [{ "typ": "klappe", "pos": 1.5 }] }
+          ],
+          "treppe": { "x0": 5, "x1": 9, "z0": 0.2, "z1": 1.2 },
+          "objekte": [
+            { "typ": "bett", "x": 2.5, "z": 7.95, "rot": 180 }, { "typ": "nachttisch", "x": 1.2, "z": 8.6, "rot": 180 }, { "typ": "wecker", "x": 1.2, "z": 8.6, "y": 0.5 },
+            { "typ": "kinderbett", "x": 9.5, "z": 6, "rot": 0 }, { "typ": "spielzeugkiste", "x": 6, "z": 8.6 }, { "typ": "ball", "x": 7, "z": 5 },
+            { "typ": "katzenkissen", "x": 2, "z": 1.5 }, { "typ": "bauklotz", "x": 3, "z": 0.5 }
+          ]
+        },
+        {
+          "id": "dg", "name": "Dachboden", "y": 5.6, "h": 2.4, "boden": "dielen", "wand": "#D9C2A0", "kleineFenster": true,
+          "raeume": [
+            { "name": "Dachboden", "x0": 4, "z0": 0, "x1": 10, "z1": 9 },
+            { "name": "Geheimer Dachboden", "x0": 0, "z0": 0, "x1": 4, "z1": 9, "geheim": true, "boden": "teppich" }
+          ],
+          "waende": [{ "a": [4, 0], "b": [4, 9], "o": [{ "typ": "klappe", "pos": 6 }] }],
+          "objekte": [
+            { "typ": "kiste", "x": 8, "z": 8 }, { "typ": "kiste", "x": 8.6, "z": 8 }, { "typ": "sessel", "x": 6, "z": 6, "rot": 0 },
+            { "typ": "katzenkissen", "x": 2, "z": 4.5 }, { "typ": "wollknaeuel", "x": 1, "z": 8 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gelb", "name": "Gelbes Haus", "x": 33, "z": -31, "w": 10, "d": 9, "farbe": "#F3DC8C", "dach": "sattel", "dachfarbe": "#B0583A",
+      "kopie": "blau",
+      "objekte_ersetzen": {
+        "k": [
+          { "typ": "kiste", "x": 1, "z": 1 }, { "typ": "katzenkissen", "x": 2.5, "z": 3.5 }, { "typ": "spielzeugauto", "x": 1.5, "z": 3 },
+          { "typ": "truhe", "x": 2, "z": 8.5, "rot": 180 }, { "typ": "wollknaeuel", "x": 2, "z": 6.5 },
+          { "typ": "werkbank", "x": 9.6, "z": 6, "rot": 270 }, { "typ": "glas", "x": 9.6, "z": 6.3, "y": 0.9 }
+        ],
+        "eg": [
+          { "typ": "sofa", "x": 2.5, "z": 3.6, "rot": 0, "farbe": "#D35400" }, { "typ": "sessel", "x": 5, "z": 5, "rot": 270 },
+          { "typ": "kuechenzeile", "x": 9.68, "z": 6, "rot": 270, "laenge": 3 }, { "typ": "topf", "x": 9.7, "z": 5.4, "y": 0.9 }, { "typ": "tasse", "x": 9.7, "z": 6.6, "y": 0.9 },
+          { "typ": "pflanze", "x": 0.6, "z": 8.4 }, { "typ": "vase", "x": 5.6, "z": 8.6 }, { "typ": "katzenkissen", "x": 1.5, "z": 1.5 }
+        ],
+        "og": [
+          { "typ": "bett", "x": 2.5, "z": 7.95, "rot": 180, "decke": "#F9E79F" }, { "typ": "kommode", "x": 4.4, "z": 5, "rot": 270 }, { "typ": "vase", "x": 4.4, "z": 5, "y": 0.85 },
+          { "typ": "schreibtisch", "x": 7.5, "z": 8.6, "rot": 180 }, { "typ": "buch", "x": 7.3, "z": 8.6, "y": 0.75 }, { "typ": "ball", "x": 7, "z": 5 },
+          { "typ": "katzenkissen", "x": 2, "z": 1.5 }
+        ],
+        "dg": [
+          { "typ": "kiste", "x": 8, "z": 8 }, { "typ": "truhe", "x": 7, "z": 0.6, "rot": 0 },
+          { "typ": "katzenkissen", "x": 2, "z": 4.5 }, { "typ": "spielzeugmaus", "x": 1.2, "z": 7.5 }
+        ]
+      }
+    }
+  ]
+}

@@ -98,8 +98,19 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    im Gebüsch. Geheimgänge (`haus.json → geheimgaenge`, draußen in `draussen.js`): Loch im Kleiderschrank-Boden
    ↔ Wohnzimmer (Katzenbretter an der Wand), Kellerschacht (Katzenklappe im Keller ↔ Garten), Loch hinter den
    Büschen ins geheime Spielzimmer. 2 neue Aufgaben (jetzt 23), zählen nur *verschiedene* Verstecke/Gänge.
-8. ⏳ Dach begehbar (Versteck am Schornstein), Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
-9. ⏳ Editor, zu zweit spielen
+8. ✅ v0.10 – **Mehr Häuser** (`level/siedlung.json` + `js/siedlung.js`, Häuser sind Daten: Etagen, Räume,
+   Wände mit Türen/Klappen, Fenster automatisch, Treppen, Balkone, Pools; `kopie` = gleiche Etagen, andere Möbel).
+   **Villa** (rechts neben dem Garten): Keller + 4 Stockwerke + Dachterrasse, Balkone, **3 Pools** (Hallenbad im Keller,
+   Gartenpool, Dachpool), 6 Geheimräume. **Blaues Haus** und **Gelbes Haus** gegenüber, je 5 Geheimräume.
+   Omas Haus hat jetzt auch 5 (Geheimkammer, Spielzimmer im Garten, Schatzkeller, Maulwurfbau, Kuschelhöhle).
+   **Maulwurfgang**: Katzenklappe im Maulwurfbau (Keller) → langer Erdtunnel mit Leuchtpilzen und Maulwurf → Villa-Keller.
+   **Glücksrad** (`js/gluecksrad.js`) in der geheimen Spielhalle der Villa: 🐾 = drehen, Preise Punkte/Herz/Stern/Jackpot.
+   **Souvenirs** (9 Stück, in fremden Geheimräumen) → im Maul heimtragen und in einem eigenen Geheimraum ablegen.
+   **Garderobe** 🎨 (`js/garderobe.js`): 6 Fellfarben, 5 Sachen (Schleife, Sonnenbrille, Halstuch, Zauberhut, Umhang),
+   freigeschaltet über geschaffte Aufgaben. 6 neue Aufgaben (jetzt 28).
+   Noch offen: Geheimräume im Nachbarhaus und Restaurant (sind noch einfache Kästen).
+9. ⏳ Dach begehbar (Versteck am Schornstein), Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
+10. ⏳ Echte Sounds, Editor, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,

@@ -59,6 +59,16 @@ export const KATALOG = {
   ball:          { name: 'Ball',       emoji: '⚽', groesse: [0.22, 0.22, 0.22], beweglich: true, masse: 0.3, rund: true , tragbar: true },
   wollknaeuel:   { name: 'Wollknäuel',    emoji: '🧶', groesse: [0.14, 0.14, 0.14], beweglich: true, masse: 0.1, rund: true , tragbar: true },
   bauklotz:      { name: 'Bauklotz',     emoji: '🧱', groesse: [0.18, 0.18, 0.18], beweglich: true, masse: 0.2 , tragbar: true },
+  // --- Souvenirs: in den anderen Häusern versteckt. Daheim in einen Geheimraum bringen! ---
+  schneekugel:   { name: 'Schneekugel', emoji: '🔮', groesse: [0.14, 0.17, 0.14], beweglich: true, masse: 0.4, tragbar: true, souvenir: true },
+  muschel:       { name: 'Muschel', emoji: '🐚', groesse: [0.16, 0.05, 0.12], beweglich: true, masse: 0.1, tragbar: true, souvenir: true },
+  goldfisch:     { name: 'Goldener Fisch', emoji: '🐠', groesse: [0.22, 0.15, 0.1], beweglich: true, masse: 0.4, tragbar: true, souvenir: true },
+  spielzeugauto: { name: 'Spielzeugauto', emoji: '🚗', groesse: [0.17, 0.1, 0.1], beweglich: true, masse: 0.2, tragbar: true, souvenir: true },
+  teddy:         { name: 'Teddy', emoji: '🧸', groesse: [0.15, 0.2, 0.12], beweglich: true, masse: 0.15, tragbar: true, souvenir: true },
+  diamant:       { name: 'Diamant', emoji: '💎', groesse: [0.1, 0.16, 0.1], beweglich: true, masse: 0.2, tragbar: true, souvenir: true },
+  medaille:      { name: 'Goldmedaille', emoji: '🏅', groesse: [0.1, 0.03, 0.16], beweglich: true, masse: 0.1, tragbar: true, souvenir: true },
+  rakete:        { name: 'Spielzeugrakete', emoji: '🚀', groesse: [0.1, 0.2, 0.1], beweglich: true, masse: 0.15, tragbar: true, souvenir: true },
+  gluecksstern:  { name: 'Glücksstern', emoji: '⭐', groesse: [0.16, 0.16, 0.04], beweglich: true, masse: 0.1, tragbar: true, souvenir: true },
   spielzeugmaus: { name: 'Spielzeugmaus', emoji: '🐭', groesse: [0.12, 0.06, 0.06], beweglich: true, masse: 0.05 , tragbar: true },
 };
 

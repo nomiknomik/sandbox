@@ -17,6 +17,9 @@ import { baueDraussen, PLAN } from './draussen.js';
 import { Verkehr } from './verkehr.js';
 import { Mensch, Kellner } from './leute.js';
 import { Kloetzchen } from './kloetzchen.js';
+import { baueSiedlung, bodenLoecher } from './siedlung.js';
+import { Gluecksrad } from './gluecksrad.js';
+import { Garderobe } from './garderobe.js';
 
 const T = THREE, R = RAPIER;
 const $ = id => document.getElementById(id);
@@ -66,8 +69,12 @@ const haus = await (await fetch('level/haus.json')).json();
 try { setzeMoebel(await (await fetch('modelle/moebel.json')).json()); } catch {}   // echte 3D-Möbel (sonst die einfachen)
 const bau = baueHaus(haus, scene, world, R);
 status('Baue die Straße …');
-const drauss = baueDraussen(scene, world, R, bau);
+const siedlungDaten = await (await fetch('level/siedlung.json')).json();
+const drauss = baueDraussen(scene, world, R, bau, { loecher: bodenLoecher(siedlungDaten) });
 bau.anim.push(...drauss.anim);
+status('Baue die Villa …');
+const sied = baueSiedlung(siedlungDaten, scene, bau, drauss.wasser);
+const raeder = sied.raeder.map(p => new Gluecksrad(scene, bau, p));
 sonne.position.copy(bau.mitte).add(new T.Vector3(-11, 13, 15));
 sonne.target.position.copy(bau.mitte);
 if (Q.schatten) {
@@ -92,12 +99,13 @@ const sauger = (haus.sauger || []).map(d => new Sauger(scene, world, R, netz, ha
 let fahrZeit = 0, fahrSekunde = 0;
 const kinder = (haus.kinder || []).map(d => new Kind(scene, netz, haus, d));
 // Aufgaben: Pokale stehen in der Geheimkammer
-const geheimE = haus.etagen.find(e => e.raeume.some(r => r.geheim)), geheimR = geheimE.raeume.find(r => r.geheim);
+const geheimE = haus.etagen.find(e => e.raeume.some(r => r.name === 'Geheimkammer')), geheimR = geheimE.raeume.find(r => r.name === 'Geheimkammer');
 const aufgaben = new Aufgaben(scene, { ...geheimR, y: geheimE.y }, (a, alle) => {
   setTimeout(() => { ton.juhu(); punkte += 25; hud(); meldung(`🏆 Aufgabe geschafft: ${a.text}! +25`); }, 1300);
   if (alle) setTimeout(() => { kroneAufsetzen(); meldung('👑 ALLE Aufgaben geschafft – du bist die Königskatze!'); }, 4000);
 });
 aufgaben.knopf.style.display = 'none';
+const garderobe = new Garderobe(katze, aufgaben, t => meldung(t)); garderobe.knopf.style.display = 'none';
 function kroneAufsetzen() { if (katze.krone) return; katze.krone = krone(); katze.krone.position.set(0, 0.085, -0.01); katze.modell.kopf.add(katze.krone); }
 if (aufgaben.anzahl === AUFGABEN.length) kroneAufsetzen();
 echteFische(bau.aquarien);
@@ -176,6 +184,9 @@ function pfote() {
   if (angeln.aktiv) { angelErgebnis(angeln.druecken()); return; }
   // An der Konsole im Spielzimmer? Dann Klötzchen spielen!
   if (amKonsole()) { kloetzchenStart(); return; }
+  // Am Glücksrad? Drehen!
+  const rad = raeder.find(r => r.nah(katze.fuesse));
+  if (rad) { if (rad.drehen()) { ton.plopp(1); meldung('🎡 Das Glücksrad dreht sich …'); aufgaben.melde('gluecksrad'); } return; }
   // Maus erwischt?
   for (const m of maeuse) if (m.fangen(katze)) {
     ton.juhu(); gefangen.maeuse++;
@@ -330,7 +341,7 @@ function tragen() {
   getragen = best; best.gezaehlt = true;
   best.col.setSensor(true);
   best.body.setBodyType(R.RigidBodyType.KinematicPositionBased, true);
-  meldung(`👄 ${best.k.emoji} ${best.k.name} im Maul. Bring es in die Geheimkammer!`);
+  meldung(best.k.souvenir ? `🎁 ${best.k.emoji} ${best.k.name} – ein Souvenir! Versteck es in einem Geheimraum in deinem Haus!` : `👄 ${best.k.emoji} ${best.k.name} im Maul. Bring es in die Geheimkammer!`);
 }
 function maulPos() {
   const p = katze.pos;
@@ -348,10 +359,29 @@ function ablegen() {
   d.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
   d.col.setSensor(false); d.prev = 0;
   const { raum } = bau.raumAn(katze.fuesse);
-  if (raum && raum.geheim && !d.trophae) {
+  const daheim = raum && raum.geheim && !sied.ort(katze.fuesse);
+  if (daheim && d.k.souvenir) { ton.juhu(); aufgaben.einmal('souvenir', d.typ); }
+  if (daheim && !d.trophae) {
     d.trophae = true; ton.juhu();
     schalk(10, `🏆 ${d.k.name} ist jetzt eine Trophäe!`); aufgaben.melde('trophae');
   } else meldung(`👄 ${d.k.name} abgelegt.`);
+}
+
+// ---------- Glücksrad: Preis verteilen ----------
+let radHinweis = false;
+function gluecksPreis(rad, p) {
+  if (p.herz) { herzen = Math.min(5, herzen + 1); hud(); ton.mampf(); meldung('🎡 ❤️ Ein Herz gewonnen!'); return; }
+  if (p.stern) {
+    if (!rad.sternDa) {                 // beim ersten Mal: Glücksstern zum Mitnehmen
+      rad.sternDa = true; ton.juhu();
+      bau.stelle({ typ: 'gluecksstern', x: rad.vorne.x, z: rad.vorne.z, y: 0.3 }, rad.pos.y, -1);
+      meldung('🎡 ⭐ Ein Glücksstern – ein Souvenir! Nimm ihn mit nach Hause.');
+    } else { ton.juhu(); schalk(20, '🎡 ⭐ Stern!'); }
+    return;
+  }
+  if (!p.p) { meldung('🎡 😿 Niete! Nochmal versuchen …'); return; }
+  ton.juhu(); schalk(p.p, `🎡 ${p.emoji} ${p.text === 'JACKPOT' ? 'JACKPOT!!!' : 'Gewonnen!'}`);
+  if (p.text === 'JACKPOT') { sterne(1.6); aufgaben.melde('jackpot'); }
 }
 
 // ---------- Сковородкой по голове ----------
@@ -445,7 +475,7 @@ function kameraSetzen(dt) {
 // ---------- Versteck: dort sieht die Katze keiner ----------
 // Aus haus.json (im Haus) und draussen.js (Baumhöhle, Gebüsch). y = Boden des Verstecks.
 const etY = id => haus.etagen.find(e => e.id === id).y;
-const verstecke = [...(haus.verstecke || []).map(v => ({ ...v, y: etY(v.etage) + (v.h || 0) })), ...(drauss.verstecke || [])];
+const verstecke = [...(haus.verstecke || []).map(v => ({ ...v, y: etY(v.etage) + (v.h || 0) })), ...(drauss.verstecke || []), ...sied.verstecke];
 function versteckPruefen() {
   const k = katze.fuesse;
   const v = verstecke.find(v => k.x > v.x0 && k.x < v.x1 && k.z > v.z0 && k.z < v.z1 && Math.abs(k.y - v.y) < 0.4);
@@ -461,7 +491,7 @@ function versteckPruefen() {
 }
 
 // ---------- Geheimgänge: einmal durchkriechen = entdeckt ----------
-const gaenge = [...(haus.geheimgaenge || []).map(g => ({ ...g, y0: etY(g.etage) + g.y0, y1: etY(g.etage) + g.y1 })), ...(drauss.geheimgaenge || [])];
+const gaenge = [...(haus.geheimgaenge || []).map(g => ({ ...g, y0: etY(g.etage) + g.y0, y1: etY(g.etage) + g.y1 })), ...(drauss.geheimgaenge || []), ...sied.geheimgaenge];
 const gefundenJetzt = new Set();
 function gangPruefen() {
   const k = katze.fuesse;
@@ -474,13 +504,20 @@ function gangPruefen() {
 
 // ---------- Где кошка ----------
 let letzterRaum = '';
+const geheimGesehen = new Set();
 function ortZeigen() {
-  const { etage, raum } = bau.raumAn(katze.fuesse);
-  const draussen = drauss.ort(katze.fuesse);
-  const txt = draussen ? `Draußen · ${draussen}` : `${etage.name} · ${raum ? raum.name : '…'}`;
+  const so = sied.ort(katze.fuesse);
+  let { etage, raum } = bau.raumAn(katze.fuesse), wer = 'Omas Haus';
+  const draussen = so ? null : drauss.ort(katze.fuesse);
+  if (so) { raum = so.raum; wer = so.haus?.name; }
+  const txt = so ? so.name : draussen ? `Draußen · ${draussen}` : `${etage.name} · ${raum ? raum.name : '…'}`;
   if (txt !== letzterRaum) {
     letzterRaum = txt; $('ort').textContent = '📍 ' + txt;
-    if (raum && raum.geheim && !katze.geheimGefunden) { katze.geheimGefunden = true; meldung('🤫 Geheimkammer! Hier findet dich niemand.'); }
+    if (raum && raum.geheim && wer && !geheimGesehen.has(wer + raum.name)) {
+      geheimGesehen.add(wer + raum.name);
+      meldung(raum.name === 'Geheimkammer' ? '🤫 Geheimkammer! Hier findet dich niemand.' : `🤫 Geheimraum entdeckt: ${raum.name}!`);
+      aufgaben.einmal('geheimraum', wer + ':' + raum.name);
+    }
   }
 }
 
@@ -496,6 +533,7 @@ function draussenSchritt(dt, ein) {
     katze.wasser = drauss.imWasser(katze.pos);
     if (katze.wasser && !war && !rutsch) { ton.platsch(); tropfen.spritzen(katze.pos, 14, 1.6); if (!katze.schwimmGesagt) { katze.schwimmGesagt = true; meldung('🏊 Schwimmen! Nach unten schauen + vorwärts (oder 🤿) = tauchen. ⤒ = hoch.'); } }
     if (!katze.wasser && war) katze.nass = 6;
+    if (katze.wasser && katze.wasser !== war && ['Gartenpool', 'Hallenbad', 'Dachpool'].includes(katze.wasser.name)) aufgaben.einmal('villapools', katze.wasser.name);
     if (katze.wasser && katze.wasser !== war && katze.wasser.name === 'Tunnel' && !katze.tunnelGesagt) { katze.tunnelGesagt = true; meldung('🫧 Ein geheimer Tunnel! Schnell durch – die Luft wird knapp!'); }
     if (katze.wasser && katze.wasser !== war && katze.wasser.name === 'Schacht' && war && war.name === 'Tunnel') meldung('⬆️ Jetzt nach oben! (⤒ gedrückt halten)');
   }
@@ -656,6 +694,8 @@ function frame() {
       if (e.gesaugt && !s.gesaugtGesagt) { s.gesaugtGesagt = true; meldung('🤖 Der Staubsauger saugt die Scherben weg.'); }
     }
     draussenSchritt(dt, ein);
+    for (const r of raeder) { const p = r.schritt(dt); if (p) gluecksPreis(r, p); }
+    if (!radHinweis && raeder.some(r => r.nah(katze.fuesse))) { radHinweis = true; meldung('🎡 Ein Glücksrad! Drück 🐾 zum Drehen.'); }
     // beim Angeln sitzt die Katze still
     if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
     if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
@@ -740,9 +780,9 @@ $('start').onclick = () => {
   ton.tonStart();
   $('titel').style.display = 'none';
   laeuft = true; steuer.aktiv = true;
-  aufgaben.knopf.style.display = '';
+  aufgaben.knopf.style.display = ''; garderobe.knopf.style.display = '';
   if (!matchMedia('(pointer: coarse)').matches && renderer.domElement.requestPointerLock) { try { renderer.domElement.requestPointerLock(); } catch {} }
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { drauss, verkehr, menschen, kellner, klotz, luft: () => luft, rutsch: () => rutsch, kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { drauss, sied, raeder, verkehr, menschen, kellner, klotz, luft: () => luft, rutsch: () => rutsch, kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
