@@ -213,13 +213,15 @@ export function baueHaus(haus, scene, world, R) {
       teil.obj.rotation.y = rot;
       // Aquarium & Co. (bewegt / durchsichtig) nicht zusammenkleben
       (anim.length && o.typ === 'aquarium' ? extra : statisch).add(teil.obj);
-      if (o.typ === 'aquarium') aquarien.push({ obj: teil.obj, x: o.x, y: e.y + (o.y || 0), z: o.z, rot, etage: i });
+      const aq = o.typ === 'aquarium' ? { obj: teil.obj, x: o.x, y: e.y + (o.y || 0), z: o.z, rot, etage: i, cols: [] } : null;
+      if (aq) aquarien.push(aq);
       teil.obj.updateMatrixWorld(true);
       const q = new T.Quaternion().setFromEuler(new T.Euler(0, rot, 0));
       const meta = { typ: o.typ, name: k.name, kratzbar: k.kratzbar };
       if (!k.flach) for (const [cx, cy, cz, w, h, d] of teil.boxen) {
         tmp.set(cx, cy, cz).applyMatrix4(teil.obj.matrixWorld);
-        kollider(tmp.x, tmp.y, tmp.z, w, h, d, q, meta);
+        const c = kollider(tmp.x, tmp.y, tmp.z, w, h, d, q, meta);
+        if (aq) aq.cols.push(c);          // zum Umkippen abschaltbar
       }
     }
     // Lampen

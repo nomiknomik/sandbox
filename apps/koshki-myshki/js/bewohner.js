@@ -8,6 +8,12 @@ const R_KAPS = 0.24, H_KAPS = 0.56, MITTE = R_KAPS + H_KAPS;   // рост ≈ 1
 const RUHE_TEMPO = 1.0, JAGD_TEMPO = 2.15;
 const WUT_JAGD = 50;               // с какой злости начинается погоня
 
+// Was die Figuren rufen
+const SPRUECHE = {
+  babulya: { jagd: 'Na warte, du Frechdachs! 🍳', ruhig: 'Na gut … 😤', mimo: 'Daneben! 😠', wo: 'Wo ist diese Katze?! 🤨', runter: 'Komm sofort da runter! 👊' },
+  opa:     { jagd: 'Hey! Du Rabauke! 📰', ruhig: 'Hmpf … zurück zur Zeitung. 📰', mimo: 'Verflixt, daneben! 😠', wo: 'Wo steckt das Biest? 🧐', runter: 'Na komm schon runter! 👊', puste: 'Puh … ich muss verschnaufen 😮‍💨' },
+};
+
 export class Babulya {
   constructor(scene, world, R, netz, haus, def) {
     this.R = R; this.world = world; this.netz = netz; this.haus = haus; this.def = def;
@@ -25,7 +31,12 @@ export class Babulya {
     this.schlagZeit = 0; this.pause = 0; this.phase = 0; this.tempo = 0;
     this.klemmt = 0; this.letztePos = new T.Vector3(); this.ausweichen = 0;
     this.spruch = '';
-    this.m = baueBabulya();
+    this.opa = def.typ === 'opa';
+    this.S = SPRUECHE[def.typ] || SPRUECHE.babulya;
+    this.emoji = this.opa ? '👴' : '👵';
+    this.jagdTempo = this.opa ? 3.0 : JAGD_TEMPO;     // Opa ist schnell …
+    this.jagdZeit = 0;                                // … aber schnell müde
+    this.m = this.opa ? baueOpa() : baueBabulya();
     scene.add(this.m.wurzel);
   }
 
@@ -40,7 +51,7 @@ export class Babulya {
     if (!laut && !(gleich && d < 7)) return false;
     const faktor = gleich ? 1 : 0.6;
     this.wut = Math.min(100, this.wut + plus * faktor);
-    if (this.wut >= WUT_JAGD && this.zustand === 'ruhe') { this.zustand = 'jagd'; this.spruch = 'Na warte, du Frechdachs! 🍳'; this.weg = null; }
+    if (this.wut >= WUT_JAGD && this.zustand === 'ruhe') { this.zustand = 'jagd'; this.spruch = this.S.jagd; this.weg = null; }
     return true;
   }
 
@@ -57,7 +68,7 @@ export class Babulya {
   reset() {
     this.body.setTranslation({ x: this.startP.x, y: this.startP.y + MITTE + 0.05, z: this.startP.z }, true);
     this.body.setNextKinematicTranslation({ x: this.startP.x, y: this.startP.y + MITTE + 0.05, z: this.startP.z });
-    this.wut = 0; this.zustand = 'ruhe'; this.weg = null; this.vy = 0;
+    this.wut = 0; this.zustand = 'ruhe'; this.weg = null; this.vy = 0; this.jagdZeit = 0;
   }
 
   // Ein Physik-Schritt. Gibt 'treffer' zurück, wenn die Pfanne die Katze erwischt.
@@ -72,15 +83,20 @@ export class Babulya {
       const sieht = this.siehtKatze(katze);
       // Wut lässt langsam nach, schneller wenn die Katze weg ist
       this.wut -= dt * (sieht ? 1.5 : 5);
-      if (this.wut < 20 && this.zustand === 'jagd') { this.zustand = 'ruhe'; this.spruch = 'Na gut … 😤'; this.weg = null; }
-      tempo = JAGD_TEMPO;
+      if (this.wut < 20 && this.zustand === 'jagd') { this.zustand = 'ruhe'; this.spruch = this.S.ruhig; this.weg = null; }
+      tempo = this.jagdTempo;
+      // Opa: nach 4,5 Sekunden Rennen außer Puste
+      if (this.opa && this.zustand === 'jagd') {
+        this.jagdZeit += dt;
+        if (this.jagdZeit > 4.5) { this.zustand = 'puste'; this.pusteZeit = 3; this.spruch = this.S.puste; this.weg = null; }
+      }
       const erreichbar = dy < 1.35 && dy > -0.6;
       if (this.zustand === 'schlag') {
         this.schlagZeit += dt;
         if (!this.getroffen && this.schlagZeit > 0.28) {
           this.getroffen = true;
           if (dxz < 1.0 && erreichbar && !katze.unverwundbar) ergebnis = 'treffer';
-          else this.spruch = 'Daneben! 😠';
+          else this.spruch = this.S.mimo;
         }
         if (this.schlagZeit > 0.6) { this.zustand = 'jagd'; this.pause = 0.8; }
       } else if (dxz < 0.85 && erreichbar && meineE === katzeE && this.pause <= 0) {
@@ -92,12 +108,16 @@ export class Babulya {
         if (!this.weg || (this.wegZeit <= 0 && !aufTreppe)) {
           this.wegZeit = 1;
           this.weg = this.netz.pfad(meineE, f.x, f.z, katzeE, k.x, k.z);
-          if (!this.weg) { this.wut -= dt * 10; if (!this.unerreichbarGesagt) { this.spruch = 'Wo ist diese Katze?! 🤨'; this.unerreichbarGesagt = true; } }
+          if (!this.weg) { this.wut -= dt * 10; if (!this.unerreichbarGesagt) { this.spruch = this.S.wo; this.unerreichbarGesagt = true; } }
           else this.unerreichbarGesagt = false;
         }
-        if (!erreichbar && dxz < 1.2 && meineE === katzeE) { this.weg = null; if (Math.random() < dt * 0.4) this.spruch = 'Komm sofort da runter! 👊'; }
+        if (!erreichbar && dxz < 1.2 && meineE === katzeE) { this.weg = null; if (Math.random() < dt * 0.4) this.spruch = this.S.runter; }
       }
       this.pause -= dt;
+    } else if (this.zustand === 'puste') {
+      // steht still und schnauft
+      this.pusteZeit -= dt; this.wut -= dt * 4;
+      if (this.pusteZeit <= 0) { this.jagdZeit = 0; this.zustand = this.wut >= 20 ? 'jagd' : 'ruhe'; this.weg = null; }
     } else {
       // Ruhe: Runde durchs Haus mit Pausen
       this.wut = Math.max(0, this.wut - dt * 2);
@@ -171,7 +191,8 @@ export class Babulya {
     m.wutBalken.material.color.setHSL(0.15 - 0.15 * this.wut / 100, 0.9, 0.5);
     m.wutAnzeige.visible = this.wut > 3;
     m.wutAnzeige.quaternion.copy(m.kamera ? m.kamera.quaternion : m.wutAnzeige.quaternion);
-    m.ausruf.visible = this.zustand !== 'ruhe';
+    m.ausruf.visible = this.zustand !== 'ruhe' && this.zustand !== 'puste';
+    if (this.zustand === 'puste') m.koerper.rotation.x = 0.25 + Math.sin(zeit * 8) * 0.05; else m.koerper.rotation.x = 0;
     m.ausruf.scale.setScalar(0.28 + Math.sin(zeit * 10) * 0.03);
   }
 }
@@ -209,6 +230,12 @@ function baueBabulya() {
   // Füße
   const fuesse = [-0.1, 0.1].map(x => add(new T.SphereGeometry(0.07, 10, 8), mat('#3B2A20'), x, 0.04, 0.03, wurzel));
   fuesse.forEach(f => f.scale.set(1, 0.6, 1.6));
+  const { wutAnzeige, wutBalken, ausruf } = anzeige(wurzel, add);
+  return { wurzel, koerper, kopf, armL, armR, fuesse, wutAnzeige, wutBalken, ausruf };
+}
+
+// Wut-Balken und „!“ über dem Kopf (für alle Figuren)
+function anzeige(wurzel, add) {
   // Wut-Anzeige (immer zur Kamera gedreht)
   const wutAnzeige = new T.Group(); wutAnzeige.position.set(0, 1.85, 0); wurzel.add(wutAnzeige);
   add(new T.PlaneGeometry(0.5, 0.07), new T.MeshBasicMaterial({ color: '#222', transparent: true, opacity: 0.5, depthTest: false }), 0, 0, 0, wutAnzeige).renderOrder = 10;
@@ -218,5 +245,37 @@ function baueBabulya() {
   x.font = 'bold 56px sans-serif'; x.textAlign = 'center'; x.fillStyle = '#E8231A'; x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeText('!', 32, 54); x.fillText('!', 32, 54);
   const ausruf = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(c), depthTest: false }));
   ausruf.position.set(0, 2.12, 0); ausruf.renderOrder = 12; wurzel.add(ausruf);
+  return { wutAnzeige, wutBalken, ausruf };
+}
+
+// Opa: Hemd, Hosenträger, Glatze mit Haarkranz, Schnurrbart – und eine zusammengerollte Zeitung
+function baueOpa() {
+  const wurzel = new T.Group(), koerper = new T.Group(); wurzel.add(koerper);
+  const haut = mat('#EFC09A', { r: 0.8 }), hemd = mat('#6FA8DC', { r: 0.85 }), hose = mat('#5C4A3A', { r: 0.9 }), grau = mat('#E2E2E6', { r: 0.95 });
+  const add = (geo, m, x, y, z, eltern = koerper) => { const me = new T.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; eltern.add(me); return me; };
+  for (const x of [-0.1, 0.1]) add(new T.CylinderGeometry(0.075, 0.07, 0.8, 10), hose, x, 0.42, 0);               // Beine
+  add(new T.CylinderGeometry(0.21, 0.2, 0.25, 16), hose, 0, 0.88, 0);                                                 // Hüfte
+  add(new T.CylinderGeometry(0.19, 0.22, 0.5, 16), hemd, 0, 1.2, 0);                                                  // Bauch
+  for (const x of [-0.09, 0.09]) add(new T.BoxGeometry(0.035, 0.5, 0.02), mat('#C0392B'), x, 1.2, 0.2).rotation.x = -0.12;   // Hosenträger
+  add(new T.SphereGeometry(0.21, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), hemd, 0, 1.43, 0).scale.set(1, 0.4, 0.85);
+  const kopf = new T.Group(); kopf.position.set(0, 1.6, 0.01); koerper.add(kopf);
+  add(new T.SphereGeometry(0.135, 18, 14), haut, 0, 0, 0, kopf);
+  add(new T.TorusGeometry(0.12, 0.035, 8, 20, Math.PI * 1.3), grau, 0, 0.0, -0.02, kopf).rotation.set(Math.PI / 2, 0, Math.PI * 0.85);   // Haarkranz
+  add(new T.SphereGeometry(0.028, 8, 6), haut, 0, -0.01, 0.135, kopf);                                               // Nase
+  add(new T.SphereGeometry(0.05, 10, 6), grau, 0, -0.045, 0.12, kopf).scale.set(1.5, 0.45, 0.6);                     // Schnurrbart
+  for (const x of [-0.05, 0.05]) {
+    add(new T.SphereGeometry(0.014, 8, 6), mat('#222'), x, 0.03, 0.122, kopf);
+    add(new T.BoxGeometry(0.05, 0.012, 0.01), grau, x, 0.065, 0.122, kopf);                                          // Augenbrauen
+    add(new T.SphereGeometry(0.03, 8, 6), haut, x * 2.6, 0, 0, kopf).scale.set(0.5, 1, 0.8);                           // Ohren
+  }
+  const arm = (x) => { const g = new T.Group(); g.position.set(x, 1.42, 0); koerper.add(g);
+    add(new T.CylinderGeometry(0.05, 0.045, 0.5, 10), hemd, 0, -0.25, 0, g); add(new T.SphereGeometry(0.05, 10, 8), haut, 0, -0.52, 0, g); return g; };
+  const armL = arm(-0.25), armR = arm(0.25);
+  // Zeitung, zusammengerollt
+  const z = add(new T.CylinderGeometry(0.04, 0.04, 0.45, 10), mat('#F2EFE6', { r: 0.95 }), 0, -0.55, 0.18, armR); z.rotation.x = Math.PI / 2;
+  add(new T.CylinderGeometry(0.041, 0.041, 0.06, 10), mat('#333'), 0, 0, 0.1, z);
+  const fuesse = [-0.1, 0.1].map(x => add(new T.SphereGeometry(0.07, 10, 8), mat('#2B1E16'), x, 0.04, 0.03, wurzel));
+  fuesse.forEach(f => f.scale.set(1, 0.6, 1.6));
+  const { wutAnzeige, wutBalken, ausruf } = anzeige(wurzel, add);
   return { wurzel, koerper, kopf, armL, armR, fuesse, wutAnzeige, wutBalken, ausruf };
 }

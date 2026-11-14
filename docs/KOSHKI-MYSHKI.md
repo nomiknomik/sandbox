@@ -66,11 +66,20 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    zappelt im Maul und springt zurück; daneben = PLATSCH, 10 s nass + halb so schnell, Oma hört es;
    Feld wird bei jedem Fang kleiner), **echte 3D-Fische** (Quaternius „Animated Fish Pack“, CC0,
    als `modelle/fische.json`), Titelbild + Icon aus ChatGPT, alles auf Deutsch.
-   ⏳ noch offen: Aufgabenliste, Aquarium umwerfen, Sachen im Maul tragen
-4. ⏳ weitere Figuren, Aufzug, Sounds aus CC0, echte 3D-Modelle
-5. ⏳ Editor, Garten/Pool, zu zweit spielen
+4. ✅ v0.4 – **Aufgabenliste** (📋 oben / Taste T, 10 Aufgaben, Stand bleibt auf dem Gerät,
+   je Aufgabe ein Pokal in der Geheimkammer, alle → Krone; `js/aufgaben.js`),
+   **Aquarium umwerfen** (3× Pfote oben auf dem Becken → Becken kippt vom Schrank, Pfütze,
+   zappelnde Fische, alle kommen; nach 25 s hat Oma aufgeräumt),
+   **im Maul tragen** (👄 / Taste R, kleine Sachen; in der Geheimkammer abgelegt = Trophäe),
+   **Hund** (Shiba Inu, Quaternius CC0, animiert, `js/hund.js`: Runde im Erdgeschoss, sieht die
+   Katze → bellt (weckt Oma/Opa) und rennt hinterher, tut nichts, kann nicht springen),
+   **Opa** mit Zeitung (schnell, nach 4,5 s Jagd außer Puste; KLATSCH = −❤️),
+   **echte 3D-Möbel** (Quaternius „Ultimate House Interior“, in die alten Kollisions-Kisten
+   eingepasst, in den alten bunten Farben). three.js neu gebündelt mit GLTFLoader.
+5. ⏳ Roboter-Staubsauger, Kind (Freund), Katzen-Aufzug, Sounds aus CC0
+6. ⏳ Editor, Garten/Pool, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,
-  E/Klick Pfote, Q miauen, C Kamera, Shift rennen.
+  E/Klick Pfote, Q miauen, R tragen, T Aufgaben, C Kamera, Shift rennen.
 - iPad: linker Daumen Joystick, rechter Daumen schauen, Knöpfe rechts.

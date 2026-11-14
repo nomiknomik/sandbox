@@ -1,2 +1,6 @@
 fische.json: umgewandelt aus "Animated Fish Pack" (Fish1, Fish2, Fish3) von Quaternius
 https://quaternius.com – Lizenz: CC0 1.0 (gemeinfrei, keine Namensnennung nötig).
+moebel.json: umgewandelt aus "Ultimate House Interior Pack" von Quaternius (Sofa, Sessel, Stuhl, Kühlschrank,
+Kommode, Betten, Nachttisch, Bad) – CC0 1.0.
+hund.glb: "Shiba Inu" aus "Ultimate Animated Animals" von Quaternius – CC0 1.0 (verkleinert, nur 4 Animationen).
+Bezogen über den Spiegel github.com/Noisemaker111/jgengine (Releases „packs“).

@@ -86,15 +86,17 @@ const BAU = {
   },
   aquarium(g, b, o, anim) {
     kasten(g, 1.0, 0.7, 0.45, HOLZ_DUNKEL, 0, 0, 0, { boxen: b });
+    // Das Becken ist eine eigene Gruppe – so kann es vom Schrank kippen
+    const becken = new T.Group(); g.add(becken); g.userData.becken = becken;
     // Glas, Wasser, Sand
-    const glas = kasten(g, 1.0, 0.52, 0.45, mat('#bfe6ff', { op: 0.18, r: 0.05 }), 0, 0.7, 0, { kollider: false, rund: 0.01 });
+    const glas = kasten(becken, 1.0, 0.52, 0.45, mat('#bfe6ff', { op: 0.18, r: 0.05 }), 0, 0.7, 0, { kollider: false, rund: 0.01 });
     glas.castShadow = false;
-    const wasser = kasten(g, 0.96, 0.44, 0.41, mat('#3fa7d6', { op: 0.35, r: 0.1 }), 0, 0.72, 0, { kollider: false, rund: 0 });
+    const wasser = kasten(becken, 0.96, 0.44, 0.41, mat('#3fa7d6', { op: 0.35, r: 0.1 }), 0, 0.72, 0, { kollider: false, rund: 0 });
     wasser.castShadow = false;
-    kasten(g, 0.96, 0.05, 0.41, '#E8D29A', 0, 0.71, 0, { kollider: false, rund: 0 });
-    kasten(g, 1.02, 0.04, 0.47, '#333', 0, 1.22, 0, { kollider: false, rund: 0.01 });
+    kasten(becken, 0.96, 0.05, 0.41, '#E8D29A', 0, 0.71, 0, { kollider: false, rund: 0 });
+    kasten(becken, 1.02, 0.04, 0.47, '#7C8C94', 0, 1.22, 0, { kollider: false, rund: 0.01 });
     b.push([0, 0.98, 0, 1.0, 0.56, 0.45]);
-    for (const [x, h] of [[-0.35, 0.3], [-0.28, 0.22], [0.36, 0.26]]) zyl(g, 0.012, 0.02, h, '#3BA55C', x, 0.75, -0.1, 6);
+    for (const [x, h] of [[-0.35, 0.3], [-0.28, 0.22], [0.36, 0.26]]) zyl(becken, 0.012, 0.02, h, '#3BA55C', x, 0.75, -0.1, 6);
     // Fische, die hin und her schwimmen
     const farben = ['#FF8A1E', '#FFD23F', '#FF5D8F'];
     g.userData.fische = [];
@@ -105,7 +107,7 @@ const BAU = {
       const schw = mesh(new T.ConeGeometry(0.025, 0.04, 4), f, -0.06, 0, 0, fisch); schw.rotation.z = Math.PI / 2;
       kugel(fisch, 0.007, '#111', 0.035, 0.012, 0.016);
       fisch.position.set(0, 0.85 + i * 0.1, -0.05 + i * 0.06);
-      g.add(fisch);
+      becken.add(fisch);
       anim.push(t => {
         if (fisch.userData.weg) return;          // gerade von der Katze geangelt
         const p = t * (0.5 + i * 0.17) + i * 2;

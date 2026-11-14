@@ -140,3 +140,22 @@ export function juhu() {
   [523, 659, 784, 1046].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = f;
     huelle(g, t + i * 0.09, 0.005, 0.05, 0.25, 0.18); o.connect(g); g.connect(laut); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.4); });
 }
+
+// KLATSCH! Opas Zeitung
+export function klatsch() {
+  if (!ctx) return;
+  const t = ctx.currentTime, r = rauschen(0.25), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
+  huelle(g, t, 0.002, 0.01, 0.18, 0.9); r.connect(f); f.connect(g); g.connect(laut); r.start(t);
+}
+// Wuff! Der Hund
+export function wuff() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 2; i++) {
+    const z = t + i * 0.22, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(320, z); o.frequency.exponentialRampToValueAtTime(170, z + 0.13);
+    f.type = 'lowpass'; f.frequency.value = 1300;
+    huelle(g, z, 0.008, 0.03, 0.1, 0.35); o.connect(f); f.connect(g); g.connect(laut); o.start(z); o.stop(z + 0.18);
+  }
+}

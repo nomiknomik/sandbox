@@ -12,7 +12,7 @@ export class Steuerung {
     addEventListener('keydown', e => {
       if (e.repeat) return;
       this.tasten.add(e.code);
-      const k = { Space: 'springen', KeyE: 'pfote', KeyF: 'pfote', KeyQ: 'miau', KeyM: 'miau', KeyC: 'kamera', KeyV: 'kamera' }[e.code];
+      const k = { Space: 'springen', KeyE: 'pfote', KeyF: 'pfote', KeyQ: 'miau', KeyM: 'miau', KeyC: 'kamera', KeyV: 'kamera', KeyR: 'tragen', KeyT: 'liste', Tab: 'liste' }[e.code];
       if (k) { this.einmal[k] = true; e.preventDefault(); }
     });
     addEventListener('keyup', e => this.tasten.delete(e.code));

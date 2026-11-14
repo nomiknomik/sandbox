@@ -45,18 +45,18 @@ export const KATALOG = {
   katzenbrett:   { name: 'Katzenbrett', emoji: '🪜', groesse: [0.45, 0.05, 0.45] },
   treppe:        { name: 'Treppe',         emoji: '🪜' },
 
-  // --- Вещи, которые кошка может уронить ---
+  // --- Вещи, которые кошка может уронить ---   (tragbar: passt ins Maul)
   vase:          { name: 'Vase',      emoji: '🏺', groesse: [0.18, 0.34, 0.18], beweglich: true, zerbrechlich: true, masse: 1.0, punkte: 10 },
-  tasse:         { name: 'Tasse',     emoji: '☕', groesse: [0.1, 0.1, 0.1],   beweglich: true, zerbrechlich: true, masse: 0.3, punkte: 5 },
+  tasse:         { name: 'Tasse',     emoji: '☕', groesse: [0.1, 0.1, 0.1],   beweglich: true, zerbrechlich: true, masse: 0.3, punkte: 5 , tragbar: true },
   teller:        { name: 'Teller',   emoji: '🍽️', groesse: [0.24, 0.03, 0.24], beweglich: true, zerbrechlich: true, masse: 0.4, punkte: 5 },
   glas:          { name: 'Marmeladenglas', emoji: '🫙', groesse: [0.12, 0.16, 0.12], beweglich: true, zerbrechlich: true, masse: 0.6, punkte: 8 },
   topf:          { name: 'Kochtopf',  emoji: '🍲', groesse: [0.28, 0.18, 0.28], beweglich: true, masse: 1.2, punkte: 3 },
-  buch:          { name: 'Buch',     emoji: '📕', groesse: [0.16, 0.24, 0.05], beweglich: true, masse: 0.5, punkte: 2 },
-  wecker:        { name: 'Wecker', emoji: '⏰', groesse: [0.12, 0.12, 0.07], beweglich: true, zerbrechlich: true, masse: 0.3, punkte: 6 },
-  ball:          { name: 'Ball',       emoji: '⚽', groesse: [0.22, 0.22, 0.22], beweglich: true, masse: 0.3, rund: true },
-  wollknaeuel:   { name: 'Wollknäuel',    emoji: '🧶', groesse: [0.14, 0.14, 0.14], beweglich: true, masse: 0.1, rund: true },
-  bauklotz:      { name: 'Bauklotz',     emoji: '🧱', groesse: [0.18, 0.18, 0.18], beweglich: true, masse: 0.2 },
-  spielzeugmaus: { name: 'Spielzeugmaus', emoji: '🐭', groesse: [0.12, 0.06, 0.06], beweglich: true, masse: 0.05 },
+  buch:          { name: 'Buch',     emoji: '📕', groesse: [0.16, 0.24, 0.05], beweglich: true, masse: 0.5, punkte: 2 , tragbar: true },
+  wecker:        { name: 'Wecker', emoji: '⏰', groesse: [0.12, 0.12, 0.07], beweglich: true, zerbrechlich: true, masse: 0.3, punkte: 6 , tragbar: true },
+  ball:          { name: 'Ball',       emoji: '⚽', groesse: [0.22, 0.22, 0.22], beweglich: true, masse: 0.3, rund: true , tragbar: true },
+  wollknaeuel:   { name: 'Wollknäuel',    emoji: '🧶', groesse: [0.14, 0.14, 0.14], beweglich: true, masse: 0.1, rund: true , tragbar: true },
+  bauklotz:      { name: 'Bauklotz',     emoji: '🧱', groesse: [0.18, 0.18, 0.18], beweglich: true, masse: 0.2 , tragbar: true },
+  spielzeugmaus: { name: 'Spielzeugmaus', emoji: '🐭', groesse: [0.12, 0.06, 0.06], beweglich: true, masse: 0.05 , tragbar: true },
 };
 
 // Размер с учётом поворота (90/270 – ширина и глубина меняются местами)

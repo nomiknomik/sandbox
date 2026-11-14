@@ -2,12 +2,14 @@
 import * as THREE from '../vendor/three.js';
 import * as RAPIER from '../vendor/rapier.js';
 import { baueHaus } from './haus.js';
-import { setzeMoebel } from './modelle.js';
+import { setzeMoebel, mat } from './modelle.js';
 import { Katze } from './katze.js';
 import { Babulya } from './bewohner.js';
 import { baueWegnetz } from './wege.js';
 import { Steuerung } from './steuerung.js';
 import { Maus, Angeln, Tropfen, echteFische } from './tiere.js';
+import { Hund } from './hund.js';
+import { Aufgaben, AUFGABEN, krone } from './aufgaben.js';
 import * as ton from './ton.js';
 
 const T = THREE, R = RAPIER;
@@ -76,8 +78,18 @@ for (const b of bewohner) b.m.kamera = kamera;
 const aergern = (wo, plus, laut) => bewohner.forEach(b => b.aergern(wo, plus, laut));
 const maeuse = (haus.maeuse || []).map(d => new Maus(scene, netz, haus, d));
 const angeln = new Angeln(), tropfen = new Tropfen(scene);
+const hunde = (haus.hunde || []).map(d => new Hund(scene, world, R, netz, haus, d));
+// Aufgaben: Pokale stehen in der Geheimkammer
+const geheimE = haus.etagen.find(e => e.raeume.some(r => r.geheim)), geheimR = geheimE.raeume.find(r => r.geheim);
+const aufgaben = new Aufgaben(scene, { ...geheimR, y: geheimE.y }, (a, alle) => {
+  setTimeout(() => { ton.juhu(); punkte += 25; hud(); meldung(`🏆 Aufgabe geschafft: ${a.text}! +25`); }, 1300);
+  if (alle) setTimeout(() => { kroneAufsetzen(); meldung('👑 ALLE Aufgaben geschafft – du bist die Königskatze!'); }, 4000);
+});
+aufgaben.knopf.style.display = 'none';
+function kroneAufsetzen() { if (katze.krone) return; katze.krone = krone(); katze.krone.position.set(0, 0.085, -0.01); katze.modell.kopf.add(katze.krone); }
+if (aufgaben.anzahl === AUFGABEN.length) kroneAufsetzen();
 echteFische(bau.aquarien);
-const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera' });
+const steuer = new Steuerung(renderer.domElement, { bSprung: 'springen', bPfote: 'pfote', bMiau: 'miau', bKamera: 'kamera', bMaul: 'tragen' });
 
 // ---------- Счёт и сообщения ----------
 let punkte = 0, herzen = 5;
@@ -116,6 +128,8 @@ function zerbrechen(d) {
   ton.krach(1);
   aergern(p, 60, true);
   schalk(d.k.punkte || 5, `💥 ${d.k.name} – kaputt!`);
+  if (d.typ === 'vase') aufgaben.melde('vase');
+  aufgaben.melde('runter');
 }
 function scherbenSchritt(dt) {
   for (const s of scherben) {
@@ -139,11 +153,12 @@ function pfote() {
   // Maus erwischt?
   for (const m of maeuse) if (m.fangen(katze)) {
     ton.juhu(); gefangen.maeuse++;
-    schalk(20, '🐭 Maus gefangen!');
+    schalk(20, '🐭 Maus gefangen!'); aufgaben.melde('maus');
     return;
   }
-  // Am Aquarium? Dann angeln!
+  // Am Aquarium? Oben drauf = schubsen, davor = angeln!
   const aq = amAquarium();
+  if (aq && katze.fuesse.y > aq.y + 1.0) { aquariumSchubsen(aq); return; }
   if (aq && aq.warte <= 0) { angeln.start(aq); return; }
   let bester = null, bestD = 0.55;
   for (const d of bau.dyn) {
@@ -169,7 +184,7 @@ function pfote() {
     if (meta && meta.kratzbar) {
       ton.kratzen();
       if (meta.kratzbar === 'gut') { katze.zufrieden = (katze.zufrieden || 0) + 1; meldung('😺 Kratz-kratz! Krallen sind scharf.'); setTimeout(ton.schnurren, 450); }
-      else { schalk(3, `😾 ${meta.name} zerkratzt!`); aergern(p, 45, false); }
+      else { schalk(3, `😾 ${meta.name} zerkratzt!`); aergern(p, 45, false); if (meta.typ === 'sofa' || meta.typ === 'sessel') aufgaben.melde('kratzen'); }
       return;
     }
   }
@@ -182,7 +197,7 @@ function amAquarium() {
   const k = katze.fuesse;
   for (const aq of bau.aquarien) {
     const d = Math.hypot(k.x - aq.x, k.z - aq.z);
-    if (d < 0.95 && k.y > aq.y - 0.2 && k.y < aq.y + 1.5) return aq;
+    if (!aq.umgekippt && d < 0.95 && k.y > aq.y - 0.2 && k.y < aq.y + 1.5) return aq;
   }
   return null;
 }
@@ -195,7 +210,7 @@ function angelErgebnis(erg) {
     if (f) { f.userData.weg = true; fischImMaul = { f, aq, zeit: 2 }; }
     ton.platsch(); ton.juhu(); gefangen.fische++;
     tropfen.spritzen(katze.pos, 10, 1.2);
-    schalk(15, '🐟 Fisch geangelt!');
+    schalk(15, '🐟 Fisch geangelt!'); aufgaben.melde('fisch');
     aergern(katze.fuesse, 25, false);
   } else if (erg === 'daneben') {
     ton.platsch();
@@ -210,7 +225,7 @@ function fischSchritt(dt) {
   const { f, aq } = fischImMaul, p = katze.pos;
   fischImMaul.zeit -= dt;
   const w = new T.Vector3(p.x + Math.sin(katze.yaw) * 0.3, p.y + 0.08, p.z + Math.cos(katze.yaw) * 0.3);
-  f.position.copy(aq.obj.worldToLocal(w));
+  f.position.copy(f.parent.worldToLocal(w));
   f.rotation.y = katze.yaw - aq.rot + Math.PI / 2 + Math.sin(zeit * 30) * 0.4;   // zappelt
   if (fischImMaul.zeit <= 0) {
     f.userData.weg = false; fischImMaul = null;
@@ -219,16 +234,110 @@ function fischSchritt(dt) {
 }
 let aquaHinweis = false;
 
+// ---------- Aquarium umwerfen (3× von oben schubsen) ----------
+const pfuetzen = [];
+function aquariumSchubsen(aq) {
+  aq.schubs = (aq.schubs || 0) + 1; aq.wackeln = 0.5;
+  ton.hops();
+  if (aq.schubs < 3) { meldung(`🐾 Schubs! (${aq.schubs}/3)`); return; }
+  aq.schubs = 0; aq.umgekippt = true; aq.kipp = 0; aq.aufraeumen = 25;
+  aq.cols.slice(1).forEach(c => c.setEnabled(false));   // nur das Becken – der Schrank bleibt stehen
+  // Pfütze vor dem Aquarium
+  const vorn = { x: aq.x + Math.sin(aq.rot) * 1.0, z: aq.z + Math.cos(aq.rot) * 1.0 };
+  const p = new T.Mesh(new T.CircleGeometry(1, 28), mat('#5BB8F0', { op: 0.55, r: 0.05 }));
+  p.rotation.x = -Math.PI / 2; p.position.set(vorn.x, aq.y + 0.012, vorn.z); p.scale.setScalar(0.01); scene.add(p);
+  pfuetzen.push(p); aq.pfuetze = p;
+  // Fische zappeln auf dem Boden
+  aq.zappler = (aq.obj.userData.fische || []).map((f, i) => {
+    f.userData.weg = true;
+    const a = i * 2.1, w = new T.Vector3(vorn.x + Math.cos(a) * 0.5, aq.y + 0.04, vorn.z + Math.sin(a) * 0.5);
+    return { f, w };
+  });
+  ton.krach(1.3); setTimeout(ton.platsch, 250);
+  tropfen.spritzen({ x: vorn.x, y: aq.y + 0.4, z: vorn.z }, 24, 3);
+  aergern({ x: aq.x, y: aq.y, z: aq.z }, 100, true);
+  schalk(50, '🌊 SPLASCH! Das Aquarium ist umgekippt – alle kommen angerannt!');
+  aufgaben.melde('aquarium');
+}
+function aquarienSchritt(dt) {
+  for (const aq of bau.aquarien) {
+    let kipp = 0;
+    if (aq.umgekippt) {
+      aq.kipp = Math.min(1, aq.kipp + dt * 2.5);
+      kipp = aq.kipp * aq.kipp * Math.PI / 2;
+      if (aq.pfuetze) aq.pfuetze.scale.setScalar(Math.min(1.4, aq.pfuetze.scale.x + dt * 2));
+      for (const z of aq.zappler) {                        // Fische springen auf dem Boden
+        const w = z.w.clone(); w.y += Math.abs(Math.sin(zeit * 9 + z.w.x * 7)) * 0.12;
+        z.f.position.copy(z.f.parent.worldToLocal(w)); z.f.rotation.set(Math.PI / 2, zeit * 3, Math.sin(zeit * 20) * 0.5);
+      }
+      aq.aufraeumen -= dt;
+      if (aq.aufraeumen <= 0) {                            // Oma räumt auf
+        aq.umgekippt = false; kipp = 0;
+        aq.cols.slice(1).forEach(c => c.setEnabled(true));
+        scene.remove(aq.pfuetze); aq.pfuetze = null;
+        for (const z of aq.zappler) { z.f.rotation.set(0, 0, 0); z.f.userData.weg = false; }
+        meldung('🧽 Oma hat aufgeräumt. Das Aquarium steht wieder, die Fische schwimmen.');
+      }
+    } else if (aq.wackeln > 0) { aq.wackeln -= dt; kipp = Math.sin(aq.wackeln * 40) * 0.05 * aq.wackeln; }
+    // Becken kippt nach vorn über die untere Vorderkante und rutscht auf den Boden
+    const becken = aq.obj.userData.becken; if (!becken) continue;
+    const kq = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), kipp);
+    const pivot = new T.Vector3(0, 0.7, 0.225);
+    becken.quaternion.copy(kq);
+    becken.position.copy(pivot).sub(pivot.clone().applyQuaternion(kq));
+    if (aq.umgekippt) becken.position.y -= aq.kipp * aq.kipp * 0.25;
+  }
+}
+
+// ---------- Im Maul tragen ----------
+let getragen = null;
+function tragen() {
+  if (getragen) { ablegen(); return; }
+  const k = katze.fuesse, fx = Math.sin(katze.yaw), fz = Math.cos(katze.yaw);
+  let best = null, bd = 0.5;
+  for (const d of bau.dyn) {
+    if (d.weg || !d.k.tragbar) continue;
+    const q = d.body.translation(), dist = Math.hypot(q.x - (k.x + fx * 0.2), q.z - (k.z + fz * 0.2));
+    if (dist < bd && q.y - k.y > -0.3 && q.y - k.y < 0.45) { best = d; bd = dist; }
+  }
+  if (!best) { meldung('👄 Hier ist nichts zum Tragen.'); return; }
+  getragen = best; best.gezaehlt = true;
+  best.col.setSensor(true);
+  best.body.setBodyType(R.RigidBodyType.KinematicPositionBased, true);
+  meldung(`👄 ${best.k.emoji} ${best.k.name} im Maul. Bring es in die Geheimkammer!`);
+}
+function maulPos() {
+  const p = katze.pos;
+  return { x: p.x + Math.sin(katze.yaw) * 0.27, y: p.y + 0.06, z: p.z + Math.cos(katze.yaw) * 0.27 };
+}
+function tragenSchritt() {
+  if (!getragen) return;
+  getragen.body.setNextKinematicTranslation(maulPos());
+  getragen.body.setNextKinematicRotation(new T.Quaternion().setFromEuler(new T.Euler(0, katze.yaw, 0)));
+}
+function ablegen() {
+  const d = getragen; getragen = null;
+  d.body.setTranslation(maulPos(), true);
+  d.body.setBodyType(R.RigidBodyType.Dynamic, true);
+  d.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  d.col.setSensor(false); d.prev = 0;
+  const { raum } = bau.raumAn(katze.fuesse);
+  if (raum && raum.geheim && !d.trophae) {
+    d.trophae = true; ton.juhu();
+    schalk(10, `🏆 ${d.k.name} ist jetzt eine Trophäe!`); aufgaben.melde('trophae');
+  } else meldung(`👄 ${d.k.name} abgelegt.`);
+}
+
 // ---------- Сковородкой по голове ----------
 function getroffen(b) {
   const f = b.fuesse, k = katze.fuesse;
   katze.stoss(k.x - f.x, k.z - f.z);
-  ton.bong();
+  if (b.opa) ton.klatsch(); else ton.bong();
   sterne(1.6);
   herzen = Math.max(0, herzen - 1); hud();
   b.wut = Math.max(0, b.wut - 35);
-  if (herzen > 0) { meldung('🍳 BONG! −❤️'); return; }
-  meldung('😿 Oma hat dich erwischt! Die Katze wacht in der Geheimkammer auf …');
+  if (herzen > 0) { meldung(b.opa ? '📰 KLATSCH! −❤️' : '🍳 BONG! −❤️'); return; }
+  meldung(`😿 ${b.def.name} hat dich erwischt! Die Katze wacht in der Geheimkammer auf …`);
   laeuft = false;
   setTimeout(() => {
     katze.teleport(startPunkt); katze.unverwundbar = 2;
@@ -273,6 +382,7 @@ function heilen(dt) {
       schlafWarte = 15; stillZeit = 0;
       ton.schnurren();
       if (herzen < 5) { herzen++; hud(); meldung('😴 Schnurr … ausgeruht. +❤️'); } else meldung('😴 Schnurr …');
+      aufgaben.melde('schlafen');
     }
   }
 }
@@ -328,6 +438,14 @@ function frame() {
     if (ein.kamera) { ichSicht = !ichSicht; $('bKamera').textContent = ichSicht ? '🎥' : '👁️'; meldung(ichSicht ? '👁️ Mit Katzenaugen' : '🎥 Von hinten'); }
     if (ein.miau) { ton.miau(); katze.miauZeit = 0.6; aergern(katze.fuesse, 4, false); }
     if (ein.pfote) pfote();
+    if (ein.tragen) tragen();
+    if (ein.liste) aufgaben.zeig(!aufgaben.liste.classList.contains('zeig'));
+    for (const h of hunde) if (h.schritt(dt, katze) === 'wuff') {
+      aergern(h.pos, 12, true); aufgaben.melde('hund');
+      if (!h.gemeldet) { h.gemeldet = true; meldung('🐶 WUFF! Der Hund bellt – davon werden Oma und Opa wach!'); }
+    }
+    for (const b of bewohner) if (b.opa) { if (b.zustand === 'puste' && !b.pusteGemeldet) aufgaben.melde('opa'); b.pusteGemeldet = b.zustand === 'puste'; }
+    aquarienSchritt(dt);
     // beim Angeln sitzt die Katze still
     if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
     if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
@@ -338,6 +456,7 @@ function frame() {
     let n = 0, springen = ein.springen;
     while (rest >= SCHRITT && n < 5) {
       katze.schritt(SCHRITT, { ...ein, springen }, blickYaw, ichSicht);
+      tragenSchritt();
       springen = false;
       for (const b of bewohner) if (b.schritt(SCHRITT, katze) === 'treffer') getroffen(b);
       world.step();
@@ -348,7 +467,7 @@ function frame() {
     if (katze.pos.y < -6) { katze.teleport(startPunkt); meldung('🐱 Hoppla! Die Katze ist wieder zu Hause.'); }
     ortZeigen();
     heilen(dt);
-    for (const b of bewohner) if (b.spruch) { meldung('👵 ' + b.spruch); b.spruch = ''; }
+    for (const b of bewohner) if (b.spruch) { meldung(b.emoji + ' ' + b.spruch); b.spruch = ''; }
   }
   // Bewegliche Sachen nachziehen + zerbrechen?
   for (const d of bau.dyn) {
@@ -357,11 +476,12 @@ function frame() {
     d.obj.position.set(p.x, p.y, p.z); d.obj.quaternion.set(q.x, q.y, q.z, q.w);
     const v = d.body.linvel(), sp = Math.hypot(v.x, v.y, v.z);
     if (d.startY === undefined) d.startY = p.y;
+    if (d === getragen) { d.prev = 0; continue; }
     if (d.prev > 2.3 && d.prev - sp > 1.6) {
       if (d.k.zerbrechlich) { zerbrechen(d); continue; }
       ton.plopp(d.prev / 4);
     }
-    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) { schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} fällt runter!`); aergern(p, 15, true); } }
+    if (!d.gezaehlt && p.y < d.startY - 0.4) { d.gezaehlt = true; if (!d.k.zerbrechlich && d.k.punkte) { schalk(d.k.punkte, `${d.k.emoji} ${d.k.name} fällt runter!`); aergern(p, 15, true); aufgaben.melde('runter'); } }
     if (p.y < -8) { world.removeRigidBody(d.body); scene.remove(d.obj); d.weg = true; }
     d.prev = sp;
   }
@@ -370,6 +490,7 @@ function frame() {
   katze.zeichne(dt, zeit, !ichSicht);
   for (const b of bewohner) b.zeichne(dt, zeit);
   for (const m of maeuse) m.zeichne(dt, zeit);
+  for (const h of hunde) h.zeichne(dt);
   tropfen.schritt(dt, katze);
   sterneSchritt(dt);
   kameraSetzen(dt);
@@ -394,8 +515,9 @@ $('start').onclick = () => {
   ton.tonStart();
   $('titel').style.display = 'none';
   laeuft = true; steuer.aktiv = true;
+  aufgaben.knopf.style.display = '';
   if (!matchMedia('(pointer: coarse)').matches && renderer.domElement.requestPointerLock) { try { renderer.domElement.requestPointerLock(); } catch {} }
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

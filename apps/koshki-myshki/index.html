@@ -33,6 +33,16 @@
   #bPfote{width:74px;height:74px;right:calc(136px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
   #bMiau{width:64px;height:64px;right:calc(40px + env(safe-area-inset-right));bottom:calc(144px + env(safe-area-inset-bottom))}
   #bKamera{width:52px;height:52px;right:calc(120px + env(safe-area-inset-right));bottom:calc(126px + env(safe-area-inset-bottom));font-size:24px}
+  #bMaul{width:64px;height:64px;right:calc(220px + env(safe-area-inset-right));bottom:calc(36px + env(safe-area-inset-bottom));font-size:28px}
+  #bAufgaben{position:fixed;top:calc(8px + env(safe-area-inset-top));left:140px;padding:8px 12px;border-radius:12px;border:0;background:#0004;color:#fff;font:inherit;font-size:15px;z-index:5;cursor:pointer}
+  #aufgaben{position:fixed;top:calc(52px + env(safe-area-inset-top));left:10px;width:min(380px,calc(100vw - 20px));max-height:calc(100vh - 70px);overflow:auto;padding:12px 14px;border-radius:16px;background:#2a1a10e6;z-index:7;display:none;font-size:15px}
+  #aufgaben.zeig{display:block}
+  #aufgaben h3{margin:0 0 8px}
+  #aufgaben .aufgabe{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #fff2}
+  #aufgaben .aufgabe span:nth-child(2){flex:1}
+  #aufgaben .aufgabe.ok{color:#FFD86B}
+  #aufgaben p{font-size:13px;opacity:.85;margin:10px 0}
+  #aufgaben button{font:inherit;font-size:13px;padding:6px 12px;border-radius:10px;border:1px solid #fff6;background:transparent;color:#fff;cursor:pointer}
   @media (pointer:fine){.knopf{opacity:.55}}
   #joy{position:fixed;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;background:#ffffff26;border:2px solid #fff6;display:none;pointer-events:none;z-index:3}
   #joyKnauf{position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;background:#ffffffa0;transform:translate(-50%,-50%)}
@@ -71,6 +81,7 @@
   <button class="knopf" id="bPfote" aria-label="Pfote">🐾</button>
   <button class="knopf" id="bMiau" aria-label="Miau">😺</button>
   <button class="knopf" id="bKamera" aria-label="Kamera">👁️</button>
+  <button class="knopf" id="bMaul" aria-label="Tragen">👄</button>
 
   <div id="titel">
     <img id="titelbild" src="titelbild.webp" alt=""><h1><img id="logo" src="logo.webp" alt="Katz und Maus"></h1>
@@ -81,7 +92,7 @@
       <button data-q="schoen">✨ Schön</button><button data-q="mittel">Mittel</button><button data-q="schnell">⚡ Schnell</button>
     </div>
     <div class="hilfe">
-      💻 <b>W A S D</b> laufen · <b>Maus</b> schauen · <b>Leertaste</b> springen · <b>E</b>/Klick Pfote · <b>Q</b> miauen · <b>C</b> Kamera · <b>Shift</b> rennen<br>
+      💻 <b>W A S D</b> laufen · <b>Maus</b> schauen · <b>Leertaste</b> springen · <b>E</b>/Klick Pfote · <b>Q</b> miauen · <b>R</b> tragen · <b>T</b> Aufgaben · <b>C</b> Kamera · <b>Shift</b> rennen<br>
       📱 linker Daumen – Joystick · rechter – schauen · Knöpfe rechts
     </div>
     <div class="reihe"><a href="plan.html">🗺 Hausplan</a></div>
@@ -92,7 +103,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.4';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
