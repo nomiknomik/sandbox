@@ -139,11 +139,11 @@ const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
 versionEl.onclick = async () => {
   const zeig = (text, ms) => { versionEl.textContent = text; if (ms) setTimeout(() => versionEl.textContent = 'v' + APP_VERSION, ms); };
+  if (versionEl.textContent.startsWith('⟳')) return location.reload();
   zeig('suche Update …');
   try {
     const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
     const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
-    if (versionEl.textContent.startsWith('⟳')) return location.reload();
     if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
     zeig('lade v' + neu + ' …');
     const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
