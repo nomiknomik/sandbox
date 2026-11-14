@@ -133,7 +133,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.8';
+const APP_VERSION = '0.8.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
@@ -143,6 +143,7 @@ versionEl.onclick = async () => {
   try {
     const t = await (await fetch('index.html?u=' + Date.now(), { cache: 'no-store' })).text();
     const neu = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
+    if (versionEl.textContent.startsWith('⟳')) return location.reload();
     if (!neu || neu === APP_VERSION) return zeig('✓ aktuell (v' + APP_VERSION + ')', 2500);
     zeig('lade v' + neu + ' …');
     const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
@@ -151,7 +152,18 @@ versionEl.onclick = async () => {
     location.replace(location.pathname + '?v=' + encodeURIComponent(neu));
   } catch { zeig('offline – v' + APP_VERSION, 2500); }
 };
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Neue Version im Hintergrund fertig geladen? Dann einmal neu laden – sonst passt die Seite
+  // (schon neu) nicht zu Haus und Spiel-Code (noch alt aus dem Zwischenspeicher).
+  const hatteAlten = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hatteAlten) return;
+    const titel = document.getElementById('titel');
+    if (!titel || titel.style.display !== 'none') location.reload();
+    else versionEl.textContent = '⟳ Update da – antippen';
+  });
+}
 // Fehler sichtbar machen (hilft beim Testen auf dem iPad)
 addEventListener('error', e => { const l = document.getElementById('laden'); if (l) l.textContent = '⚠️ ' + e.message; });
 addEventListener('unhandledrejection', e => { const l = document.getElementById('laden'); if (l) l.textContent = '⚠️ ' + (e.reason && e.reason.message || e.reason); });
