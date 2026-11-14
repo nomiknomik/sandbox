@@ -76,8 +76,14 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    **Opa** mit Zeitung (schnell, nach 4,5 s Jagd außer Puste; KLATSCH = −❤️),
    **echte 3D-Möbel** (Quaternius „Ultimate House Interior“, in die alten Kollisions-Kisten
    eingepasst, in den alten bunten Farben). three.js neu gebündelt mit GLTFLoader.
-5. ⏳ Roboter-Staubsauger, Kind (Freund), Katzen-Aufzug, Sounds aus CC0
-6. ⏳ Editor, Garten/Pool, zu zweit spielen
+5. ✅ v0.5–0.7 – **Versteck hinter dem Sofa** (Sofa 45 cm von der Wand, Kuscheldecke, zu eng für
+   Menschen; im Versteck sieht dich keiner, Oma/Opa bleiben stehen und beruhigen sich schnell;
+   `haus.json → verstecke`), **Roboter-Staubsauger** (`js/sauger.js`: fährt im Erdgeschoss, dreht an
+   Hindernissen, saugt Scherben, erschreckt die Katze, Katze kann oben mitfahren), **Kind** als Freund
+   (`js/kind.js`: Kinderzimmer; Miau in der Nähe = Leckerli +❤️; gejagt beim Kind = es lenkt ab).
+   Aufgaben jetzt 14.
+6. ⏳ Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
+7. ⏳ Editor, Garten/Pool, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,

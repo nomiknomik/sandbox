@@ -10,6 +10,7 @@ import { Steuerung } from './steuerung.js';
 import { Maus, Angeln, Tropfen, echteFische } from './tiere.js';
 import { Hund } from './hund.js';
 import { Sauger } from './sauger.js';
+import { Kind } from './kind.js';
 import { Aufgaben, AUFGABEN, krone } from './aufgaben.js';
 import * as ton from './ton.js';
 
@@ -82,6 +83,7 @@ const angeln = new Angeln(), tropfen = new Tropfen(scene);
 const hunde = (haus.hunde || []).map(d => new Hund(scene, world, R, netz, haus, d));
 const sauger = (haus.sauger || []).map(d => new Sauger(scene, world, R, netz, haus, d));
 let fahrZeit = 0, fahrSekunde = 0;
+const kinder = (haus.kinder || []).map(d => new Kind(scene, netz, haus, d));
 // Aufgaben: Pokale stehen in der Geheimkammer
 const geheimE = haus.etagen.find(e => e.raeume.some(r => r.geheim)), geheimR = geheimE.raeume.find(r => r.geheim);
 const aufgaben = new Aufgaben(scene, { ...geheimR, y: geheimE.y }, (a, alle) => {
@@ -463,6 +465,19 @@ function frame() {
     }
     for (const b of bewohner) if (b.opa) { if (b.zustand === 'puste' && !b.pusteGemeldet) aufgaben.melde('opa'); b.pusteGemeldet = b.zustand === 'puste'; }
     aquarienSchritt(dt);
+    for (const kd of kinder) {
+      const e = kd.schritt(dt, katze, bewohner, ein.miau);
+      if (e.leckerli) {
+        ton.mampf(); setTimeout(ton.schnurren, 600);
+        if (herzen < 5) { herzen++; hud(); }
+        schalk(5, '🧒 „Na, Mieze? Hier, ein Leckerli!“ 😋 +❤️'); aufgaben.melde('leckerli');
+      }
+      if (e.rettet) {
+        const b = e.rettet; b.wut = 5; b.zustand = 'ruhe'; b.weg = null; b.warte = 4;
+        meldung(`🧒 „${b.def.name}, guck mal – draußen ist ein Eichhörnchen!“ 🐿️ Gerettet!`);
+        ton.juhu(); aufgaben.melde('retten');
+      }
+    }
     for (const s of sauger) {
       const e = s.schritt(dt, katze, scherben, scene);
       if (e.schreck) {
@@ -528,6 +543,7 @@ function frame() {
   for (const m of maeuse) m.zeichne(dt, zeit);
   for (const h of hunde) h.zeichne(dt);
   for (const s of sauger) s.zeichne(dt, zeit);
+  for (const kd of kinder) kd.zeichne(dt, zeit);
   tropfen.schritt(dt, katze);
   sterneSchritt(dt);
   kameraSetzen(dt);
@@ -557,4 +573,4 @@ $('start').onclick = () => {
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { fahr: () => [fahrZeit, fahrSekunde], sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

@@ -16,6 +16,8 @@ export const AUFGABEN = [
   { id: 'opa',      text: 'Renn Opa davon, bis er schnauft',     emoji: '👴', ziel: 1 },
   { id: 'aquarium', text: 'Wirf das Aquarium um',                emoji: '🌊', ziel: 1 },
   { id: 'sauger',   text: 'Fahr auf dem Staubsauger mit',        emoji: '🤖', ziel: 5 },
+  { id: 'leckerli', text: 'Miau beim Kind – hol dir ein Leckerli', emoji: '🧒', ziel: 1 },
+  { id: 'retten',   text: 'Lass dich vom Kind retten, wenn dich jemand jagt', emoji: '🦸', ziel: 1 },
   { id: 'versteck', text: 'Versteck dich hinter dem Sofa, wenn Oma dich jagt', emoji: '🙈', ziel: 1 },
 ];
 const SPEICHER = 'km-aufgaben';
