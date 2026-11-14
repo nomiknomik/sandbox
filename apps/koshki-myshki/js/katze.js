@@ -53,6 +53,8 @@ export class Katze {
     this.vy -= SCHWERE * dt;
     if (ein.springen && (this.amBoden || this.luftZeit < 0.12)) { this.vy = SPRUNG; this.amBoden = false; this.luftZeit = 1; this.gesprungen = true; }
     const want = { x: (mx * v + this.schub.x) * dt, y: this.vy * dt, z: (mz * v + this.schub.z) * dt };
+    // steht auf etwas, das fährt (Staubsauger)? Dann fährt sie mit
+    if (this.plattform) { want.x += this.plattform.x; want.z += this.plattform.z; if (!ichSicht) this.yaw += this.plattform.dreh || 0; this.plattform = null; }
     const abkl = Math.exp(-4 * dt); this.schub.x *= abkl; this.schub.z *= abkl;
     if (this.unverwundbar > 0) this.unverwundbar -= dt;
     this.ctrl.computeColliderMovement(this.col, want, this.R.QueryFilterFlags.EXCLUDE_SENSORS);

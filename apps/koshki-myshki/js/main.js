@@ -9,6 +9,7 @@ import { baueWegnetz } from './wege.js';
 import { Steuerung } from './steuerung.js';
 import { Maus, Angeln, Tropfen, echteFische } from './tiere.js';
 import { Hund } from './hund.js';
+import { Sauger } from './sauger.js';
 import { Aufgaben, AUFGABEN, krone } from './aufgaben.js';
 import * as ton from './ton.js';
 
@@ -79,6 +80,8 @@ const aergern = (wo, plus, laut) => bewohner.forEach(b => b.aergern(wo, plus, la
 const maeuse = (haus.maeuse || []).map(d => new Maus(scene, netz, haus, d));
 const angeln = new Angeln(), tropfen = new Tropfen(scene);
 const hunde = (haus.hunde || []).map(d => new Hund(scene, world, R, netz, haus, d));
+const sauger = (haus.sauger || []).map(d => new Sauger(scene, world, R, netz, haus, d));
+let fahrZeit = 0, fahrSekunde = 0;
 // Aufgaben: Pokale stehen in der Geheimkammer
 const geheimE = haus.etagen.find(e => e.raeume.some(r => r.geheim)), geheimR = geheimE.raeume.find(r => r.geheim);
 const aufgaben = new Aufgaben(scene, { ...geheimR, y: geheimE.y }, (a, alle) => {
@@ -460,6 +463,19 @@ function frame() {
     }
     for (const b of bewohner) if (b.opa) { if (b.zustand === 'puste' && !b.pusteGemeldet) aufgaben.melde('opa'); b.pusteGemeldet = b.zustand === 'puste'; }
     aquarienSchritt(dt);
+    for (const s of sauger) {
+      const e = s.schritt(dt, katze, scherben, scene);
+      if (e.schreck) {
+        katze.vy = 6.5; katze.schub = { x: e.weg.x * 3, z: e.weg.z * 3 }; ton.miau();
+        meldung('😱 Huch! Der Staubsauger! Spring oben drauf und fahr mit!');
+      }
+      if (e.fahren) {
+        if (fahrZeit === 0) meldung('🤖 Wiiieee! Die Katze fährt Staubsauger!');
+        fahrZeit += dt; fahrSekunde += dt;
+        if (fahrSekunde >= 1) { fahrSekunde = 0; aufgaben.melde('sauger'); }   // Aufgabe: 5 Sekunden
+      } else fahrZeit = 0;
+      if (e.gesaugt && !s.gesaugtGesagt) { s.gesaugtGesagt = true; meldung('🤖 Der Staubsauger saugt die Scherben weg.'); }
+    }
     // beim Angeln sitzt die Katze still
     if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
     if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
@@ -511,6 +527,7 @@ function frame() {
   for (const b of bewohner) b.zeichne(dt, zeit);
   for (const m of maeuse) m.zeichne(dt, zeit);
   for (const h of hunde) h.zeichne(dt);
+  for (const s of sauger) s.zeichne(dt, zeit);
   tropfen.schritt(dt, katze);
   sterneSchritt(dt);
   kameraSetzen(dt);
@@ -540,4 +557,4 @@ $('start').onclick = () => {
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
 };
 // Für Tests im Browser
-window.__km = { hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { fahr: () => [fahrZeit, fahrSekunde], sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

@@ -4,6 +4,7 @@
   "groesse": [14, 10],
   "start": { "etage": "dg", "x": 12, "z": 8 },
   "verstecke": [{ "etage": "eg", "name": "hinter dem Sofa", "x0": 2.35, "x1": 4.65, "z0": 9.42, "z1": 9.95 }],
+  "sauger": [{ "etage": "eg", "x": 11.5, "z": 5.0 }],
   "maeuse": [{ "etage": "eg", "x": 0.13, "z": 5.4, "rot": 90 }],
   "bewohner": [
     { "typ": "babulya", "name": "Oma", "etage": "eg", "x": 12.6, "z": 5.0,
