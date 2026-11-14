@@ -34,7 +34,7 @@ export async function echteFische(aquarien) {
 // ---------- Die Maus ----------
 // Zustände: loch (versteckt) → raus (schnuppert herum) → flucht (rennt zum Loch) → loch
 //           gefangen (zappelt im Maul der Katze) → heim (entwischt, rennt zum Loch)
-const LAUF = 0.7, FLUCHT = 2.6, HEIM = 3.0;
+const LAUF = 0.7, FLUCHT = 1.7, HEIM = 3.0;     // Katze: gehen 2,4 / rennen 4,6 m/s
 
 export class Maus {
   constructor(scene, netz, haus, def) {
@@ -93,7 +93,7 @@ export class Maus {
       // kommt nur raus, wenn die Katze nicht direkt davor sitzt
       if (this.warte <= 0 && katzeNah > 2.2) { this.zustand = 'raus'; this.weg = [{ x: this.tuer.x, z: this.tuer.z }]; this.warte = 0; }
     } else if (this.zustand === 'raus') {
-      if (katzeNah < 1.7) { this.zustand = 'flucht'; this.weg = this.heimWeg(); this.piep(); }
+      if (katzeNah < 1.2) { this.zustand = 'flucht'; this.weg = this.heimWeg(); this.piep(); this.schreck = 0.7; }
       else if (!this.weg || !this.weg.length) {
         this.warte -= dt;
         if (this.warte <= 0) { this.weg = [this.zufallsZiel()]; this.warte = 1 + Math.random() * 2.5; this.schnuppern = 0; }
@@ -103,6 +103,12 @@ export class Maus {
       if (katzeNah < 4 && this.piepWarte <= 0 && Math.random() < dt * 0.3) this.piep();
     } else if (this.zustand === 'flucht' || this.zustand === 'heim') {
       tempo = this.zustand === 'heim' ? HEIM : FLUCHT;
+      // vor Schreck erstarrt sie immer wieder kurz – die Chance für die Katze!
+      if (this.zustand === 'flucht') {
+        this.schreck = (this.schreck ?? 0) - dt;
+        if (this.schreck > 0) tempo = 0;
+        else if (this.schreck < -1.3) this.schreck = 0.6;
+      }
     } else if (this.zustand === 'gefangen') {
       this.warte -= dt;
       // zappelt im Maul der Katze
@@ -135,6 +141,13 @@ export class Maus {
       }
     } else this.tempo = 0;
     this.pos.y = this.y;
+    // Katze springt/rennt direkt auf die Maus → gefangen
+    if (this.fangbar && Math.abs(k.y - this.y) < 0.25 && Math.hypot(k.x - this.pos.x, k.z - this.pos.z) < 0.28) {
+      this.zustand = 'gefangen'; this.warte = 2.5; this.piep(); ergebnis = 'gefangen';
+    }
+    // kommt sie raus, piepst sie (damit man sie findet)
+    if (this.zustand === 'raus' && !this.drausen) { this.drausen = true; this.piepWarte = 0; this.piep(); ergebnis = ergebnis || 'raus'; }
+    if (this.zustand === 'loch') this.drausen = false;
     return ergebnis;
   }
 
@@ -145,7 +158,8 @@ export class Maus {
     if (!this.fangbar) return false;
     const k = katze.fuesse, fx = Math.sin(katze.yaw), fz = Math.cos(katze.yaw);
     const px = k.x + fx * 0.18, pz = k.z + fz * 0.18;
-    if (Math.abs(k.y - this.y) > 0.3 || Math.hypot(px - this.pos.x, pz - this.pos.z) > 0.42) return false;
+    if (Math.abs(k.y - this.y) > 0.4) return false;
+    if (Math.hypot(px - this.pos.x, pz - this.pos.z) > 0.6 && Math.hypot(k.x - this.pos.x, k.z - this.pos.z) > 0.45) return false;
     this.zustand = 'gefangen'; this.warte = 2.5; this.piep();
     return true;
   }

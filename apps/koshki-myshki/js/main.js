@@ -450,7 +450,12 @@ function frame() {
     if (angeln.aktiv) { ein.x = 0; ein.z = 0; ein.springen = false; }
     if (angeln.schritt(dt) === 'weg') angelErgebnis('weg');
     if (!aquaHinweis && !angeln.aktiv && amAquarium()) { aquaHinweis = true; meldung('🐟 Am Aquarium: Pfote drücken = Fische angeln!'); }
-    for (const m of maeuse) if (m.schritt(dt, katze) === 'entwischt') meldung('🐭 Die Maus ist entwischt!');
+    for (const m of maeuse) {
+      const e = m.schritt(dt, katze);
+      if (e === 'entwischt') meldung('🐭 Die Maus ist entwischt!');
+      if (e === 'gefangen') { ton.juhu(); gefangen.maeuse++; schalk(20, '🐭 Maus gefangen!'); aufgaben.melde('maus'); }
+      if (e === 'raus' && bau.raumAn(katze.fuesse).etage === bau.etagen[m.e]) meldung('🐭 Piep! Die Maus ist aus ihrem Loch gekommen!');
+    }
     fischSchritt(dt);
     rest += dt;
     let n = 0, springen = ein.springen;
