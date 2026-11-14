@@ -245,7 +245,7 @@ Dateien danach: `apps/koshki-myshki/icon-*.png` (Motiv links + Hintergrund) und 
 Ergebnis: Katze+Maus links → Icon + `titelbild.webp`. Der russische Schriftzug wird nicht benutzt,
 weil das Spiel jetzt **deutsch** ist (Titel „Katz und Maus“) → neuer Logo-Prompt unten.
 
-## Katz und Maus – Logo (deutscher Titel)  ⏳ offen
+## Katz und Maus – Logo (deutscher Titel)  ✅ eingebaut (v0.3.1, `logo.webp`)
 ```
 Create ONE image, 1536x512, with a REAL transparent background (alpha channel, NOT a checkerboard pattern).
 A game title logo with the German words "KATZ UND MAUS" (exactly these letters: K A T Z   U N D   M A U S), on one line.

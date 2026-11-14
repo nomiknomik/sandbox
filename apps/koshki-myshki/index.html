@@ -47,6 +47,7 @@
   #titel{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
          background:radial-gradient(circle at 50% 30%,#FFB46Bcc,#7A3E14ee);padding:20px;text-align:center}
   #titel h1{margin:0;font-size:clamp(40px,8vw,72px);text-shadow:0 4px 0 #7A3E14,0 8px 18px #0006}
+  #logo{display:block;width:min(560px,82vw);height:auto;filter:drop-shadow(0 6px 10px #0005)}
   #titelbild{height:min(30vh,220px);filter:drop-shadow(0 8px 14px #0006)}
   #titel p{margin:0;max-width:560px;opacity:.95}
   #start{font:inherit;font-size:24px;font-weight:700;padding:16px 44px;border:0;border-radius:18px;background:#fff;color:#C2581B;box-shadow:0 6px 0 #B9692F;cursor:pointer}
@@ -72,7 +73,7 @@
   <button class="knopf" id="bKamera" aria-label="Kamera">👁️</button>
 
   <div id="titel">
-    <img id="titelbild" src="titelbild.webp" alt=""><h1>Katz und Maus</h1>
+    <img id="titelbild" src="titelbild.webp" alt=""><h1><img id="logo" src="logo.webp" alt="Katz und Maus"></h1>
     <p>Du bist eine Katze. Renn durchs Haus, spring auf Schränke und wirf Sachen runter. Fang die Maus, angle Fische – aber lass dich nicht von Oma erwischen!</p>
     <button id="start" disabled>Lädt …</button>
     <div id="laden">Lade …</div>
@@ -91,7 +92,7 @@
 
 <script>
 // Bei jeder Änderung hochzählen (und CACHE in sw.js).
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.3.1';
 // Version unten rechts antippen = nach Update suchen.
 const versionEl = document.getElementById('version');
 versionEl.textContent = 'v' + APP_VERSION;
