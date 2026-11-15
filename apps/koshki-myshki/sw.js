@@ -1,9 +1,10 @@
 // Service Worker: macht die App offline-fähig.
 // WICHTIG: Bei jeder Änderung CACHE hochzählen (und APP_VERSION in index.html).
-const CACHE = 'koshki-myshki-v13';
+const CACHE = 'koshki-myshki-v14';
 const SHELL = ['./', './index.html', './plan.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './js/main.js', './js/haus.js', './js/katalog.js', './js/modelle.js', './js/katze.js', './js/steuerung.js', './js/ton.js', './js/texturen.js', './js/bewohner.js', './js/wege.js', './js/tiere.js', './js/hund.js', './js/sauger.js', './js/kind.js', './js/aufgaben.js', './js/draussen.js', './js/verkehr.js', './js/leute.js', './js/kloetzchen.js', './js/siedlung.js', './js/gluecksrad.js', './js/garderobe.js', './level/siedlung.json', './modelle/moebel.json', './modelle/hund.glb', './modelle/fische.json', './titelbild.webp', './logo.webp',
-  './vendor/three.js', './vendor/rapier.js', './level/haus.json'];
+  './vendor/three.js', './vendor/rapier.js', './level/haus.json',
+  './toene/blubb1.mp3','./toene/blubb2.mp3','./toene/bong.mp3','./toene/klatsch.mp3','./toene/krach.mp3','./toene/kratzen.mp3','./toene/mampf.mp3','./toene/miau1.mp3','./toene/miau2.mp3','./toene/miau3.mp3','./toene/piep.mp3','./toene/platsch1.mp3','./toene/platsch2.mp3','./toene/plopp.mp3','./toene/schnurren.mp3','./toene/wuff.mp3'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => null)))).then(() => self.skipWaiting()));

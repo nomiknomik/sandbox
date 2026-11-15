@@ -1,0 +1,15 @@
+Alle Aufnahmen: CC0 (gemeinfrei), von opengameart.org. Gekürzt, Mono, leiser/lauter gemacht.
+
+miau1.mp3            opengameart.org/content/meow
+miau2.mp3            opengameart.org/content/kitten-mew
+miau3.mp3, schnurren opengameart.org/content/cat-purr-meow
+wuff.mp3             opengameart.org/content/dog-sounds (Ausschnitt)
+krach.mp3            opengameart.org/content/glass-break
+platsch*, blubb*     opengameart.org/content/40-cc0-water-splash-slime-sfx
+mampf.mp3            opengameart.org/content/7-eating-crunches
+bong.mp3, plopp.mp3  opengameart.org/content/100-cc0-metal-and-wood-sfx
+klatsch.mp3          opengameart.org/content/thwack-sounds
+kratzen.mp3          opengameart.org/content/scrapes
+piep.mp3             opengameart.org/content/mouse-imitation
+
+Hupe, Rutsche, Hopser und Ta-daa macht weiter der Synthesizer (js/ton.js).

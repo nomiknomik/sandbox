@@ -273,13 +273,55 @@ export function baueDraussen(scene, world, R, bau, extra = {}) {
     l.position.set((d.x0 + d.x1) / 2, hoch - 0.5, (d.z0 + d.z1) / 2); scene.add(l); lampen.push(l);
   }
 
-  // Nachbarhaus
+  // Innenwand (gerade, entlang x oder z) mit Türen und Katzenklappen.
+  // oe = [{ typ: 'tuer' | 'klappe', pos }]  – pos = Mitte der Öffnung, gemessen ab a
+  const raeume = [];
+  function innenwand(a, b, hoch, farbe, oe = []) {
+    const t = 0.2, langX = a[1] === b[1], quer = langX ? a[1] : a[0], s0 = langX ? Math.min(a[0], b[0]) : Math.min(a[1], b[1]);
+    const len = Math.abs(langX ? b[0] - a[0] : b[1] - a[1]), wm = mat(farbe, { r: 0.92 });
+    const stueck = (u0, u1, y0, y1) => { if (u1 - u0 < 0.01) return;
+      langX ? kiste(s0 + u0, s0 + u1, y0, y1, quer - t / 2, quer + t / 2, wm) : kiste(quer - t / 2, quer + t / 2, y0, y1, s0 + u0, s0 + u1, wm); };
+    let u = 0;
+    for (const o of [...oe].sort((p, q) => p.pos - q.pos)) {
+      const br = o.typ === 'klappe' ? 0.38 : 1.0, ho = o.typ === 'klappe' ? 0.42 : 2.1;
+      stueck(u, o.pos - br / 2, 0, hoch); stueck(o.pos - br / 2, o.pos + br / 2, ho, hoch);
+      if (o.typ === 'klappe') {            // orangener Rahmen: hier passt nur eine Katze durch
+        const r = mat('#E8A85C'), x0 = s0 + o.pos - br / 2 - 0.03, x1 = s0 + o.pos + br / 2 + 0.03;
+        langX ? kiste(x0, x1, ho, ho + 0.04, quer - t / 2 - 0.01, quer + t / 2 + 0.01, r, false) : kiste(quer - t / 2 - 0.01, quer + t / 2 + 0.01, ho, ho + 0.04, x0, x1, r, false);
+      }
+      u = o.pos + br / 2;
+    }
+    stueck(u, len, 0, hoch);
+  }
+  // Leuchtende Lampe an der Decke (ohne echtes Licht – das wäre zu teuer)
+  function deckenlampe(x, z, y, farbe = '#FFE9B8') {
+    const m = new T.Mesh(new T.SphereGeometry(0.16, 12, 8), mat(farbe, { e: farbe, ei: 1.5 })); m.position.set(x, y - 0.2, z); lose.add(m);
+  }
+
+  // Nachbarhaus: vorne Flur + Essen, hinten Wohnzimmer und zwei Geheimräume (nur durch Katzenklappen)
   const N = P.nachbar;
   gebaeude(N, '#BFD8E8', '#5C6E8C', 'holz');
+  innenwand([N.x0, -28], [N.x1, -28], N.h, '#F7F0E3', [{ typ: 'tuer', pos: 6 }]);
+  innenwand([2, N.z0], [2, -28], N.h, '#F3E2F0', [{ typ: 'klappe', pos: 1.5 }]);
+  innenwand([6.5, N.z0], [6.5, -28], N.h, '#E2F0F3', [{ typ: 'klappe', pos: 2.0 }]);
+  raeume.push({ haus: 'Nachbarhaus', name: 'Geheimes Wollzimmer', x0: N.x0, x1: 2, z0: N.z0, z1: -28, geheim: true },
+              { haus: 'Nachbarhaus', name: 'Wohnzimmer', x0: 2, x1: 6.5, z0: N.z0, z1: -28 },
+              { haus: 'Nachbarhaus', name: 'Geheime Schatzkammer', x0: 6.5, x1: N.x1, z0: N.z0, z1: -28, geheim: true },
+              { haus: 'Nachbarhaus', name: 'Flur und Esszimmer', x0: N.x0, x1: N.x1, z0: -28, z1: N.z1 });
+  deckenlampe(4.25, -29.5, N.h); deckenlampe(0, -29.5, N.h, '#F8C8E8'); deckenlampe(8.25, -29.5, N.h, '#C8F0F8');
   for (const o of [
-    { typ: 'sofa', x: 2.0, z: -30.2, rot: 0 }, { typ: 'couchtisch', x: 2.0, z: -28.8 }, { typ: 'vase', x: 1.8, z: -28.8, y: 0.45 },
-    { typ: 'sessel', x: -0.8, z: -28.6, rot: 90 }, { typ: 'teppich', x: 2.0, z: -28.8 }, { typ: 'regal', x: 6.5, z: -30.6, rot: 0 },
-    { typ: 'buch', x: 6.2, z: -30.6, y: 1.8 }, { typ: 'wecker', x: 6.8, z: -30.6, y: 1.8 }, { typ: 'pflanze', x: 9.3, z: -30.3 },
+    // Wohnzimmer
+    { typ: 'sofa', x: 4.25, z: -30.3, rot: 0 }, { typ: 'couchtisch', x: 4.25, z: -29.1 }, { typ: 'vase', x: 4.05, z: -29.1, y: 0.45 },
+    { typ: 'teppich', x: 4.25, z: -29.2 },
+    // Geheimes Wollzimmer: Kissen, ganz viel Wolle, Spielzeugmaus
+    { typ: 'katzenkissen', x: 0.2, z: -30.2 }, { typ: 'kuscheldecke', x: -1.2, z: -29.0 }, { typ: 'wollknaeuel', x: -1.4, z: -30.4 },
+    { typ: 'wollknaeuel', x: 1.2, z: -29.0 }, { typ: 'wollknaeuel', x: -0.5, z: -28.6 }, { typ: 'spielzeugmaus', x: 0.9, z: -30.5 },
+    // Geheime Schatzkammer: Truhe, Kisten, Diamant
+    { typ: 'truhe', x: 8.3, z: -30.55, rot: 0 }, { typ: 'kiste', x: 9.6, z: -30.6 }, { typ: 'kiste', x: 9.6, z: -30.0 }, { typ: 'kiste', x: 9.6, z: -30.3, y: 0.5 },
+    { typ: 'diamant', x: 8.3, z: -30.55, y: 0.6 }, { typ: 'katzenkissen', x: 8.0, z: -28.9 },
+    // vorne
+    { typ: 'sessel', x: -1.2, z: -26.5, rot: 90 }, { typ: 'regal', x: 1.0, z: -27.65, rot: 0 },
+    { typ: 'buch', x: 0.7, z: -27.65, y: 1.8 }, { typ: 'wecker', x: 1.3, z: -27.65, y: 1.8 }, { typ: 'pflanze', x: 9.4, z: -27.5 },
     { typ: 'esstisch', x: 6.5, z: -26.0 }, { typ: 'stuhl', x: 6.0, z: -25.3, rot: 180 }, { typ: 'stuhl', x: 7.0, z: -26.7 },
     { typ: 'tasse', x: 6.3, z: -26.0, y: 0.75 }, { typ: 'teller', x: 6.8, z: -26.1, y: 0.75 }, { typ: 'vase', x: 9.4, z: -23.0, y: 0.85 },
     { typ: 'kommode', x: 9.5, z: -23.0, rot: 270 }, { typ: 'kratzbaum', x: -1.4, z: -22.2 }, { typ: 'napf', x: 0.0, z: -22.0 },
@@ -294,13 +336,33 @@ export function baueDraussen(scene, world, R, bau, extra = {}) {
     const m = new T.Mesh(new T.BoxGeometry(0.4, 0.04, 1.2), mat(i % 2 ? '#FFFFFF' : '#D9433A', { r: 0.8 }));
     m.position.set(RS.tuer - 1.4 + i * 0.4, 2.35, RS.z1 + 0.6); m.rotation.x = 0.25; m.castShadow = true; g.add(m);
   }
-  // Theke + Küchentür
-  kiste(18, 24, 0, 1.05, RS.z0 + 0.2, RS.z0 + 0.85, '#8B5A36');
-  kiste(17.95, 24.05, 1.05, 1.1, RS.z0 + 0.15, RS.z0 + 0.9, '#E8E1D4', false);
-  kiste(26, 27.2, 0, 2.1, RS.z0 + 0.2, RS.z0 + 0.24, '#C9A06A', false);
+  // Hinten: Küche und zwei Geheimräume. Davor die Theke.
+  const KW = -28.4;                                   // Wand zwischen Gastraum und Küche
+  innenwand([RS.x0, KW], [RS.x1, KW], RS.h, '#F7F0E3', [{ typ: 'tuer', pos: 10.6 }]);
+  innenwand([19, RS.z0], [19, KW], RS.h, '#F4E6C8', [{ typ: 'klappe', pos: 1.3 }]);
+  innenwand([22, RS.z0], [22, KW], RS.h, '#F6D9D9', [{ typ: 'klappe', pos: 1.3 }]);
+  raeume.push({ haus: 'Restaurant', name: 'Geheime Vorratskammer', x0: RS.x0, x1: 19, z0: RS.z0, z1: KW, geheim: true },
+              { haus: 'Restaurant', name: 'Geheimes Katzen-Café', x0: 19, x1: 22, z0: RS.z0, z1: KW, geheim: true },
+              { haus: 'Restaurant', name: 'Küche', x0: 22, x1: RS.x1, z0: RS.z0, z1: KW },
+              { haus: 'Restaurant', name: 'Gastraum', x0: RS.x0, x1: RS.x1, z0: KW, z1: RS.z1 });
+  deckenlampe(17.5, -29.7, RS.h, '#FFD9A0'); deckenlampe(20.5, -29.7, RS.h, '#F8C8E8'); deckenlampe(26, -29.7, RS.h);
+  const thZ = KW + 0.15;
+  kiste(18, 24, 0, 1.05, thZ, thZ + 0.65, '#8B5A36');
+  kiste(17.95, 24.05, 1.05, 1.1, thZ - 0.05, thZ + 0.7, '#E8E1D4', false);
   for (const [x, f] of [[18.6, '#E74C3C'], [19.4, '#27AE60'], [23.4, '#F1C40F']]) {   // Flaschen auf der Theke (Deko)
-    const b = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.3, 8), mat(f, { r: 0.2 })); b.position.set(x, 1.25, RS.z0 + 0.5); g.add(b);
+    const b = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.3, 8), mat(f, { r: 0.2 })); b.position.set(x, 1.25, thZ + 0.3); g.add(b);
   }
+  for (const o of [
+    // Küche
+    { typ: 'kuechenzeile', x: 25.5, z: -30.65, rot: 0 }, { typ: 'kuehlschrank', x: 29.4, z: -30.6, rot: 0 }, { typ: 'topf', x: 24.8, z: -30.65, y: 0.9 },
+    { typ: 'kiste', x: 22.5, z: -30.6 },
+    // Geheime Vorratskammer: Regal mit Gläsern, Kisten, Kissen
+    { typ: 'regal', x: 17.5, z: -30.65, rot: 0 }, { typ: 'glas', x: 17.2, z: -30.65, y: 1.8 }, { typ: 'glas', x: 17.8, z: -30.65, y: 1.8 },
+    { typ: 'kiste', x: 16.5, z: -28.95 }, { typ: 'kiste', x: 17.1, z: -28.95 }, { typ: 'katzenkissen', x: 18.2, z: -29.3 },
+    // Geheimes Katzen-Café: Napf, Teller, Kissen, Ball
+    { typ: 'napf', x: 20.0, z: -30.5 }, { typ: 'napf', x: 20.6, z: -30.5 }, { typ: 'katzenkissen', x: 20.5, z: -29.2 },
+    { typ: 'teppich', x: 20.5, z: -29.6, breite: 2.4, tiefe: 1.8, farbe: '#C0392B' }, { typ: 'ball', x: 21.4, z: -29.0 },
+  ]) bau.stelle(o, 0, -1, g);
   // Tische mit Resten
   const tische = [];
   const weissMat = mat('#FFFFFF', { r: 0.3 }), tuch = mat('#F7EFE2', { r: 0.9 }), bein = mat('#5A3A22');
@@ -461,6 +523,7 @@ export function baueDraussen(scene, world, R, bau, extra = {}) {
 
   // ---------- Wo ist die Katze? ----------
   const ORTE = [
+    ...raeume.map(r => [`${r.haus} · ${r.name}`, r, -1]),
     ['Geheimes Spielzimmer', P.spielzimmer, -0.2],
     ['Unterwasser-Tunnel', { x0: Tu.x0, x1: Tu.x1, z0: pool.z1 - 0.3, z1: sch.z0 }, -9],
     ['Unterwasser-Tunnel', sch, -9],
@@ -478,6 +541,8 @@ export function baueDraussen(scene, world, R, bau, extra = {}) {
     for (const [name, r, ymin] of ORTE) if (p.x >= r.x0 && p.x < r.x1 && p.z >= r.z0 && p.z < r.z1 && p.y > ymin - 0.4) return name;
     return 'Wiese';
   }
+  // Raum im Nachbarhaus / Restaurant (für Geheimräume)
+  function raum(p) { return raeume.find(r => p.x >= r.x0 && p.x < r.x1 && p.z >= r.z0 && p.z < r.z1 && p.y > -0.5 && p.y < 3) || null; }
   function imWasser(p) {
     for (const w of wasser) if (p.x > w.x0 && p.x < w.x1 && p.z > w.z0 && p.z < w.z1 && p.y > w.y0 - 0.3 && p.y < w.flaeche + 0.05) return w;
     return null;
@@ -485,7 +550,7 @@ export function baueDraussen(scene, world, R, bau, extra = {}) {
   const drin = (p, r) => p.x > r.x0 && p.x < r.x1 && p.z > r.z0 && p.z < r.z1;
 
   return {
-    anim, lampen, wasser, imWasser, ort, drin, kurve, tische,
+    anim, lampen, wasser, imWasser, ort, raum, drin, kurve, tische,
     // Verstecke und Geheimgänge draußen (y = Boden in Metern)
     verstecke: [
       { name: 'in der Baumhöhle', x0: bx - 0.15, x1: bx + 0.42, z0: bz - 0.27, z1: bz + 0.27, y: hoehleU },

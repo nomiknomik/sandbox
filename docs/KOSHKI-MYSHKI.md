@@ -108,9 +108,15 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    **Souvenirs** (9 Stück, in fremden Geheimräumen) → im Maul heimtragen und in einem eigenen Geheimraum ablegen.
    **Garderobe** 🎨 (`js/garderobe.js`): 6 Fellfarben, 5 Sachen (Schleife, Sonnenbrille, Halstuch, Zauberhut, Umhang),
    freigeschaltet über geschaffte Aufgaben. 6 neue Aufgaben (jetzt 28).
-   Noch offen: Geheimräume im Nachbarhaus und Restaurant (sind noch einfache Kästen).
-9. ⏳ Dach begehbar (Versteck am Schornstein), Katzen-Aufzug (braucht neue Löcher in den Decken), Sounds aus CC0
-10. ⏳ Echte Sounds, Editor, zu zweit spielen
+9. ✅ v0.11 – **Nachbarhaus und Restaurant mit Innenwänden** (`innenwand()` in `draussen.js`, Türen + Katzenklappen).
+   Nachbarhaus: vorne Flur/Essen, hinten Wohnzimmer, **Geheimes Wollzimmer** und **Geheime Schatzkammer**.
+   Restaurant: Gastraum mit Theke, hinten Küche (Tür), **Geheimes Katzen-Café** und **Geheime Vorratskammer**
+   (Küche → Klappe → Café → Klappe → Vorrat). Kellner bleibt im Gastraum, Nachbarin vorne.
+   **Dach begehbar**: schräge Kollider fürs Satteldach, **Dachluke** in der Decke der Geheimkammer (3 Katzenbretter hoch),
+   oben **Unterschlupf am Schornstein** (Versteck, Kissen, grünes Dächlein). Neue Aufgabe (jetzt 29).
+   **Echte Töne** (`toene/`, CC0 von OpenGameArt, 16 Dateien, ~110 KB): Miau (3 Varianten), Schnurren, Wuff, Glas,
+   Platsch, Blubb, Mampf, Pfanne, Zeitung, Plopp, Kratzen, Piep. Hupe/Rutsche/Hopser/Ta-daa bleiben Synthesizer.
+10. ⏳ Katzen-Aufzug, Editor, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,

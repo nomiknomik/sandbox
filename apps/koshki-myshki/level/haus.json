@@ -3,7 +3,9 @@
   "info": "Einheiten: Meter. x → Osten, z → Süden (auf dem Plan nach unten). rot: 0 = Vorderseite nach Süden, 90 = Osten, 180 = Norden, 270 = Westen. y beim Gegenstand = in welcher Höhe er steht (z. B. Vase auf dem Tisch). maeuse: Mauseloch (x, z) an der Wand, rot = wohin das Loch schaut.",
   "groesse": [14, 10],
   "start": { "etage": "dg", "x": 12, "z": 8 },
+  "dachluke": { "x0": 10.9, "x1": 12.3, "z0": 8.9, "z1": 9.8, "info": "Loch in der Decke der Geheimkammer, Bretter führen hoch" },
   "verstecke": [
+    { "etage": "dg", "name": "im Unterschlupf am Schornstein", "x0": 10.7, "x1": 12.1, "z0": 5.1, "z1": 6.4, "h": 4.65, "info": "auf dem Dach" },
     { "etage": "eg", "name": "hinter dem Sofa", "x0": 2.35, "x1": 4.65, "z0": 9.42, "z1": 9.95 },
     { "etage": "eg", "name": "hinter dem Vorhang", "x0": 9.05, "x1": 10.55, "z0": 9.5, "z1": 9.9, "info": "Schwanz guckt raus" },
     { "etage": "og", "name": "unter dem Bett", "x0": 2.75, "x1": 4.25, "z0": 8.05, "z1": 9.75 },
@@ -13,6 +15,7 @@
   ],
   "geheimgaenge": [
     { "etage": "og", "name": "Loch im Kleiderschrank", "x0": 0.2, "x1": 0.62, "z0": 4.75, "z1": 5.2, "y0": -0.6, "y1": 0.1 },
+    { "etage": "dg", "name": "Dachluke aufs Dach", "x0": 10.9, "x1": 12.3, "z0": 8.9, "z1": 9.8, "y0": 2.2, "y1": 2.9 },
     { "etage": "keller", "name": "Kellerschacht", "x0": 12.25, "x1": 12.75, "z0": 9.85, "z1": 10.3, "y0": -0.1, "y1": 0.4 }
   ],
   "sauger": [{ "etage": "eg", "x": 11.5, "z": 5.0 }],
@@ -232,7 +235,10 @@
         { "typ": "wollknaeuel", "x": 5.5, "z": 6.0 },
         { "typ": "katzenkissen", "x": 12.2, "z": 8.6 },
         { "typ": "regal", "x": 13.75, "z": 7.6, "rot": 270 },
-        { "typ": "spielzeugmaus", "x": 11.3, "z": 7.6 }
+        { "typ": "spielzeugmaus", "x": 11.3, "z": 7.6 },
+        { "typ": "katzenbrett", "x": 12.75, "z": 9.45, "y": 0.7 },
+        { "typ": "katzenbrett", "x": 12.05, "z": 9.35, "y": 1.45 },
+        { "typ": "katzenbrett", "x": 11.2, "z": 9.35, "y": 2.4 }
       ]
     }
   ]

@@ -1,5 +1,33 @@
-// Звуки делаются прямо в программе (синтезатор). Никаких записей голосов.
+// Töne: echte Aufnahmen (Ordner toene/, alle CC0 von OpenGameArt, siehe toene/LIZENZ.txt).
+// Solange eine Aufnahme noch lädt (oder fehlt), spielt der Synthesizer darunter.
 let ctx = null, laut = null;
+
+// Name → Dateien. Bei mehreren wird zufällig eine gewählt (klingt lebendiger).
+const AUFNAHMEN = {
+  miau: ['miau1', 'miau2', 'miau3'], schnurren: ['schnurren'], wuff: ['wuff'], krach: ['krach'],
+  platsch: ['platsch1', 'platsch2'], blubb: ['blubb1', 'blubb2'], mampf: ['mampf'], bong: ['bong'],
+  klatsch: ['klatsch'], plopp: ['plopp'], kratzen: ['kratzen'], piep: ['piep'],
+};
+const puffer = {};       // Dateiname → AudioBuffer
+
+function laden() {
+  for (const n of Object.values(AUFNAHMEN).flat()) {
+    fetch(`toene/${n}.mp3`).then(r => r.arrayBuffer())
+      .then(d => new Promise((ok, nein) => ctx.decodeAudioData(d, ok, nein)))   // so geht es auch auf alten iPads
+      .then(b => { puffer[n] = b; }).catch(() => {});
+  }
+}
+// Spielt eine Aufnahme. Gibt false zurück, wenn sie (noch) nicht da ist.
+function spiel(name, lautst = 1, hoehe = 1) {
+  if (!ctx) return false;
+  const da = AUFNAHMEN[name].filter(n => puffer[n]);
+  if (!da.length) return false;
+  const q = ctx.createBufferSource(), g = ctx.createGain();
+  q.buffer = puffer[da[Math.floor(Math.random() * da.length)]];
+  q.playbackRate.value = hoehe * (0.94 + Math.random() * 0.12);   // jedes Mal ein bisschen anders
+  g.gain.value = lautst; q.connect(g); g.connect(laut); q.start();
+  return true;
+}
 
 export function tonStart() {
   if (!ctx) {
@@ -7,6 +35,7 @@ export function tonStart() {
     if (!AC) return;
     ctx = new AC();
     laut = ctx.createGain(); laut.gain.value = 0.7; laut.connect(ctx.destination);
+    laden();
   }
   if (ctx.state === 'suspended') ctx.resume();
 }
@@ -26,6 +55,7 @@ function huelle(g, t, a, h, d, max = 1) {
 // Мяу: «пила» через два фильтра-форманты, высота поднимается и падает
 export function miau() {
   if (!ctx) return;
+  if (spiel('miau', 0.9)) return;
   const t = ctx.currentTime, dauer = 0.55 + Math.random() * 0.2, hoch = 1 + (Math.random() - 0.5) * 0.25;
   const o = ctx.createOscillator(); o.type = 'sawtooth';
   o.frequency.setValueAtTime(420 * hoch, t);
@@ -46,6 +76,7 @@ export function miau() {
 // Дзынь-бах: разбилось стекло/фарфор
 export function krach(staerke = 1) {
   if (!ctx) return;
+  if (spiel('krach', 0.8 * staerke)) return;
   const t = ctx.currentTime;
   const r = rauschen(0.5), hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
   const g = ctx.createGain(); huelle(g, t, 0.003, 0.02, 0.35, 0.6 * staerke);
@@ -61,6 +92,7 @@ export function krach(staerke = 1) {
 // Глухой «бум» (упала книга, мяч)
 export function plopp(staerke = 1) {
   if (!ctx) return;
+  if (spiel('plopp', 0.7 * Math.min(1, staerke))) return;
   const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
   o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(55, t + 0.15);
   huelle(g, t, 0.003, 0, 0.18, 0.5 * Math.min(1, staerke));
@@ -70,6 +102,7 @@ export function plopp(staerke = 1) {
 // Царап-царап
 export function kratzen() {
   if (!ctx) return;
+  if (spiel('kratzen', 0.8)) return;
   const t = ctx.currentTime;
   for (let i = 0; i < 4; i++) {
     const r = rauschen(0.1), f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2500 + i * 300; f.Q.value = 2;
@@ -81,6 +114,7 @@ export function kratzen() {
 // Мурр
 export function schnurren() {
   if (!ctx) return;
+  if (spiel('schnurren', 0.9)) return;
   const t = ctx.currentTime, r = rauschen(1.2), f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
   const g = ctx.createGain(); g.gain.value = 0;
   const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 24; lg.gain.value = 0.25;
@@ -99,15 +133,17 @@ export function hops() {
 // БОНГ! Сковородка
 export function bong() {
   if (!ctx) return;
+  const echt = spiel('bong', 1);
   const t = ctx.currentTime;
   for (const [f, v, d] of [[310, 0.5, 0.9], [742, 0.3, 0.7], [1285, 0.18, 0.5], [2010, 0.1, 0.3]]) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f;
-    huelle(g, t, 0.002, 0, d, v); o.connect(g); g.connect(laut); o.start(t); o.stop(t + d + 0.05);
+    huelle(g, t, 0.002, 0, d, echt ? v * 0.4 : v); o.connect(g); g.connect(laut); o.start(t); o.stop(t + d + 0.05);
   }
-  plopp(1);
+  if (!echt) plopp(1);
 }
 export function mampf() {
   if (!ctx) return;
+  if (spiel('mampf', 0.9)) return;
   const t = ctx.currentTime;
   for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 500 + i * 120;
     huelle(g, t + i * 0.12, 0.005, 0.02, 0.06, 0.15); o.connect(g); g.connect(laut); o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.12); }
@@ -116,6 +152,7 @@ export function mampf() {
 // Piep-piep: die Maus
 export function piep() {
   if (!ctx) return;
+  if (spiel('piep', 0.6, 1.1)) return;
   const t = ctx.currentTime;
   for (let i = 0; i < 2; i++) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
@@ -126,6 +163,7 @@ export function piep() {
 // Platsch! Ins Wasser
 export function platsch() {
   if (!ctx) return;
+  if (spiel('platsch', 0.9)) return;
   const t = ctx.currentTime, r = rauschen(0.7), f = ctx.createBiquadFilter(), g = ctx.createGain();
   f.type = 'lowpass'; f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.6);
   huelle(g, t, 0.01, 0.05, 0.6, 0.6); r.connect(f); f.connect(g); g.connect(laut); r.start(t);
@@ -144,6 +182,7 @@ export function juhu() {
 // KLATSCH! Opas Zeitung
 export function klatsch() {
   if (!ctx) return;
+  if (spiel('klatsch', 1)) return;
   const t = ctx.currentTime, r = rauschen(0.25), f = ctx.createBiquadFilter(), g = ctx.createGain();
   f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
   huelle(g, t, 0.002, 0.01, 0.18, 0.9); r.connect(f); f.connect(g); g.connect(laut); r.start(t);
@@ -151,6 +190,7 @@ export function klatsch() {
 // Wuff! Der Hund
 export function wuff() {
   if (!ctx) return;
+  if (spiel('wuff', 0.9)) return;
   const t = ctx.currentTime;
   for (let i = 0; i < 2; i++) {
     const z = t + i * 0.22, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -180,6 +220,7 @@ export function wiii() {
 // Blubb – Luftblasen unter Wasser
 export function blubb() {
   if (!ctx) return;
+  if (spiel('blubb', 0.5)) return;
   const t = ctx.currentTime;
   for (let i = 0; i < 3; i++) { const z = t + i * 0.08, o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(300 + Math.random() * 200, z); o.frequency.exponentialRampToValueAtTime(900, z + 0.06);

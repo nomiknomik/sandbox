@@ -120,7 +120,7 @@ for (let i = 0; i < 9; i++) {
 const N = PLAN.nachbar;
 menschen.push(new Mensch(scene, { innen: { x0: N.x0 + 0.3, x1: N.x1 - 0.3, z0: -27.5, z1: N.z1 - 0.3 }, x: 3, z: -24 },
   { haut: '#F5D0B0', oben: '#F48FB1', unten: '#7E57C2', haar: '#D7D7D7', rock: true, lang: true }));
-const kellner = new Kellner(scene, PLAN.restaurant, drauss.tische);
+const kellner = new Kellner(scene, { ...PLAN.restaurant, z0: -27.9 }, drauss.tische);   // bleibt im Gastraum
 const klotz = new Kloetzchen();
 
 // ---------- Счёт и сообщения ----------
@@ -486,6 +486,7 @@ function versteckPruefen() {
     meldung(gejagt ? `🙈 Versteckt ${v.name}! Hier findet dich keiner – warte, bis sie sich beruhigt.` : `🙈 Versteckt ${v.name}.${schwanz || ' Hier sieht dich keiner.'}`);
     if (gejagt) aufgaben.melde('versteck');
     aufgaben.einmal('verstecke', v.name);
+    if (v.info === 'auf dem Dach') { setTimeout(ton.schnurren, 400); meldung('🏠 Ganz oben auf dem Dach, warm am Schornstein. Hier sucht dich NIEMAND!'); aufgaben.melde('dach'); }
   }
   $('ort').classList.toggle('versteckt', !!v);
 }
@@ -510,7 +511,8 @@ function ortZeigen() {
   let { etage, raum } = bau.raumAn(katze.fuesse), wer = 'Omas Haus';
   const draussen = so ? null : drauss.ort(katze.fuesse);
   if (so) { raum = so.raum; wer = so.haus?.name; }
-  const txt = so ? so.name : draussen ? `Draußen · ${draussen}` : `${etage.name} · ${raum ? raum.name : '…'}`;
+  else if (draussen) { const dr = drauss.raum(katze.fuesse); raum = dr; wer = dr?.haus; }
+  const txt = so ? so.name : draussen ? `Draußen · ${draussen}` : (raum ? `${etage.name} · ${raum.name}` : etage.name === 'Auf dem Dach' ? 'Auf dem Dach' : `${etage.name} · …`);
   if (txt !== letzterRaum) {
     letzterRaum = txt; $('ort').textContent = '📍 ' + txt;
     if (raum && raum.geheim && wer && !geheimGesehen.has(wer + raum.name)) {

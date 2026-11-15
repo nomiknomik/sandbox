@@ -79,7 +79,8 @@ export function baueHaus(haus, scene, world, R) {
   });
   // Крыша-потолок над чердаком
   const top = etagen[etagen.length - 1], dachY = top.y + top.hoehe;
-  block(0, W, dachY - DECKE, dachY, 0, D, deckeMat);
+  const luke = haus.dachluke;   // Loch in der Decke der Geheimkammer → aufs Dach
+  for (const r of luke ? minus([{ x0: 0, x1: W, z0: 0, z1: D }], luke) : [{ x0: 0, x1: W, z0: 0, z1: D }]) block(r.x0, r.x1, dachY - DECKE, dachY, r.z0, r.z1, deckeMat);
 
   // ---------- Стены ----------
   const aussenMat = mat('#EAD9BC', { r: 0.95 });   // Fassade: heller Putz
@@ -243,13 +244,15 @@ export function baueHaus(haus, scene, world, R) {
   });
 
   // ---------- Крыша (Garten, Straße & Co. baut draussen.js) ----------
-  aussen(scene, statisch, W, D, dachY, block);
+  aussen(scene, statisch, W, D, dachY, block, kollider, luke);
 
   // ---------- Склеить неподвижное (меньше работы для видеокарты) ----------
   verkleben(statisch);
 
   // В какой комнате кошка?
+  const DACH = { name: 'Auf dem Dach' };
   function raumAn(p) {
+    if (p.y > dachY - 0.05 && p.x > -0.6 && p.x < W + 0.6 && p.z > -0.6 && p.z < D + 0.6) return { etage: DACH, raum: null };
     for (let i = etagen.length - 1; i >= 0; i--) {
       const e = etagen[i];
       if (p.y < e.y - 0.3) continue;
@@ -261,16 +264,30 @@ export function baueHaus(haus, scene, world, R) {
   return { dyn, anim, kratz, raumAn, aquarien, etagen, lampen, mitte: new T.Vector3(W / 2, 2, D / 2), block, kollider, stelle, extra, minus };
 }
 
-function aussen(scene, statisch, W, D, dachY, block) {
-  // Satteldach (nur Deko)
+function aussen(scene, statisch, W, D, dachY, block, kollider, luke) {
+  // Satteldach – man kann darauf laufen (schräge Kollider)
   const dachMat = mat('#B5523B', { r: 0.8 });
-  const hoch = 2.2, ueber = 0.5;
-  const schraeg = Math.hypot(D / 2 + ueber, hoch);
-  for (const s of [-1, 1]) {
-    const p = new T.Mesh(new T.BoxGeometry(W + 2 * ueber, 0.15, schraeg), dachMat);
-    p.position.set(W / 2, dachY + hoch / 2, D / 2 + s * (D / 4 + ueber / 2));
-    p.rotation.x = s * Math.atan2(hoch, D / 2 + ueber);
+  const hoch = 2.2, ueber = 0.5, dick = 0.15;
+  const schraeg = Math.hypot(D / 2 + ueber, hoch), winkel = Math.atan2(hoch, D / 2 + ueber);
+  const cos = Math.cos(winkel), sin = Math.sin(winkel);
+  // Ein Stück Dachbrett: x0..x1, u0..u1 = Abstand vom First die Schräge runter
+  function brett(s, x0, x1, u0, u1) {
+    if (x1 - x0 < 0.01 || u1 - u0 < 0.01) return;
+    const lz = (u0 + u1) / 2 - schraeg / 2;                 // Mitte im Brett
+    const cy = dachY + hoch / 2 - lz * sin, cz = D / 2 + s * (D / 4 + ueber / 2 + lz * cos);
+    const p = new T.Mesh(new T.BoxGeometry(x1 - x0, dick, u1 - u0), dachMat);
+    p.position.set((x0 + x1) / 2, cy, cz); p.rotation.x = s * winkel;
     p.castShadow = p.receiveShadow = true; statisch.add(p);
+    p.updateMatrixWorld();
+    kollider(p.position.x, cy, cz, x1 - x0, dick, u1 - u0, new T.Quaternion().setFromEuler(p.rotation));
+  }
+  const dachH = z => dachY + hoch * (D / 2 + ueber - Math.abs(z - D / 2)) / (D / 2 + ueber) + dick / 2 / cos;   // Höhe der Dachfläche
+  for (const s of [-1, 1]) {
+    if (s === 1 && luke) {          // Südseite mit Dachluke: um das Loch herum
+      const u0 = (luke.z0 - D / 2) / cos, u1 = (luke.z1 - D / 2) / cos;
+      brett(s, -ueber, luke.x0, 0, schraeg); brett(s, luke.x1, W + ueber, 0, schraeg);
+      brett(s, luke.x0, luke.x1, 0, u0); brett(s, luke.x0, luke.x1, u1, schraeg);
+    } else brett(s, -ueber, W + ueber, 0, schraeg);
   }
   const giebel = new T.Shape([new T.Vector2(-D / 2, 0), new T.Vector2(D / 2, 0), new T.Vector2(0, hoch)]);
   for (const x of [0, W]) {
@@ -278,6 +295,28 @@ function aussen(scene, statisch, W, D, dachY, block) {
     m.rotation.y = Math.PI / 2; m.position.set(x - 0.125, dachY, D / 2);
     m.castShadow = m.receiveShadow = true; statisch.add(m);
   }
+  if (!luke) return;
+  // Lukenrahmen (Holz) – damit man nicht unters Dach kriecht. Deckel steht offen.
+  const holz = mat('#8B5A36', { r: 0.8 }), oben = dachH(luke.z0) + 0.04;
+  block(luke.x0 - 0.06, luke.x1 + 0.06, dachY, oben, luke.z0 - 0.06, luke.z0, holz);
+  block(luke.x0 - 0.06, luke.x1 + 0.06, dachY, dachH(luke.z1) + 0.04, luke.z1, luke.z1 + 0.06, holz);
+  block(luke.x0 - 0.06, luke.x0, dachY, oben, luke.z0, luke.z1, holz);
+  block(luke.x1, luke.x1 + 0.06, dachY, oben, luke.z0, luke.z1, holz);
+  const deckel = new T.Mesh(new T.BoxGeometry(luke.x1 - luke.x0, 0.04, luke.z1 - luke.z0), holz);
+  deckel.position.set((luke.x0 + luke.x1) / 2, oben + (luke.z1 - luke.z0) / 2 * 0.7, luke.z0 - 0.1); deckel.rotation.x = 1.2; statisch.add(deckel);
+
+  // Schornstein + Katzen-Unterschlupf daneben (flaches Brett, kleines Dach, Kissen)
+  const stein = mat('#9A4A3A', { r: 0.9 }), sx = 12.6, sz = 5.9;
+  block(sx - 0.35, sx + 0.35, dachH(sz + 0.35) - 0.3, dachY + hoch + 1.0, sz - 0.35, sz + 0.35, stein);
+  block(sx - 0.42, sx + 0.42, dachY + hoch + 1.0, dachY + hoch + 1.12, sz - 0.42, sz + 0.42, mat('#6E3529'));
+  const by = dachY + hoch + 0.05;                                  // Boden der Hütte (knapp über dem First)
+  const hx0 = 10.6, hx1 = 12.2, hz0 = 5.0, hz1 = 6.5;
+  block(hx0, hx1, by - 0.08, by, hz0, hz1, holz);                   // Boden
+  for (const [x, z] of [[hx0 + 0.05, hz1 - 0.05], [hx1 - 0.05, hz1 - 0.05]]) block(x - 0.04, x + 0.04, dachH(z) - 0.1, by - 0.08, z - 0.04, z + 0.04, holz, { fest: false });
+  block(hx0, hx0 + 0.06, by, by + 0.7, hz0, hz1, holz);             // Rückwand (Westen)
+  block(hx0, hx1, by, by + 0.7, hz0, hz0 + 0.06, holz);             // Nordwand
+  block(hx0 - 0.1, hx1 + 0.1, by + 0.7, by + 0.76, hz0 - 0.1, hz1 + 0.15, mat('#2E7D5B', { r: 0.8 }));   // Dach (grün)
+  block(hx0 + 0.15, hx1 - 0.2, by, by + 0.1, hz0 + 0.15, hz1 - 0.2, mat('#E8A0B8', { r: 1 }), { fest: false });   // Kissen
 }
 
 export function verkleben(gruppe) {

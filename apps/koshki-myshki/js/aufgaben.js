@@ -28,10 +28,11 @@ export const AUFGABEN = [
   { id: 'kloetzchen', text: 'Schaffe 10 Reihen bei Klötzchen',   emoji: '🧱', ziel: 10 },
   { id: 'verstecke', text: 'Finde 6 verschiedene Verstecke',     emoji: '🫣', ziel: 6 },
   { id: 'geheimgang', text: 'Kriech durch 4 Geheimgänge (einer führt zur Villa!)', emoji: '🕳️', ziel: 4 },
-  { id: 'geheimraum', text: 'Finde 12 Geheimräume (jedes Haus hat mindestens 5)', emoji: '🤫', ziel: 12 },
+  { id: 'geheimraum', text: 'Finde 12 Geheimräume (auch im Nachbarhaus und im Restaurant!)', emoji: '🤫', ziel: 12 },
   { id: 'souvenir',  text: 'Sammle 8 Souvenirs aus fremden Häusern und versteck sie in deinen Geheimräumen', emoji: '🎁', ziel: 8 },
   { id: 'gluecksrad', text: 'Dreh am Glücksrad in der geheimen Spielhalle der Villa', emoji: '🎡', ziel: 1 },
   { id: 'jackpot',   text: 'Gewinn den JACKPOT am Glücksrad',    emoji: '💰', ziel: 1 },
+  { id: 'dach',      text: 'Kletter durch die Dachluke aufs Dach und kuschel dich an den Schornstein', emoji: '🏠', ziel: 1 },
   { id: 'villapools', text: 'Schwimm in allen 3 Pools der Villa', emoji: '🏊', ziel: 3 },
 ];
 const SPEICHER = 'km-aufgaben';
