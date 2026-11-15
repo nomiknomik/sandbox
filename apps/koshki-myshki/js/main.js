@@ -20,6 +20,7 @@ import { Kloetzchen } from './kloetzchen.js';
 import { baueSiedlung, bodenLoecher } from './siedlung.js';
 import { Gluecksrad } from './gluecksrad.js';
 import { Garderobe } from './garderobe.js';
+import { Unfall } from './unfall.js';
 
 const T = THREE, R = RAPIER;
 const $ = id => document.getElementById(id);
@@ -87,6 +88,7 @@ if (Q.schatten) {
 const startEtage = haus.etagen.find(e => e.id === haus.start.etage);
 const startPunkt = { x: haus.start.x, y: startEtage.y, z: haus.start.z };
 const katze = new Katze(scene, world, R, startPunkt);
+const unfall = new Unfall(scene, katze, renderer.domElement);   // Autounfall: Bein, Augen, Krankenhaus
 world.step();                                    // einmal rechnen, damit Abfragen gehen
 const netz = baueWegnetz(haus, world, R);
 const bewohner = (haus.bewohner || []).map(d => new Babulya(scene, world, R, netz, haus, d));
@@ -391,6 +393,19 @@ function getroffen(b) {
   schaden(1, b.opa ? '📰 KLATSCH! −❤️' : '🍳 BONG! −❤️', b.fuesse, `😿 ${b.def.name} hat dich erwischt!`);
 }
 // Aua: n Herzen weg, die Katze fliegt von «von» weg.  Keine Herzen mehr → Geheimkammer
+// Krankenhaus: 30 echte Minuten im Krankenzimmer, solange ist Pause
+function insKrankenhaus(sofort = false) {
+  laeuft = false; steuer.aktiv = false;
+  if (!sofort) meldung('🚑 Tatütata! Die Katze muss ins Krankenhaus!');
+  setTimeout(() => { unfall.insBett(katze); imKH = true; }, sofort ? 0 : 1800);
+}
+function ausDemKrankenhaus() {
+  imKH = false; unfall.raus();
+  katze.teleport(startPunkt); katze.unverwundbar = 3;
+  for (const x of bewohner) x.reset();
+  herzen = 5; hud(); laeuft = true; steuer.aktiv = true;
+  meldung('💚 Wieder gesund! Und ab jetzt: links und rechts schauen!');
+}
 function schaden(n, text, von, endeText = '😿 Keine Herzen mehr!') {
   const k = katze.fuesse;
   if (katze.unverwundbar > 0) return;
@@ -452,6 +467,7 @@ function heilen(dt) {
 let blickYaw = Math.PI, blickPitch = -0.2, ichSicht = !matchMedia('(pointer: coarse)').matches ? false : false;
 const kamPos = new T.Vector3();
 function kameraSetzen(dt) {
+  if (imKH) { unfall.kamera(kamera); return; }
   const p = katze.pos;
   const dir = new T.Vector3(Math.sin(blickYaw) * Math.cos(blickPitch), Math.sin(blickPitch), Math.cos(blickYaw) * Math.cos(blickPitch));
   if (ichSicht) {
@@ -525,6 +541,7 @@ function ortZeigen() {
 
 // ---------- Draußen ----------
 let luft = 1, hupGesagt = 0, rutsch = null, ueber = null, spielzimmerGesagt = false;
+let geschautO = -99, geschautW = -99, schauHinweis = false, imKH = false;   // wann zuletzt nach rechts (Osten) / links (Westen) geschaut
 const startPunktPool = { x: (PLAN.pool.x0 + PLAN.pool.x1) / 2, y: PLAN.pool.wasser - 0.25, z: PLAN.pool.z0 + 1 };
 function draussenSchritt(dt, ein) {
   const k = katze.fuesse;
@@ -557,20 +574,36 @@ function draussenSchritt(dt, ein) {
   if (!rutsch && k.x > rs.x0 - 0.1 && k.x < rs.x1 && k.z > rs.z0 && k.z < rs.z1 && Math.abs(k.y - rs.y) < 0.3) {
     rutsch = { t: 0 }; ton.wiii(); meldung('🛝 Wiiiiieeeee!');
   }
+  // --- Straße: erst nach links und rechts schauen! ---
+  const amRand = k.z > PLAN.gehwegS.z0 - 0.5 && k.z < PLAN.gehwegN.z1 + 0.5 && k.y < 1;
+  if (amRand) {
+    const bx = Math.sin(blickYaw);
+    if (bx > 0.7) geschautO = zeit;
+    if (bx < -0.7) geschautW = zeit;
+    if (!schauHinweis && k.x > PLAN.zebra.x0 - 1.5 && k.x < PLAN.zebra.x1 + 1.5) {
+      schauHinweis = true; meldung('👀 Zebrastreifen! Erst nach links und nach rechts schauen (Kamera drehen) – dann gehen.');
+    }
+  }
   // --- Straße: Autos ---
   const leute = menschen.filter(m => m.aufStrasse).map(m => m.pos);
   const v = verkehr.schritt(dt, k, leute);
   hupGesagt -= dt;
   if (v.hupe) { ton.hupe(); if (hupGesagt <= 0) { hupGesagt = 6; meldung('🚗 HUUUP! Vorsicht, ein Auto! Hier gibt es keinen Zebrastreifen!'); } }
-  if (v.ueberfahren && katze.unverwundbar <= 0) {
+  if (v.ueberfahren && katze.unverwundbar <= 0 && !imKH) {
     katze.platt = 1.6; ton.bong(); setTimeout(ton.hupe, 150);
-    schaden(2, '🚗 PLATT wie ein Pfannkuchen! −❤️❤️  Geh lieber am Zebrastreifen oder bei Grün!', { x: k.x, z: v.ueberfahren.sp.z }, '🚗 Vom Auto erwischt!');
+    const art = unfall.passiert(v.ueberfahren.v);
+    if (art === 'kh') insKrankenhaus();
+    else schaden(1, art === 'bein' ? '🚗 BUMM! Das Bein tut weh – 20 Minuten nur humpeln. 🩼 −❤️' : '🚗 BUMM! Kopf gestoßen – 10 Minuten siehst du alles verschwommen. 🤕 −❤️',
+      { x: k.x, z: v.ueberfahren.sp.z }, '🚗 Vom Auto erwischt!');
   }
   // Über die Straße gegangen? (Zebrastreifen / Ampel bei Grün)
   const S = PLAN.strasse, aufS = k.z > S.z0 && k.z < S.z1 && k.y < 0.8;
   if (aufS && !ueber) {
     const amZ = k.x > PLAN.zebra.x0 - 0.3 && k.x < PLAN.zebra.x1 + 0.3, amA = k.x > PLAN.ampel.x0 - 0.3 && k.x < PLAN.ampel.x1 + 0.3;
     ueber = { von: k.z > (S.z0 + S.z1) / 2 ? 'N' : 'S', zebra: amZ, ampel: amA && verkehr.fussGruen };
+    const geschaut = zeit - geschautO < 8 && zeit - geschautW < 8;
+    verkehr.unachtsam = !geschaut;
+    if (amZ) meldung(geschaut ? '👀 Gut geschaut! Die Autos sehen dich und halten.' : '😱 Du hast nicht geschaut! Die Autos sehen dich zu spät!');
     if (amA && !verkehr.fussGruen) meldung('🚦 Rot! Die Autos halten nicht für dich – schnell rüber oder zurück!');
   }
   if (ueber && !aufS) {
@@ -578,7 +611,7 @@ function draussenSchritt(dt, ein) {
     const amZ = k.x > PLAN.zebra.x0 - 0.8 && k.x < PLAN.zebra.x1 + 0.8, amA = k.x > PLAN.ampel.x0 - 0.8 && k.x < PLAN.ampel.x1 + 0.8;
     if (drueben && ueber.zebra && amZ) { meldung('🦓 Sicher über den Zebrastreifen! Die Autos haben gewartet.'); aufgaben.melde('zebra'); }
     if (drueben && ueber.ampel && amA) { meldung('🚦 Brav bei Grün über die Ampel!'); aufgaben.melde('ampel'); }
-    ueber = null;
+    ueber = null; verkehr.unachtsam = false;
   }
   // --- Leute ---
   for (const m of menschen) {
@@ -725,8 +758,11 @@ function frame() {
     ortZeigen();
     versteckPruefen(); gangPruefen();
     heilen(dt);
+    katze.langsam = unfall.tempoFaktor();
     for (const b of bewohner) if (b.spruch) { meldung(b.emoji + ' ' + b.spruch); b.spruch = ''; }
   }
+  unfall.schritt(katze);
+  if (imKH && !unfall.aktiv('kh')) ausDemKrankenhaus();
   // Bewegliche Sachen nachziehen + zerbrechen?
   for (const d of bau.dyn) {
     if (d.weg) continue;
@@ -785,6 +821,7 @@ $('start').onclick = () => {
   aufgaben.knopf.style.display = ''; garderobe.knopf.style.display = '';
   if (!matchMedia('(pointer: coarse)').matches && renderer.domElement.requestPointerLock) { try { renderer.domElement.requestPointerLock(); } catch {} }
   meldung('🐱 Du bist in der Geheimkammer auf dem Dachboden. Los, mach Unfug!');
+  if (unfall.aktiv('kh')) insKrankenhaus(true);      // noch im Krankenhaus (auch nach Neuladen)
 };
 // Für Tests im Browser
-window.__km = { drauss, sied, raeder, verkehr, menschen, kellner, klotz, luft: () => luft, rutsch: () => rutsch, kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };
+window.__km = { unfall, insKrankenhaus, drauss, sied, raeder, verkehr, menschen, kellner, klotz, luft: () => luft, rutsch: () => rutsch, kinder, sauger, hunde, aufgaben, tragen, maeuse, angeln, gefangen, renderer, sonne, scene, katze, bewohner, netz, bau, world, kamera, setBlick: (y, p) => { blickYaw = y; blickPitch = p; }, setIch: v => { ichSicht = v; } };

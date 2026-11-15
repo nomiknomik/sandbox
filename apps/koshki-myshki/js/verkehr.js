@@ -64,10 +64,11 @@ export class Verkehr {
     if (this.phasenZeit > PHASEN[this.phase][1]) { this.phasenZeit = 0; this.phase = (this.phase + 1) % PHASEN.length; }
     this.zeigAmpel();
     const S = PLAN.strasse, Z = PLAN.zebra, A = PLAN.ampel;
-    const zebraVoll = this.zebraBelegt([...leute, katze]);
+    // unachtsam = die Katze hat vorher nicht nach links und rechts geschaut → die Autos sehen sie zu spät
+    const zebraVoll = this.zebraBelegt(this.unachtsam ? leute : [...leute, katze]);
     const katzeAufStrasse = katze.z > S.z0 - 0.1 && katze.z < S.z1 + 0.1 && katze.y < 0.8;
     // Auf dem Zebrastreifen und bei Grün an der Ampel hupt keiner (dort halten die Autos ja)
-    const geschuetzt = this.zebraBelegt([katze]) || (this.fussGruen && katze.x > A.x0 - 0.5 && katze.x < A.x1 + 0.5);
+    const geschuetzt = (!this.unachtsam && this.zebraBelegt([katze])) || (this.fussGruen && katze.x > A.x0 - 0.5 && katze.x < A.x1 + 0.5);
     for (const sp of this.spuren) {
       const hier = this.autos.filter(a => a.sp === sp).sort((a, b) => (a.x - b.x) * sp.dir);
       hier.forEach((a, i) => {

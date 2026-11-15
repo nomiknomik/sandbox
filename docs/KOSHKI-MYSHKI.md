@@ -116,7 +116,15 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    oben **Unterschlupf am Schornstein** (Versteck, Kissen, grünes Dächlein). Neue Aufgabe (jetzt 29).
    **Echte Töne** (`toene/`, CC0 von OpenGameArt, 16 Dateien, ~110 KB): Miau (3 Varianten), Schnurren, Wuff, Glas,
    Platsch, Blubb, Mampf, Pfanne, Zeitung, Plopp, Kratzen, Piep. Hupe/Rutsche/Hopser/Ta-daa bleiben Synthesizer.
-10. ⏳ Katzen-Aufzug, Editor, zu zweit spielen
+10. ✅ v0.12 – **Verkehrserziehung / Autounfall** (`js/unfall.js`). Am Straßenrand merkt sich das Spiel, ob die Kamera
+   nach links (Westen) und rechts (Osten) geschaut hat (in den letzten 8 s). Wer **ohne Schauen** auf den Zebrastreifen geht,
+   wird von den Autos zu spät gesehen (sie hupen, bremsen zu spät). Unfall je nach Auto-Tempo, in **echten Minuten**,
+   gespeichert auf dem Gerät (`km-unfall`, bleibt auch nach Neuladen):
+   langsam (< 4,5 m/s) → 🩼 Bein: 20 min humpeln (60 % Tempo, kein Rennen), −❤️;
+   mittel (< 7 m/s) → 🤕 Kopf: 10 min verschwommen sehen, −❤️;
+   schnell → 🚑 **Krankenhaus**: 30 min im Krankenzimmer (Bett, Tropf, Blumen, Monitor; Puppenhaus-Blick), Spiel pausiert, danach
+   volle Herzen in der Geheimkammer. Verband am Kopf solange verletzt.
+11. ⏳ Katzen-Aufzug, Editor, zu zweit spielen
 
 ## Steuerung
 - Computer: WASD laufen, Maus schauen (Klick = Zeiger fangen), Leertaste springen,
