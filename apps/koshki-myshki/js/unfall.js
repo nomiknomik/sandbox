@@ -66,8 +66,9 @@ export class Unfall {
   insBett(katze) {
     katze.teleport({ x: ZIMMER.x + 1.6, y: 0.62, z: ZIMMER.z + 2.2 });
     this.schild.style.display = 'flex';
+    document.body.classList.add('kh'); document.getElementById('ort').textContent = '📍 Krankenhaus · Zimmer 3';
   }
-  raus() { this.schild.style.display = 'none'; }
+  raus() { this.schild.style.display = 'none'; document.body.classList.remove('kh'); }
   // Kamera schaut von oben ins Zimmer (es hat keine Decke – wie ein Puppenhaus)
   kamera(kam) {
     kam.position.set(ZIMMER.x + 3.4, 3.4, ZIMMER.z + 4.4);
