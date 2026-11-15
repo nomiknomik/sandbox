@@ -124,6 +124,7 @@ bzw. ein Werkzeug, das diese Datei schreibt.
    mittel (< 7 m/s) → 🤕 Kopf: 10 min verschwommen sehen, −❤️;
    schnell → 🚑 **Krankenhaus**: 30 min im Krankenzimmer (Bett, Tropf, Blumen, Monitor; Puppenhaus-Blick), Spiel pausiert, danach
    volle Herzen in der Geheimkammer. Verband am Kopf solange verletzt.
+   **Versteckter Erwachsenen-Knopf** (v0.12.1): 🏥 auf dem Krankenhaus-Schild 3 s gedrückt halten = Krankenhaus sofort vorbei.
 11. ⏳ Katzen-Aufzug, Editor, zu zweit spielen
 
 ## Steuerung

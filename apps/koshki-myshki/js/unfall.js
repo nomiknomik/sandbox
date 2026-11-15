@@ -22,6 +22,13 @@ export class Unfall {
     this.schild = document.getElementById('krankenhaus');
     this.zimmer = baueZimmer(scene);
     this.verband = null; this.letzteSek = -1;
+    // Versteckter Knopf für Erwachsene: 🏥 auf dem Schild 3 Sekunden gedrückt halten = Krankenhaus sofort vorbei
+    const knopf = document.getElementById('khEnde');
+    let timer = 0;
+    const los = e => { e.preventDefault(); clearTimeout(timer); timer = setTimeout(() => { this.ende.kh = 0; this.speichern(); }, 3000); };
+    const stopp = () => clearTimeout(timer);
+    knopf.addEventListener('pointerdown', los);
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) knopf.addEventListener(ev, stopp);
   }
   rest(art) { return Math.max(0, (this.ende[art] || 0) - Date.now()); }
   aktiv(art) { return this.rest(art) > 0; }
